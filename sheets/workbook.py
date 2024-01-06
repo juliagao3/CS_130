@@ -1,15 +1,22 @@
+from typing import *
+from sheet import *
+
 class Workbook:
     # A workbook containing zero or more named spreadsheets.
     #
     # Any and all operations on a workbook that may affect calculated cell
     # values should cause the workbook's contents to be updated properly.
 
-    def __init__(self):
+    def __init__(self, workbook_name):
         # Initialize a new empty workbook.
+        self.workbook_name = workbook_name
+        self.num_sheets = 0
+        self.sheets_list = [] 
         pass
 
     def num_sheets(self) -> int:
         # Return the number of spreadsheets in the workbook.
+        return self.num_sheets
         pass
 
     def list_sheets(self) -> List[str]:
@@ -24,6 +31,7 @@ class Workbook:
         #
         # A user should be able to mutate the return-value without affecting the
         # workbook's internal state.
+        return self.list_sheets
         pass
 
     def new_sheet(self, sheet_name: Optional[str] = None) -> Tuple[int, str]:
@@ -38,6 +46,8 @@ class Workbook:
         #
         # If the spreadsheet name is an empty string (not None), or it is
         # otherwise invalid, a ValueError is raised.
+        # TODO
+        self.num_sheets += 1
         pass
 
     def del_sheet(self, sheet_name: str) -> None:

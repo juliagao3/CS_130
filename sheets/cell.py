@@ -1,7 +1,23 @@
+from workbook import *
+import enum 
+
 class Cell: 
-    def __init__(self):
+    def __init__(self, value, sheet_name, contents, location):
+        self.value = value
+        self.sheet_name = sheet_name
+        self.contents = contents
+        self.location = location
+    
+    def set_value(self, new_value):
+        self.value = new_value
+
+    def evaluate_contents(self): # takes the contents and gets the value
+        # TODO
         pass
 
+    def set_content(self, content):
+        self.contents = content
+    
 class CellErrorType(enum.Enum):
     '''
     This enum specifies the kinds of errors that spreadsheet cells can hold.
