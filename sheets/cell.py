@@ -1,22 +1,50 @@
-from workbook import *
-import enum 
+from .workbook import *
+import enum
+import decimal
+from typing import *
 
 class Cell: 
-    def __init__(self, value, sheet_name, contents, location):
-        self.value = value
+    def __init__(self, sheet_name):
         self.sheet_name = sheet_name
-        self.contents = contents
-        self.location = location
+        self.value = None
+        self.contents = None
+
+        # cells referenced by this cell's formula
+        self.dependencies = [] 
+
+        # cells that reference this cell
+        self.referenced_by = []
     
-    def set_value(self, new_value):
-        self.value = new_value
+    def get_value(self, workbook_name, sheet_name):
+        # if not None, we've already evaluated the contents
+        if self.value == None and self.contents != None:
+            # if the first char is =, evaluate as a formula
+            if self.contents[0] == "=":
+                # call evaluate formula function? also set self.value?
+                # evaluate formula will return a value or raise an error
+                pass
+            elif self.contents[0] == "'":
+                self.value = self.contents[1:]
+            else:
+                # evaluate as a literal (number, date, etc.)
+                # for now, just numbers and strings
+                # TODO: other values (NaN, Infinity, -Infinity) should not be converted to nums
+                # can use decimal.is_finite() method to check
+                # remove trailing zeros from number (str)
+                num = self.contents.rstrip("0")
+                if num[-1] == ".":
+                    num = num[:-1]
+                # store value as a Decimal
+                self.value = decimal.Decimal(num)  
 
-    def evaluate_contents(self): # takes the contents and gets the value
-        # TODO
-        pass
+        # evaluate formulas in workbook
+        return self.value
 
-    def set_content(self, content):
-        self.contents = content
+    def set_contents(self, contents: str):
+        # if contents == "" or only whitespace, contents + value are still None
+        if contents != "" and contents != len(contents) * " ":
+            self.contents = contents.strip()
+            # if it's a formula, scan for references
     
 class CellErrorType(enum.Enum):
     '''

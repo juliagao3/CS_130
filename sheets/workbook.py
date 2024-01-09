@@ -1,5 +1,5 @@
 from typing import *
-from sheet import *
+from .sheet import Sheet
 
 class Workbook:
     # A workbook containing zero or more named spreadsheets.
@@ -9,15 +9,15 @@ class Workbook:
 
     def __init__(self, workbook_name):
         # Initialize a new empty workbook.
-        self.workbook_name = workbook_name
-        self.num_sheets = 0
-        self.sheets_list = [] 
-        pass
+        self.workbook_name: str = workbook_name
+        self.sheets: List[Sheet] = []
+
+        # map from lowercase sheet name to sheet
+        self.sheet_map: Dict[str, Sheet] = {}
 
     def num_sheets(self) -> int:
         # Return the number of spreadsheets in the workbook.
-        return self.num_sheets
-        pass
+        return len(self.sheets)
 
     def list_sheets(self) -> List[str]:
         # Return a list of the spreadsheet names in the workbook, with the
@@ -31,8 +31,7 @@ class Workbook:
         #
         # A user should be able to mutate the return-value without affecting the
         # workbook's internal state.
-        return self.list_sheets
-        pass
+        return [sheet.name for sheet in self.sheets]
 
     def new_sheet(self, sheet_name: Optional[str] = None) -> Tuple[int, str]:
         # Add a new sheet to the workbook.  If the sheet name is specified, it
@@ -47,8 +46,21 @@ class Workbook:
         # If the spreadsheet name is an empty string (not None), or it is
         # otherwise invalid, a ValueError is raised.
         # TODO
-        self.num_sheets += 1
-        pass
+        if sheet_name == "":
+            raise ValueError
+        elif sheet_name == None:
+            nSheet = 1
+            while ('Sheet' + nSheet) in self.sheet_map:
+                nSheet += 1
+            sheet_name = 'Sheet' + nSheet        
+        else:
+            for name in self.sheet_map:
+                if name.lower() == sheet_name.lower():
+                    raise ValueError
+            
+        self.sheet_map[sheet_name] = 
+        self.sheets.append()
+        return (len(self.sheets), sheet_name)
 
     def del_sheet(self, sheet_name: str) -> None:
         # Delete the spreadsheet with the specified name.
@@ -67,7 +79,7 @@ class Workbook:
         # case does not have to.
         #
         # If the specified sheet name is not found, a KeyError is raised.
-        pass
+        return self.sheet_map[sheet_name.lower()].get_extent()
 
     def set_cell_contents(self, sheet_name: str, location: str,
                           contents: Optional[str]) -> None:
@@ -91,7 +103,7 @@ class Workbook:
         # invalid for some reason, this method does not raise an exception;
         # rather, the cell's value will be a CellError object indicating the
         # naure of the issue.
-        pass
+        self.sheet_map[sheet_name.lower()].set_cell_contents(location, contents)
 
     def get_cell_contents(self, sheet_name: str, location: str) -> Optional[str]:
         # Return the contents of the specified cell on the specified sheet.
@@ -109,7 +121,7 @@ class Workbook:
         #
         # This method will never return a zero-length string; instead, empty
         # cells are indicated by a value of None.
-        pass
+        self.sheet_map[sheet_name.lower()].get_cell_contents(location)
 
     def get_cell_value(self, sheet_name: str, location: str) -> Any:
         # Return the evaluated value of the specified cell on the specified
@@ -129,4 +141,4 @@ class Workbook:
         # decimal place, and will not include a decimal place if the value is a
         # whole number.  For example, this function would not return
         # Decimal('1.000'); rather it would return Decimal('1').
-        pass
+        return self.sheet_map[sheet_name.lower()].get_cell_value(location)

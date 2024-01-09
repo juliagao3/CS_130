@@ -1,5 +1,6 @@
-from workbook import *
-from cell import *
+from typing import *
+from .workbook import *
+from .cell import Cell
 
 class Sheet:
     def __init__(self, sheet_name):
@@ -11,12 +12,55 @@ class Sheet:
         # include workbook name ?
     
     def update_sheet_name(self, new_name):
-        pass
+        self.sheet_name = new_name
+    
+    def check_location(location: str):
+        """
+        check that the given location
+        - has the form [row][col]
+        - is to the left and above ZZZZ9999
 
-    def add_cell_to_sheet(self, cell : Cell):
+        ValueError is raised if and only if the location is invalid
+        """
+        alpha_end = 0
+        while alpha_end < len(location) and location[alpha_end].isalpha():
+            alpha_end += 1
 
-        self.update_extent()
-        pass
+        if alpha_end == 0 or alpha_end == len(location):
+            raise ValueError
 
-    def update_extent(self):
-        pass
+        col = location[:alpha_end]
+        row = location[alpha_end:]
+
+        if col > "zzzz" or row > "9999":
+            raise ValueError
+
+    def set_cell_contents(self, location: str, content: str):
+        """
+        location - string like '[row][col]'
+        """
+        location = location.lower()
+        self.check_location(location)
+        if not location in self.cells:
+            self.cells[location] = Cell(self.sheet_name)
+        self.cells[location].set_content(content)
+
+    def get_cell_contents(self, location: str, content: str):
+        """
+        location - string like '[row][col]'
+        """
+        location = location.lower()
+        self.check_location(location)
+        if not location in self.cells:
+            return None
+        return self.cells[location].get_content()
+
+    def get_cell_value(self, location: str):
+        location = location.lower()
+        self.check_location(location)
+        try:
+            return self.cells[location].get_value()
+        except KeyError:
+            # cell is not in the dict;
+            # its value has not been set and it is empty
+            return None
