@@ -34,7 +34,7 @@ class Sheet:
         if col > "zzzz" or row > "9999":
             raise ValueError
 
-    def set_cell_contents(self, location: str, content: str):
+    def set_cell_contents(self, workbook, location: str, content: str):
         """
         location - string like '[col][row]'
         """
@@ -42,7 +42,7 @@ class Sheet:
         self.check_location(location)
         if not location in self.cells:
             self.cells[location] = Cell(self.sheet_name)
-        self.cells[location].set_contents(content)
+        self.cells[location].set_contents(workbook, self, location, content)
 
     def get_cell_contents(self, location: str):
         """
@@ -63,3 +63,12 @@ class Sheet:
             # cell is not in the dict;
             # its value has not been set and it is empty
             return None
+    
+    def get_cell(self, location: str):
+        location = location.lower()
+        self.check_location(location)
+
+        if not location in self.cells:
+            self.cells[location] = Cell(self.sheet_name)
+        
+        return self.cells[location]

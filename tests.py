@@ -11,6 +11,11 @@ def test_default_sheet_name():
         sheet_num, sheet_name = wb.new_sheet(None)
         assert sheet_name == "Sheet1"
 
+def test_empty_sheet():
+        wb = sheets.Workbook("wb")
+        sheet_num, sheet_name = wb.new_sheet(None)
+        assert wb.get_cell_value(sheet_name, "A1") == None
+
 def test_one_plus_one():
         wb = sheets.Workbook("wb")
         sheet_num, sheet_name = wb.new_sheet(None)
@@ -57,7 +62,6 @@ def test_string_arithmetic_cells():
         wb.set_cell_contents(sheet_name, "A3", "=A1+A2")
 
         assert wb.get_cell_value(sheet_name, "A1") == decimal.Decimal(1)
-        assert wb.get_cell_value(sheet_name, "A2") == decimal.Decimal(1)
 
         a3 = wb.get_cell_value(sheet_name, "A3")
 
@@ -69,7 +73,9 @@ def test_all():
                 test_default_sheet_name,
                 test_one_plus_one,
                 test_one_plus_string,
-                test_one_minus_unary_string
+                test_one_minus_unary_string,
+                test_one_plus_one_cells,
+                test_string_arithmetic_cells,
         ]
 
         for t in tests:

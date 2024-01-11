@@ -21,17 +21,17 @@ def number_arg(index):
         return new_f
     return check
 
-# class CellRefFinder(lark.Visitor):
-#     def __init__(self):
-#         self.refs = []
+class CellRefFinder(lark.Visitor):
+    def __init__(self):
+        self.refs = []
         
-#     def cell(self, tree):
-#         #print(tree.children)
-#         if len(tree.children) == 1:
-#             self.refs.append(str(tree.children[0]))
-#         else:
-#             assert len(tree.children) == 2
-#             self.refs.append('!'.join(tree.children))
+    def cell(self, tree):
+        #print(tree.children)
+        if len(tree.children) == 1:
+            self.refs.append(str(tree.children[0]))
+        else:
+            assert len(tree.children) == 2
+            self.refs.append('!'.join(tree.children))
 
 class FormulaEvaluator(lark.visitors.Interpreter):
 
@@ -73,6 +73,22 @@ class FormulaEvaluator(lark.visitors.Interpreter):
         else:
             assert f"Unexpected unary operator: {values[0]}"
         
+    @visit_children_decor
+    def cell(self, values):
+        sheet_name = self.sheet.sheet_name
+        cell_ref = values[0]
+
+        if len(values) > 1:
+            sheet_name = values[0]
+            cell_ref = values[1]
+        
+        try:
+            return self.workbook.get_cell_value(sheet_name, cell_ref) 
+        except ValueError as e:
+            return sheets.CellError(sheets.CellErrorType.BAD_REFERENCE, "!".join([sheet_name, cell_ref]), e)
+        except KeyError as e:
+            return sheets.CellError(sheets.CellErrorType.BAD_REFERENCE, "!".join([sheet_name, cell_ref]), e)
+
     @visit_children_decor
     def concat_expr(self, values):
         return "".join([str(v) for v in values])

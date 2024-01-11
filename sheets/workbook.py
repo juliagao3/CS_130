@@ -164,3 +164,6 @@ class Workbook:
         # whole number.  For example, this function would not return
         # Decimal('1.000'); rather it would return Decimal('1').
         return self.sheet_map[sheet_name.lower()].get_cell_value(self, location)
+    
+    def get_cell(self, sheet_name: str, location:str):
+        return self.sheet_map[sheet_name.lower()].get_cell(self, location)
