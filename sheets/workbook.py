@@ -10,10 +10,15 @@ class Workbook:
     def __init__(self, workbook_name):
         # Initialize a new empty workbook.
         self.workbook_name: str = workbook_name
+
+        # List of sheets in order of creation
         self.sheets: List[Sheet] = []
 
         # map from lowercase sheet name to sheet
         self.sheet_map: Dict[str, Sheet] = {}
+
+        # Default sheet number
+        self.sheet_num: int = 1
 
     def num_sheets(self) -> int:
         # Return the number of spreadsheets in the workbook.
@@ -31,7 +36,7 @@ class Workbook:
         #
         # A user should be able to mutate the return-value without affecting the
         # workbook's internal state.
-        return [sheet.name for sheet in self.sheets]
+        return [sheet.sheet_name for sheet in self.sheets]
 
     def new_sheet(self, sheet_name: Optional[str] = None) -> Tuple[int, str]:
         # Add a new sheet to the workbook.  If the sheet name is specified, it
@@ -45,22 +50,25 @@ class Workbook:
         #
         # If the spreadsheet name is an empty string (not None), or it is
         # otherwise invalid, a ValueError is raised.
-        # TODO
-        if sheet_name == "":
-            raise ValueError
-        elif sheet_name == None:
-            nSheet = 1
-            while ('Sheet' + nSheet) in self.sheet_map:
-                nSheet += 1
-            sheet_name = 'Sheet' + nSheet        
+
+        if (sheet_name != None) and not (sheet_name.lower() in self.sheet_map.keys()) and (sheet_name != ""):
+
+            pass
+
+        elif (sheet_name == None):
+
+            sheet_name = 'Sheet' + str(self.sheet_num)
+            self.sheet_num += 1
+
         else:
-            for name in self.sheet_map:
-                if name.lower() == sheet_name.lower():
-                    raise ValueError
-            
-        self.sheet_map[sheet_name] = 
-        self.sheets.append()
-        return (len(self.sheets), sheet_name)
+
+            raise ValueError
+
+        sheet = Sheet(sheet_name)
+        self.sheet_map[sheet_name.lower()] = sheet
+        self.sheets.append(sheet)
+
+        return (len(self.sheets)-1, sheet_name)
 
     def del_sheet(self, sheet_name: str) -> None:
         # Delete the spreadsheet with the specified name.
@@ -69,7 +77,21 @@ class Workbook:
         # case does not have to.
         #
         # If the specified sheet name is not found, a KeyError is raised.
-        pass
+        
+        if (sheet_name.lower() in self.sheet_map.keys()):
+
+            pos = 0
+            for name in self.list_sheets():
+                if name.lower() == sheet_name.lower():
+                    self.sheets.pop(pos)
+                    break
+                pos += 1
+
+            self.sheet_map.pop(sheet_name.lower())
+
+        else:
+
+            raise KeyError
 
     def get_sheet_extent(self, sheet_name: str) -> Tuple[int, int]:
         # Return a tuple (num-cols, num-rows) indicating the current extent of
@@ -79,7 +101,7 @@ class Workbook:
         # case does not have to.
         #
         # If the specified sheet name is not found, a KeyError is raised.
-        return self.sheet_map[sheet_name.lower()].get_extent()
+        return self.sheet_map[sheet_name.lower()].extent
 
     def set_cell_contents(self, sheet_name: str, location: str,
                           contents: Optional[str]) -> None:
@@ -121,7 +143,7 @@ class Workbook:
         #
         # This method will never return a zero-length string; instead, empty
         # cells are indicated by a value of None.
-        self.sheet_map[sheet_name.lower()].get_cell_contents(location)
+        return self.sheet_map[sheet_name.lower()].get_cell_contents(location)
 
     def get_cell_value(self, sheet_name: str, location: str) -> Any:
         # Return the evaluated value of the specified cell on the specified
@@ -141,4 +163,4 @@ class Workbook:
         # decimal place, and will not include a decimal place if the value is a
         # whole number.  For example, this function would not return
         # Decimal('1.000'); rather it would return Decimal('1').
-        return self.sheet_map[sheet_name.lower()].get_cell_value(location)
+        return self.sheet_map[sheet_name.lower()].get_cell_value(self, location)

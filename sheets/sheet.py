@@ -7,14 +7,13 @@ class Sheet:
         self.extent = (0, 0)
         self.sheet_name = sheet_name
         self.cells = {} # cell : location 
-        # TODO if sheet_name is None, then use default sheetname
         # Workbook.list_sheets()
         # include workbook name ?
     
     def update_sheet_name(self, new_name):
         self.sheet_name = new_name
     
-    def check_location(location: str):
+    def check_location(self, location: str):
         """
         check that the given location
         - has the form [row][col]
@@ -37,29 +36,29 @@ class Sheet:
 
     def set_cell_contents(self, location: str, content: str):
         """
-        location - string like '[row][col]'
+        location - string like '[col][row]'
         """
         location = location.lower()
         self.check_location(location)
         if not location in self.cells:
             self.cells[location] = Cell(self.sheet_name)
-        self.cells[location].set_content(content)
+        self.cells[location].set_contents(content)
 
-    def get_cell_contents(self, location: str, content: str):
+    def get_cell_contents(self, location: str):
         """
-        location - string like '[row][col]'
+        location - string like '[col][row]'
         """
         location = location.lower()
         self.check_location(location)
         if not location in self.cells:
             return None
-        return self.cells[location].get_content()
+        return self.cells[location].contents
 
-    def get_cell_value(self, location: str):
+    def get_cell_value(self, workbook, location: str):
         location = location.lower()
         self.check_location(location)
         try:
-            return self.cells[location].get_value()
+            return self.cells[location].get_value(workbook, self)
         except KeyError:
             # cell is not in the dict;
             # its value has not been set and it is empty

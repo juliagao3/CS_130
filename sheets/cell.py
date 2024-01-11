@@ -2,6 +2,7 @@ from .workbook import *
 import enum
 import decimal
 from typing import *
+from .interp import *
 
 class Cell: 
     def __init__(self, sheet_name):
@@ -15,21 +16,21 @@ class Cell:
         # cells that reference this cell
         self.referenced_by = []
     
-    def get_value(self, workbook_name, sheet_name):
+    def get_value(self, workbook, sheet):
         # if not None, we've already evaluated the contents
         if self.value == None and self.contents != None:
             # if the first char is =, evaluate as a formula
             if self.contents[0] == "=":
                 # call evaluate formula function? also set self.value?
                 # evaluate formula will return a value or raise an error
-                pass
+                self.value = evaluate_formula(workbook, sheet, self.contents)
             elif self.contents[0] == "'":
                 self.value = self.contents[1:]
             else:
                 # evaluate as a literal (number, date, etc.)
                 # for now, just numbers and strings
                 # TODO: other values (NaN, Infinity, -Infinity) should not be converted to nums
-                # can use decimal.is_finite() method to check
+                # can us decimal.is_finite() method to check
                 # remove trailing zeros from number (str)
                 num = self.contents.rstrip("0")
                 if num[-1] == ".":
@@ -42,9 +43,16 @@ class Cell:
 
     def set_contents(self, contents: str):
         # if contents == "" or only whitespace, contents + value are still None
-        if contents != "" and contents != len(contents) * " ":
+        if contents != None and contents != "" and contents != len(contents) * " ":
             self.contents = contents.strip()
             # if it's a formula, scan for references
+
+    # check if the contents are a cell error string representation?
+    def is_error_string(self):
+        error_strings = ["#ERROR!", "#CIRCREF!", "#REF!",
+                         "#NAME", "#VALUE!", "#DIV/0"]
+        
+        pass
     
 class CellErrorType(enum.Enum):
     '''
