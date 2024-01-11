@@ -3,7 +3,7 @@ import decimal
 import lark
 from lark.visitors import visit_children_decor
 
-parser = lark.Lark.open('formulas.lark', start='formula')
+parser = lark.Lark.open('formulas.lark', rel_to=__file__, start='formula')
 
 def number_arg(index):
     def check(f):
@@ -109,3 +109,9 @@ def evaluate_formula(workbook, sheet, formula):
     tree = parser.parse(formula)
     value = evaluator.visit(tree)
     return value
+
+def find_refs(formula):
+    finder = CellRefFinder()
+    tree = parser.parse(formula)
+    finder.visit(tree)
+    return finder.refs

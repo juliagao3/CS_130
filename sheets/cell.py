@@ -2,7 +2,8 @@ from .workbook import *
 import enum
 import decimal
 from typing import *
-from .interp import *
+
+from . import interp
 
 class Cell: 
     def __init__(self, sheet_name):
@@ -23,7 +24,7 @@ class Cell:
             if self.contents[0] == "=":
                 # call evaluate formula function? also set self.value?
                 # evaluate formula will return a value or raise an error
-                self.value = evaluate_formula(workbook, sheet, self.contents)
+                self.value = interp.evaluate_formula(workbook, sheet, self.contents)
             elif self.contents[0] == "'":
                 self.value = self.contents[1:]
             # elif self.is_error_string():
@@ -54,13 +55,7 @@ class Cell:
 
         # if it's a formula, scan for references
         if contents[0] == "=":
-            parser = lark.Lark.open('formulas.lark', start='formula')
-            tree = parser.parse(contents)
-            
-            v = CellRefFinder()
-            v.visit(tree)
-
-            for ref in v.refs:
+            for ref in interp.find_refs(contents):
                 sheet_name = sheet.sheet_name
                 location = ref
                 if "!" in ref:
