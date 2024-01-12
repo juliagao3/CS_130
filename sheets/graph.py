@@ -17,24 +17,66 @@ class Graph(Generic[T]):
         self.forward: Dict[T, T] = {}
         self.backward: Dict[T, T] = {}
 
+    def get_forward_links(self, node):
+        if not node in self.forward:
+            return []
+        else:
+            return self.forward[node]
+
     def link(self, from_node: T, to_node: T):
         '''
         Add entries to the forward and backward maps to create a link between
         the from_node and to_node.
         '''
-        pass
+        if not from_node in self.forward:
+            self.forward[from_node] = set()
+
+        if not to_node in self.backward:
+            self.backward[to_node] = set()
+
+        self.forward[from_node].add(to_node)
+        self.backward[to_node].add(from_node)
 
     def clear_forward_links(self, node: T):
         '''
         Remove all forward links coming from the given node.
         '''
-        pass
+        if node in self.forward:
+            for to in self.forward[node]:
+                self.backward[to].remove(node)
+            self.forward[node].clear()
 
     def find_cycle(self, root: T):
         '''
         Returns a cycle containing this node or None if no such cycle exists.
         '''
-        return None
+        # this is a non-recursive dfs... I think this could've probly been
+        # done better
+        seen = set()
+        path = []
+        stack = [(0, root, list(self.get_forward_links(root)))]
+        while len(stack) > 0:
+            i, cur, children = stack.pop()
+
+            if i == 0:
+                if cur in seen:
+                    prev_idx = path.index(cur)
+                    assert prev_idx >= 0
+                    path = path[prev_idx:]
+                    break
+                seen.add(cur)
+                path.append(cur)
+
+            if i < len(children):
+                stack.append((i+1, cur, children))
+                stack.append((0, children[i], list(self.get_forward_links(children[i]))))
+            else:
+                path.pop()
+
+        if len(path) == 0:
+            return None
+        else:
+            return path
 
     def get_ancestors(self, root: T):
         '''
