@@ -67,7 +67,9 @@ class Cell:
 
             ancestors = workbook.graph.get_ancestors(self)
             for c in ancestors:
-                c.get_value(workbook, sheet)
+                if cycle == None or (not c in cycle):
+                    c.value = None
+                    c.get_value(workbook, sheet)
 
     # check if the contents are a cell error string representation?
     def is_error_string(self):
