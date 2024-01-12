@@ -1,5 +1,11 @@
 # CS_130
 
+## Testing
+
+```
+python3 -m sheets.tests
+```
+
 ## TODO
 
 - [ ] write tests
