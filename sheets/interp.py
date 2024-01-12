@@ -8,7 +8,9 @@ parser = lark.Lark.open('formulas.lark', rel_to=__file__, start='formula')
 def number_arg(index):
     def check(f):
         def new_f(self, values):
-            if type(values[index]) == str:
+            if values[index] == None:
+                values[index] = decimal.Decimal(0)
+            elif type(values[index]) == str:
                 try:
                     values[index] = decimal.Decimal(values[index])
                 except decimal.InvalidOperation as e:
