@@ -1,6 +1,7 @@
 from typing import *
 from .sheet import Sheet
 from .graph import Graph
+from .cell import Cell
 
 class Workbook:
     # A workbook containing zero or more named spreadsheets.
@@ -22,7 +23,7 @@ class Workbook:
         self.sheet_num: int = 1
 
         # Graph
-        self.graph = Graph()
+        self.graph = Graph[Cell]()
 
     def num_sheets(self) -> int:
         # Return the number of spreadsheets in the workbook.
