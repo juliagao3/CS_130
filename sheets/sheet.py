@@ -69,6 +69,6 @@ class Sheet:
         self.check_location(location)
 
         if not location in self.cells:
-            self.cells[location] = Cell(self.sheet_name)
+            self.cells[location] = Cell()
         
         return self.cells[location]
