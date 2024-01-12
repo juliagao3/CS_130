@@ -1,6 +1,8 @@
-import typing
+from typing import *
 
-class Graph[T]:
+T = TypeVar("T")
+
+class Graph(Generic[T]):
     '''
     Represents a directed graph.
 
@@ -22,9 +24,9 @@ class Graph[T]:
         '''
         pass
 
-    def unlink_node(self, node: T):
+    def clear_forward_links(self, node: T):
         '''
-        Remove all links to and from this node.
+        Remove all forward links coming from the given node.
         '''
         pass
 
@@ -32,9 +34,9 @@ class Graph[T]:
         '''
         Returns a cycle containing this node or None if no such cycle exists.
         '''
-        pass
+        return None
 
-    def get_decendants(self, root: T):
+    def get_ancestors(self, root: T):
         '''
         Returns the nodes that need to be recomputed following a change in
         the given node. The nodes should be ordered so that no node must be
@@ -43,4 +45,4 @@ class Graph[T]:
         In graph terms this is the set of nodes reachable by following backward
         links from the root in topological sort order.
         '''
-        pass
+        return []

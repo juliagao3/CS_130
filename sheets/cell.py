@@ -6,16 +6,9 @@ from typing import *
 from . import interp
 
 class Cell: 
-    def __init__(self, sheet_name):
-        self.sheet_name = sheet_name
+    def __init__(self):
         self.value = None
         self.contents = None
-
-        # cells referenced by this cell's formula
-        self.dependencies = [] 
-
-        # cells that reference this cell
-        self.referenced_by = []
     
     def get_value(self, workbook, sheet):
         # if not None, we've already evaluated the contents
@@ -53,6 +46,7 @@ class Cell:
         if contents != None and contents != "" and contents != len(contents) * " ":
             self.contents = contents.strip()
 
+        workbook.graph.clear_forward_links(self)
         # if it's a formula, scan for references
         if contents[0] == "=":
             for ref in interp.find_refs(contents):
@@ -64,8 +58,16 @@ class Cell:
                     location = ref[index+1:]
 
                 cell = workbook.get_cell(sheet_name, location)
-                self.dependencies.append(cell)
-                cell.referenced_by.append(self)
+                workbook.graph.link(self, cell)
+
+            cycle = workbook.graph.find_cycle(self)
+            if cycle != None:
+                for c in cycle:
+                    c.value = CellError(CellErrorType.CIRCULAR_REFERENCE, "")
+
+            ancestors = workbook.graph.get_ancestors(self)
+            for c in ancestors:
+                c.get_value(workbook, sheet)
 
     # check if the contents are a cell error string representation?
     def is_error_string(self):
