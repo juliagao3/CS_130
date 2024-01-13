@@ -9,20 +9,20 @@ python3 -m sheets.tests
 ## TODO
 
 - [ ] write tests
-  - [ ] basic dependency tests
-  - [ ] cyclic dependency test
-  - [ ] topological sort test
+  - [x] basic dependency tests
+  - [x] cyclic dependency test
+  - [x] topological sort test
 - [ ] formula parsing
   - [x] add
   - [x] mul
   - [x] unary
   - [x] concatenation
-  - [ ] cell references
+  - [x] cell references
   - [ ] finding errors
     - [ ] parse error
     - [ ] bad reference (should move this to the dependency discovery code)
 - [ ] dependency discovery
-  - [ ] maintain dependency graph
-    - [ ] remove edges around cells whose content changes
-  - [ ] identify cycles
+  - [x] maintain dependency graph
+    - [x] remove edges around cells whose content changes
+  - [x] identify cycles
   - [ ] topological sort
