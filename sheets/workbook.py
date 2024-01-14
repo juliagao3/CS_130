@@ -125,7 +125,7 @@ class Workbook:
         # invalid for some reason, this method does not raise an exception;
         # rather, the cell's value will be a CellError object indicating the
         # naure of the issue.
-        self.sheet_map[sheet_name.lower()].set_cell_contents(location, contents)
+        self.sheet_map[sheet_name.lower()].set_cell_contents(self, location, contents)
 
     def get_cell_contents(self, sheet_name: str, location: str) -> Optional[str]:
         # Return the contents of the specified cell on the specified sheet.
@@ -164,3 +164,6 @@ class Workbook:
         # whole number.  For example, this function would not return
         # Decimal('1.000'); rather it would return Decimal('1').
         return self.sheet_map[sheet_name.lower()].get_cell_value(self, location)
+    
+    def get_cell(self, sheet_name: str, location:str):
+        return self.sheet_map[sheet_name.lower()].get_cell(location)

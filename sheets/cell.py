@@ -2,7 +2,8 @@ from .workbook import *
 import enum
 import decimal
 from typing import *
-from .interp import *
+
+from . import interp
 
 class Cell: 
     def __init__(self, sheet_name):
@@ -23,9 +24,11 @@ class Cell:
             if self.contents[0] == "=":
                 # call evaluate formula function? also set self.value?
                 # evaluate formula will return a value or raise an error
-                self.value = evaluate_formula(workbook, sheet, self.contents)
+                self.value = interp.evaluate_formula(workbook, sheet, self.contents)
             elif self.contents[0] == "'":
                 self.value = self.contents[1:]
+            # elif self.is_error_string():
+            #     self.value = 
             else:
                 # evaluate as a literal (number, date, etc.)
                 # for now, just numbers and strings
@@ -35,23 +38,41 @@ class Cell:
                 num = self.contents.rstrip("0")
                 if num[-1] == ".":
                     num = num[:-1]
-                # store value as a Decimal
-                self.value = decimal.Decimal(num)  
+                try:
+                    # store value as a Decimal
+                    self.value = decimal.Decimal(num)
+                except decimal.InvalidOperation:
+                    # if it failed to parse store the contents as a string
+                    self.value = self.contents
 
         # evaluate formulas in workbook
         return self.value
 
-    def set_contents(self, contents: str):
+    def set_contents(self, workbook, sheet, location, contents: str):
         # if contents == "" or only whitespace, contents + value are still None
         if contents != None and contents != "" and contents != len(contents) * " ":
             self.contents = contents.strip()
-            # if it's a formula, scan for references
+
+        # if it's a formula, scan for references
+        if contents[0] == "=":
+            for ref in interp.find_refs(contents):
+                sheet_name = sheet.sheet_name
+                location = ref
+                if "!" in ref:
+                    index = ref.index("!")
+                    sheet_name = ref[:index]
+                    location = ref[index+1:]
+
+                cell = workbook.get_cell(sheet_name, location)
+                self.dependencies.append(cell)
+                cell.referenced_by.append(self)
 
     # check if the contents are a cell error string representation?
     def is_error_string(self):
         error_strings = ["#ERROR!", "#CIRCREF!", "#REF!",
                          "#NAME", "#VALUE!", "#DIV/0"]
-        
+        # if self.contents in error_strings:
+        #     return self.contents.
         pass
     
 class CellErrorType(enum.Enum):
