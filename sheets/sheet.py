@@ -41,7 +41,7 @@ class Sheet:
         location = location.lower()
         self.check_location(location)
         if not location in self.cells:
-            self.cells[location] = Cell(self.sheet_name)
+            self.cells[location] = Cell()
         self.cells[location].set_contents(workbook, self, location, content)
 
     def get_cell_contents(self, location: str):
@@ -69,6 +69,6 @@ class Sheet:
         self.check_location(location)
 
         if not location in self.cells:
-            self.cells[location] = Cell(self.sheet_name)
+            self.cells[location] = Cell()
         
         return self.cells[location]
