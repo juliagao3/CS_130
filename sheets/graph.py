@@ -22,6 +22,12 @@ class Graph(Generic[T]):
             return []
         else:
             return self.forward[node]
+        
+    def get_backward_links(self, node):
+        if not node in self.backward:
+            return []
+        else:
+            return self.backward[node]
 
     def link(self, from_node: T, to_node: T):
         '''
@@ -44,7 +50,9 @@ class Graph(Generic[T]):
         if node in self.forward:
             for to in self.forward[node]:
                 self.backward[to].remove(node)
-            self.forward[node].clear()
+                if len(self.backward[to]) == 0:
+                    self.backward.pop(to)
+            self.forward.pop(node)
 
     def find_cycle(self, root: T):
         '''
@@ -59,10 +67,8 @@ class Graph(Generic[T]):
             i, cur, children = stack.pop()
 
             if i == 0:
-                if cur in seen:
-                    prev_idx = path.index(cur)
-                    assert prev_idx >= 0
-                    path = path[prev_idx:]
+                if cur in seen and cur in path:
+                    path = path[path.index(cur):]
                     break
                 seen.add(cur)
                 path.append(cur)
@@ -78,13 +84,42 @@ class Graph(Generic[T]):
         else:
             return path
 
+    def topological_sort(self):
+        ordering = []
+        vertices = self.forward.keys() | self.backward.keys()
+        while len(vertices) > 0:
+            no_incoming = vertices - self.backward.keys()
+            if len(no_incoming) == 0:
+                break
+            node = no_incoming.pop()
+            vertices.remove(node)
+            self.clear_forward_links(node)
+            ordering.append(node)
+        return ordering
+
     def get_ancestors(self, root: T):
         '''
-        Returns the nodes that need to be recomputed following a change in
-        the given node. The nodes should be ordered so that no node must be
-        recomputed twice.
-
-        In graph terms this is the set of nodes reachable by following backward
-        links from the root in topological sort order.
+        Return the nodes reachable from root by following backward links.
         '''
-        return []
+        seen = set()
+        path = []
+        stack = [(0, root, list(self.get_backward_links(root)))]
+        subgraph = Graph()
+        while len(stack) > 0:
+            i, cur, children = stack.pop()
+
+            if i == 0:
+                if len(path) > 0:
+                    subgraph.link(path[-1], cur)
+                if cur in seen:
+                    continue
+                seen.add(cur)
+                path.append(cur)
+
+            if i < len(children):
+                stack.append((i+1, cur, children))
+                stack.append((0, children[i], list(self.get_backward_links(children[i]))))
+            else:
+                path.pop()
+        
+        return subgraph

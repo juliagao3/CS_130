@@ -43,8 +43,11 @@ class Cell:
 
     def set_contents(self, workbook, sheet, location, contents: str):
         # if contents == "" or only whitespace, contents + value are still None
-        if contents != None and contents != "" and contents != len(contents) * " ":
+        if contents != None and not contents == "" and not contents.isspace():
             self.contents = contents.strip()
+        else:
+            self.contents = None
+            return
 
         workbook.graph.clear_forward_links(self)
         # if it's a formula, scan for references
@@ -57,19 +60,24 @@ class Cell:
                     sheet_name = ref[:index]
                     location = ref[index+1:]
 
+                if not sheet_name in workbook.sheet_map:
+                    # TODO
+                    pass
+
                 cell = workbook.get_cell(sheet_name, location)
                 workbook.graph.link(self, cell)
 
-            cycle = workbook.graph.find_cycle(self)
-            if cycle != None:
-                for c in cycle:
-                    c.value = CellError(CellErrorType.CIRCULAR_REFERENCE, "")
+        cycle = workbook.graph.find_cycle(self)
+        if cycle != None:
+            for c in cycle:
+                c.value = CellError(CellErrorType.CIRCULAR_REFERENCE, "")
 
-            ancestors = workbook.graph.get_ancestors(self)
-            for c in ancestors:
-                if cycle == None or (not c in cycle):
-                    c.value = None
-                    c.get_value(workbook, sheet)
+        ancestors = workbook.graph.get_ancestors(self)
+        ordered = ancestors.topological_sort()
+        for c in ordered:
+            if cycle == None or (not c in cycle):
+                c.value = None
+                c.get_value(workbook, sheet)
 
     # check if the contents are a cell error string representation?
     def is_error_string(self):

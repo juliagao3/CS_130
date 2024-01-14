@@ -2,6 +2,7 @@ from typing import *
 from .sheet import Sheet
 from .graph import Graph
 from .cell import Cell
+from . import location as location_utils
 
 class Workbook:
     # A workbook containing zero or more named spreadsheets.
@@ -106,6 +107,10 @@ class Workbook:
         # case does not have to.
         #
         # If the specified sheet name is not found, a KeyError is raised.
+        
+        if not sheet_name.lower() in self.sheet_map.keys():
+            raise KeyError
+        
         return self.sheet_map[sheet_name.lower()].extent
 
     def set_cell_contents(self, sheet_name: str, location: str,
@@ -130,6 +135,10 @@ class Workbook:
         # invalid for some reason, this method does not raise an exception;
         # rather, the cell's value will be a CellError object indicating the
         # naure of the issue.
+        if not sheet_name.lower() in self.sheet_map.keys():
+            raise KeyError
+        
+        location = location_utils.check_location(location)
         self.sheet_map[sheet_name.lower()].set_cell_contents(self, location, contents)
 
     def get_cell_contents(self, sheet_name: str, location: str) -> Optional[str]:
@@ -168,7 +177,9 @@ class Workbook:
         # decimal place, and will not include a decimal place if the value is a
         # whole number.  For example, this function would not return
         # Decimal('1.000'); rather it would return Decimal('1').
+        location = location_utils.check_location(location)
         return self.sheet_map[sheet_name.lower()].get_cell_value(self, location)
     
     def get_cell(self, sheet_name: str, location:str):
+        location = location_utils.check_location(location)
         return self.sheet_map[sheet_name.lower()].get_cell(location)
