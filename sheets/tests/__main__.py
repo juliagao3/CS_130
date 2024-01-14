@@ -58,7 +58,7 @@ def test_one_plus_one_cells():
         sheet_num, sheet_name = wb.new_sheet(None)
 
         wb.set_cell_contents(sheet_name, "A1", "1")
-        wb.set_cell_contents(sheet_name, "A2", "1")
+        wb.set_cell_contents(sheet_name, "A2", "=1")
         wb.set_cell_contents(sheet_name, "A3", "=A1+A2")
 
         assert_eq(wb.get_cell_value(sheet_name, "A1"), decimal.Decimal(1))
