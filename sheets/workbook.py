@@ -84,20 +84,15 @@ class Workbook:
         #
         # If the specified sheet name is not found, a KeyError is raised.
         
-        if (sheet_name.lower() in self.sheet_map.keys()):
 
-            pos = 0
-            for name in self.list_sheets():
-                if name.lower() == sheet_name.lower():
-                    self.sheets.pop(pos)
-                    break
-                pos += 1
+        pos = 0
+        for name in self.list_sheets():
+            if name.lower() == sheet_name.lower():
+                self.sheets.pop(pos)
+                break
+            pos += 1
 
-            self.sheet_map.pop(sheet_name.lower())
-
-        else:
-
-            raise KeyError
+        self.sheet_map.pop(sheet_name.lower())
 
     def get_sheet_extent(self, sheet_name: str) -> Tuple[int, int]:
         # Return a tuple (num-cols, num-rows) indicating the current extent of
@@ -107,9 +102,6 @@ class Workbook:
         # case does not have to.
         #
         # If the specified sheet name is not found, a KeyError is raised.
-        
-        if not sheet_name.lower() in self.sheet_map.keys():
-            raise KeyError
         
         return self.sheet_map[sheet_name.lower()].extent
 
@@ -135,8 +127,6 @@ class Workbook:
         # invalid for some reason, this method does not raise an exception;
         # rather, the cell's value will be a CellError object indicating the
         # naure of the issue.
-        if not sheet_name.lower() in self.sheet_map.keys():
-            raise KeyError
         
         location = location_utils.check_location(location)
         self.sheet_map[sheet_name.lower()].set_cell_contents(self, location, contents)

@@ -21,8 +21,8 @@ python3 -m sheets.tests
   - [ ] finding errors
     - [ ] parse error
     - [ ] bad reference (should move this to the dependency discovery code)
-- [ ] dependency discovery
+- [x] dependency discovery
   - [x] maintain dependency graph
     - [x] remove edges around cells whose content changes
   - [x] identify cycles
-  - [ ] topological sort
+  - [x] topological sort
