@@ -159,6 +159,31 @@ def test_grow_and_shrink_extent():
 
         wb.set_cell_contents(sheet_name, "C4", "")
         assert_eq(wb.get_sheet_extent(sheet_name), init_extent)
+        
+def test_multiple_sheets():
+        wb = sheets.Workbook("wb")
+        sheet_num1, sheet_name1 = wb.new_sheet("Sheet1")
+        sheet_num2, sheet_name2 = wb.new_sheet("Sheet2")
+
+        wb.set_cell_contents(sheet_name1, "A1", "10")
+        wb.set_cell_contents(sheet_name2, "A1", "=Sheet1!A1+5")
+
+        assert_eq(wb.get_cell_value(sheet_name2, "A1"), decimal.Decimal(15))
+
+        wb.set_cell_contents(sheet_name1, "A1", "20")
+
+        assert_eq(wb.get_cell_value(sheet_name2, "A1"), decimal.Decimal(25))
+
+        wb.set_cell_contents(sheet_name1, "A1", "=Sheet2!A1")
+
+        sheet1_a1 = wb.get_cell_value(sheet_name1, "A1")
+        sheet2_a1 = wb.get_cell_value(sheet_name2, "A1")
+
+        assert_eq(type(sheet1_a1), sheets.CellError)
+        assert_eq(type(sheet2_a1), sheets.CellError)
+
+        assert_eq(sheet1_a1.get_type(), sheets.CellErrorType.CIRCULAR_REFERENCE)
+        assert_eq(sheet2_a1.get_type(), sheets.CellErrorType.CIRCULAR_REFERENCE)
 
 def test_all():
         tests = [
@@ -173,7 +198,8 @@ def test_all():
                 test_circular_refs_with_tail,
                 test_grow_and_shrink_extent,
                 test_cell_update,
-                test_cell_update_multiple
+                test_cell_update_multiple,
+                test_multiple_sheets
         ]
 
         GREEN  = "\033[32m"

@@ -28,7 +28,10 @@ class Cell:
                 # TODO: other values (NaN, Infinity, -Infinity) should not be converted to nums
                 # can us decimal.is_finite() method to check
                 # remove trailing zeros from number (str)
-                num = self.contents.rstrip("0")
+                if "." in self.contents:
+                    num = self.contents.rstrip("0")
+                else:
+                    num = self.contents
                 if num[-1] == ".":
                     num = num[:-1]
                 try:
@@ -63,8 +66,9 @@ class Cell:
                 if not sheet_name in workbook.sheet_map:
                     # TODO
                     pass
-
+        
                 cell = workbook.get_cell(sheet_name, location)
+                #print(sheet_name, location, cell.value, cell.contents)
                 workbook.graph.link(self, cell)
 
         cycle = workbook.graph.find_cycle(self)
