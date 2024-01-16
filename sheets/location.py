@@ -31,7 +31,7 @@ def check_location(location: str):
         ValueError is raised if and only if the location is invalid
         """
         location = location.lower()
-        col, row = location_split(location)
-        if col > "zzzz" or row > "9999":
+        col, row = location_string_to_tuple(location)
+        if col > from_base_26("zzzz") or row > 9999:
             raise ValueError
         return location

@@ -5,11 +5,20 @@ from typing import *
 
 from . import interp
 
+def is_empty_content_string(contents):
+    return contents == None or contents == "" or contents.isspace()
+
 class Cell: 
     def __init__(self):
         self.value = None
         self.contents = None
     
+    def __str__(self):
+        if self.contents == None:
+            return "{None}"
+        else:
+            return self.contents
+        
     def get_value(self, workbook, sheet):
         # if not None, we've already evaluated the contents
         if self.value == None and self.contents != None:
@@ -17,11 +26,11 @@ class Cell:
             if self.contents[0] == "=":
                 # call evaluate formula function? also set self.value?
                 # evaluate formula will return a value or raise an error
-                self.value = interp.evaluate_formula(workbook, sheet, self.contents)
+                self.value = interp.evaluate_formula(workbook, sheet, interp.parse_formula(self.contents))
+            elif CellErrorType.from_string(self.contents) != None:
+                self.value = CellError(CellErrorType.from_string(self.contents), "")
             elif self.contents[0] == "'":
                 self.value = self.contents[1:]
-            # elif self.is_error_string():
-            #     self.value = 
             else:
                 # evaluate as a literal (number, date, etc.)
                 # for now, just numbers and strings
@@ -44,58 +53,82 @@ class Cell:
         # evaluate formulas in workbook
         return self.value
 
-    def set_contents(self, workbook, sheet, location, contents: str):
-        # if contents == "" or only whitespace, contents + value are still None
-        if contents != None and not contents == "" and not contents.isspace():
-            self.contents = contents.strip()
-        else:
-            self.contents = None
-            return
-
-        workbook.graph.clear_forward_links(self)
-        # if it's a formula, scan for references
-        if contents[0] == "=":
-            for ref in interp.find_refs(contents):
-                sheet_name = sheet.sheet_name
-                location = ref
-                if "!" in ref:
-                    index = ref.index("!")
-                    sheet_name = ref[:index]
-                    location = ref[index+1:]
-
-                if not sheet_name in workbook.sheet_map:
-                    # TODO
-                    pass
-        
-                cell = workbook.get_cell(sheet_name, location)
-                #print(sheet_name, location, cell.value, cell.contents)
-                workbook.graph.link(self, cell)
-
-        cycle = workbook.graph.find_cycle(self)
-        if cycle != None:
-            for c in cycle:
-                c.value = CellError(CellErrorType.CIRCULAR_REFERENCE, "")
-
+    def recompute_value(self, workbook, sheet):
+        if type(self.value) != CellError or self.value.get_type() != CellErrorType.CIRCULAR_REFERENCE:
+            self.value = None
+            self.get_value(workbook, sheet)
+    
+    def update_referencing_nodes(self, workbook, sheet):
         ancestors = workbook.graph.get_ancestors(self)
         ordered = ancestors.topological_sort()
         for c in ordered:
-            if cycle == None or (not c in cycle):
-                c.value = None
-                c.get_value(workbook, sheet)
+            c.recompute_value(workbook, sheet)
 
-    # check if the contents are a cell error string representation?
-    def is_error_string(self):
-        error_strings = ["#ERROR!", "#CIRCREF!", "#REF!",
-                         "#NAME", "#VALUE!", "#DIV/0"]
-        # if self.contents in error_strings:
-        #     return self.contents.
-        pass
+    def set_contents(self, workbook, sheet, location, contents: str):
+        # if contents == "" or only whitespace, contents + value are still None
+        if is_empty_content_string(contents):
+            self.contents = None
+            workbook.graph.clear_forward_links(self)
+            self.update_referencing_nodes(workbook, sheet)
+            return
+
+        self.contents = contents.strip()
+        self.value = None
+
+        workbook.sheet_references.clear_forward_links((sheet, self))
+        workbook.graph.clear_forward_links(self)
+        # if it's a formula, scan for references
+        if contents[0] == "=":
+            tree = interp.parse_formula(self.contents)
+            if tree == None:
+                self.value = CellError(CellErrorType.PARSE_ERROR, "")
+            else:
+                for ref in interp.find_refs(workbook, sheet, tree):
+                    sheet_name = sheet.sheet_name.lower()
+                    location = ref
+                    if "!" in ref:
+                        index = ref.index("!")
+                        sheet_name = ref[:index].lower()
+                        location = ref[index+1:]
+
+                    workbook.sheet_references.link((sheet, self), sheet_name)
+
+                    try:
+                        cell = workbook.get_cell(sheet_name, location)
+                        workbook.graph.link(self, cell)
+                    except KeyError:
+                        self.value = CellError(CellErrorType.BAD_REFERENCE, "")
+                        return
+                    except ValueError:
+                        self.value = CellError(CellErrorType.BAD_REFERENCE, "")
+                        return
+
+                cycle = workbook.graph.find_cycle(self)
+                if cycle != None:
+                    for cell in cycle:
+                        cell.value = CellError(CellErrorType.CIRCULAR_REFERENCE, "")
+
+        self.update_referencing_nodes(workbook, sheet)
     
 class CellErrorType(enum.Enum):
     '''
     This enum specifies the kinds of errors that spreadsheet cells can hold.
     '''
 
+    def from_string(s):
+        errors = {
+                "#ERROR!": CellErrorType.PARSE_ERROR,
+                "#CIRCREF!": CellErrorType.CIRCULAR_REFERENCE,
+                "#REF!": CellErrorType.BAD_REFERENCE,
+                "#NAME?": CellErrorType.BAD_NAME,
+                "#VALUE!": CellErrorType.TYPE_ERROR,
+                "#DIV/0!": CellErrorType.DIVIDE_BY_ZERO
+        }
+        s = s.upper()
+        if s in errors:
+            return errors[s]
+        return None
+    
     # A formula doesn't parse successfully ("#ERROR!")
     PARSE_ERROR = 1
 
@@ -113,7 +146,6 @@ class CellErrorType(enum.Enum):
 
     # A divide-by-zero was encountered during evaluation ("#DIV/0!")
     DIVIDE_BY_ZERO = 6
-
 
 class CellError:
     '''

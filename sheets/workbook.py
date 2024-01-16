@@ -1,7 +1,7 @@
 from typing import *
 from .sheet import Sheet
 from .graph import Graph
-from .cell import Cell
+from .cell import Cell, CellError, CellErrorType
 from . import location as location_utils
 
 class Workbook:
@@ -10,15 +10,21 @@ class Workbook:
     # Any and all operations on a workbook that may affect calculated cell
     # values should cause the workbook's contents to be updated properly.
 
-    def __init__(self, workbook_name):
+    def __init__(self, workbook_name: str=None):
         # Initialize a new empty workbook.
-        self.workbook_name: str = workbook_name
+        if workbook_name != None:
+            self.workbook_name: str = workbook_name
+        else:
+            self.workbook_name: str = "wb"
 
         # List of sheets in order of creation
         self.sheets: List[Sheet] = []
 
         # map from lowercase sheet name to sheet
         self.sheet_map: Dict[str, Sheet] = {}
+        
+        # cells point to sheet names they reference
+        self.sheet_references = Graph[Any]()
 
         # Default sheet number
         self.sheet_num: int = 1
@@ -74,6 +80,10 @@ class Workbook:
         self.sheet_map[sheet_name.lower()] = sheet
         self.sheets.append(sheet)
 
+        if sheet_name.lower() in self.sheet_references.backward:
+            for sheet, cell in self.sheet_references.backward[sheet_name.lower()]:
+                cell.recompute_value(self, sheet)
+
         return (len(self.sheets)-1, sheet_name)
 
     def del_sheet(self, sheet_name: str) -> None:
@@ -83,16 +93,14 @@ class Workbook:
         # case does not have to.
         #
         # If the specified sheet name is not found, a KeyError is raised.
+        sheet = self.sheet_map.pop(sheet_name.lower())
+        self.sheets.remove(sheet)
         
-
-        pos = 0
-        for name in self.list_sheets():
-            if name.lower() == sheet_name.lower():
-                self.sheets.pop(pos)
-                break
-            pos += 1
-
-        self.sheet_map.pop(sheet_name.lower())
+        # nodes that reference this cell will have their value recomputed
+        # and find that they now have a bad reference since the sheet has
+        # been removed from the workbook
+        for sheet, cell in self.sheet_references.backward[sheet_name.lower()]:
+            cell.value = CellError(CellErrorType.BAD_REFERENCE, "")
 
     def get_sheet_extent(self, sheet_name: str) -> Tuple[int, int]:
         # Return a tuple (num-cols, num-rows) indicating the current extent of

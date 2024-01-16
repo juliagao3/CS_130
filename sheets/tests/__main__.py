@@ -18,6 +18,12 @@ def test_empty_sheet():
         sheet_num, sheet_name = wb.new_sheet(None)
         assert_eq(wb.get_cell_value(sheet_name, "A1"), None)
 
+def test_quoted_contents():
+        wb = sheets.Workbook()
+        sheet_num, sheet_name = wb.new_sheet(None)
+        wb.set_cell_contents(sheet_name, "A1", "'1.000")
+        assert_eq(wb.get_cell_value(sheet_name, "A1"), "1.000")
+
 def test_one_plus_one():
         wb = sheets.Workbook("wb")
         sheet_num, sheet_name = wb.new_sheet(None)
@@ -185,6 +191,181 @@ def test_multiple_sheets():
         assert_eq(sheet1_a1.get_type(), sheets.CellErrorType.CIRCULAR_REFERENCE)
         assert_eq(sheet2_a1.get_type(), sheets.CellErrorType.CIRCULAR_REFERENCE)
 
+def test_delete_add():
+        wb = sheets.Workbook()
+        sheet_num, sheet_name1 = wb.new_sheet("Sheet1")
+        sheet_num, sheet_name2 = wb.new_sheet("Sheet2")
+        
+        wb.set_cell_contents(sheet_name1, "A1", "1.0")
+        wb.set_cell_contents(sheet_name2, "A1", "=Sheet1!A1 + 2.0")
+        
+        assert_eq(wb.get_cell_value(sheet_name2, "A1"), decimal.Decimal(3))
+        
+        wb.del_sheet(sheet_name1)
+        
+        a1 = wb.get_cell_value(sheet_name2, "A1")
+        assert_eq(type(a1), sheets.CellError)
+        assert_eq(a1.get_type(), sheets.CellErrorType.BAD_REFERENCE)
+
+        wb.new_sheet(sheet_name1)
+        
+        assert_eq(wb.get_cell_value(sheet_name2, "A1"), decimal.Decimal(2))
+
+def test_div_by_zero():
+        wb = sheets.Workbook()
+        sheet_num1, sheet_name1 = wb.new_sheet()
+        sheet_num2, sheet_name2 = wb.new_sheet()
+
+        wb.set_cell_contents(sheet_name1, "A1", "100")
+        wb.set_cell_contents(sheet_name2, "B2", "=Sheet1!A1/0")
+        
+        b2 = wb.get_cell_value(sheet_name2, "B2")
+        
+        assert_eq(type(b2), sheets.CellError)
+        assert_eq(b2.get_type(), sheets.CellErrorType.DIVIDE_BY_ZERO)
+       
+def test_parse_error():
+        wb = sheets.Workbook()
+        sheet_num, sheet_name = wb.new_sheet()
+        
+        wb.set_cell_contents(sheet_name, "A1", "=10+")
+        a1 = wb.get_cell_value(sheet_name, "A1")
+
+        assert_eq(type(a1), sheets.CellError)
+        assert_eq(a1.get_type(), sheets.CellErrorType.PARSE_ERROR)
+        
+def test_bad_reference():
+        wb = sheets.Workbook()
+        sheet_num1, sheet_name1 = wb.new_sheet()
+        sheet_num2, sheet_name2 = wb.new_sheet()
+
+        wb.set_cell_contents(sheet_name1, "A1", "1000.000")
+        
+        wb.set_cell_contents(sheet_name2, "A1", "=Sheet3!A1")
+        value_1 = wb.get_cell_value(sheet_name2, "A1")
+        assert_eq(type(value_1), sheets.CellError)
+        assert_eq(value_1.get_type(), sheets.CellErrorType.BAD_REFERENCE)
+
+        wb.set_cell_contents(sheet_name2, "A2", "=Sheet1!AAAAAAA1")
+        value_2 = wb.get_cell_value(sheet_name2, "A2")
+        assert_eq(type(value_2), sheets.CellError)
+        assert_eq(value_2.get_type(), sheets.CellErrorType.BAD_REFERENCE)
+
+        wb.set_cell_contents(sheet_name2, "A3", "=Sheet3!AAAAAAA1")
+        value_2 = wb.get_cell_value(sheet_name2, "A3")
+        assert_eq(type(value_2), sheets.CellError)
+        assert_eq(value_2.get_type(), sheets.CellErrorType.BAD_REFERENCE)                
+
+def test_bad_name():
+        pass
+
+def test_error_string_reps():
+        wb = sheets.Workbook()
+        sheet_num, sheet_name = wb.new_sheet()
+        
+        wb.set_cell_contents(sheet_name, "A1", "#DIV/0!")
+        wb.set_cell_contents(sheet_name, "A2", "'#DIV/0!")
+
+        a1 = wb.get_cell_value(sheet_name, "A1")
+        a2 = wb.get_cell_value(sheet_name, "A2")
+
+        assert_eq(type(a1), sheets.CellError)
+        assert_eq(a1.get_type(), sheets.CellErrorType.DIVIDE_BY_ZERO)
+        assert_eq(a2, "#DIV/0!")
+
+        wb.set_cell_contents(sheet_name, "A1", "#ERROR!")
+        a1 = wb.get_cell_value(sheet_name, "A1")
+        assert_eq(type(a1), sheets.CellError)
+        assert_eq(a1.get_type(), sheets.CellErrorType.PARSE_ERROR)
+
+        wb.set_cell_contents(sheet_name, "A1", "#Circref!")
+        a1 = wb.get_cell_value(sheet_name, "A1")
+        assert_eq(type(a1), sheets.CellError)
+        assert_eq(a1.get_type(), sheets.CellErrorType.CIRCULAR_REFERENCE)
+
+        wb.set_cell_contents(sheet_name, "A1", "#ref!")
+        a1 = wb.get_cell_value(sheet_name, "A1")
+        assert_eq(type(a1), sheets.CellError)
+        assert_eq(a1.get_type(), sheets.CellErrorType.BAD_REFERENCE)
+
+def test_error_literals_in_formulas():
+        wb = sheets.Workbook()
+        sheet_num, sheet_name = wb.new_sheet()
+        
+        wb.set_cell_contents(sheet_name, "A1", "=#REF!+5")
+
+        a1 = wb.get_cell_value(sheet_name, "A1")
+
+        assert_eq(type(a1), sheets.CellError)
+        assert_eq(a1.get_type(), sheets.CellErrorType.BAD_REFERENCE)
+
+
+def test_error_priorities():
+        wb = sheets.Workbook()
+        sheet_num, sheet_name = wb.new_sheet()
+        
+        wb.set_cell_contents(sheet_name, "A1", "=B1+5")
+        wb.set_cell_contents(sheet_name, "B1", "=10.0/0")
+
+        a1 = wb.get_cell_value(sheet_name, "A1")
+        b1 = wb.get_cell_value(sheet_name, "B1")
+
+        assert_eq(type(a1), sheets.CellError)
+        assert_eq(a1.get_type(), sheets.CellErrorType.DIVIDE_BY_ZERO)
+        assert_eq(type(b1), sheets.CellError)
+        assert_eq(b1.get_type(), sheets.CellErrorType.DIVIDE_BY_ZERO)
+
+        wb.set_cell_contents(sheet_name, "A2", "=B2")
+        wb.set_cell_contents(sheet_name, "B2", "=C2")
+        wb.set_cell_contents(sheet_name, "C2", "=B2/0")
+
+        # should prioritize circref error over div/0 error
+        a2 = wb.get_cell_value(sheet_name, "A2")
+        b2 = wb.get_cell_value(sheet_name, "B2")
+        c2 = wb.get_cell_value(sheet_name, "C2")
+
+        assert_eq(type(a2), sheets.CellError)
+        assert_eq(a2.get_type(), sheets.CellErrorType.CIRCULAR_REFERENCE)
+        assert_eq(type(b2), sheets.CellError)
+        assert_eq(b2.get_type(), sheets.CellErrorType.CIRCULAR_REFERENCE)
+        assert_eq(type(c2), sheets.CellError)
+        assert_eq(c2.get_type(), sheets.CellErrorType.CIRCULAR_REFERENCE)
+
+        # parse error should have the highest priority (?)
+        wb.set_cell_contents(sheet_name, "A3", "=#REF!+")
+        wb.set_cell_contents(sheet_name, "B3", "=A3+1")
+
+        a3 = wb.get_cell_value(sheet_name, "A3")
+        b3 = wb.get_cell_value(sheet_name, "B3")
+        
+        assert_eq(type(a3), sheets.CellError)
+        assert_eq(a3.get_type(), sheets.CellErrorType.PARSE_ERROR)
+        assert_eq(type(b3), sheets.CellError)
+        assert_eq(b3.get_type(), sheets.CellErrorType.PARSE_ERROR)
+        
+        wb.set_cell_contents(sheet_name, "A5", "=#error!")
+        wb.set_cell_contents(sheet_name, "B5", "=A5+#Ref!")
+        b5 = wb.get_cell_value(sheet_name, "B5")
+        assert_eq(type(b5), sheets.CellError)
+        #assert_eq(b5.get_type(), sheets.CellErrorType.PARSE_ERROR)
+
+def test_parentheses_in_formulas():
+        wb = sheets.Workbook()
+        sheet_num, sheet_name = wb.new_sheet("sheet1")
+        
+        wb.set_cell_contents(sheet_name, "A1", "=5*(1+1+(2*4))")
+        assert_eq(wb.get_cell_value(sheet_name, "A1"), decimal.Decimal(50))
+        
+def test_formula_in_parenthesis():
+        wb = sheets.Workbook()
+        sheet_num, sheet_name1 = wb.new_sheet("sheet1")
+        sheet_num, sheet_name2 = wb.new_sheet("sheet2")
+        
+        wb.set_cell_contents(sheet_name1, "A1", "=6")
+        wb.set_cell_contents(sheet_name2, "A1", "= 5 * (sheet1!A1 + 1)")
+        
+        assert_eq(wb.get_cell_value(sheet_name2, "A1"), decimal.Decimal(35))
+
 def test_all():
         tests = [
                 test_default_sheet_name,
@@ -199,7 +380,16 @@ def test_all():
                 test_grow_and_shrink_extent,
                 test_cell_update,
                 test_cell_update_multiple,
-                test_multiple_sheets
+                test_multiple_sheets, 
+                test_delete_add,
+                test_div_by_zero,
+                test_parse_error,
+                test_bad_reference,
+                test_error_string_reps,
+                test_error_literals_in_formulas,
+                test_error_priorities,
+                test_parentheses_in_formulas,
+                test_formula_in_parenthesis
         ]
 
         GREEN  = "\033[32m"

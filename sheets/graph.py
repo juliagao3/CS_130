@@ -28,6 +28,9 @@ class Graph(Generic[T]):
             return []
         else:
             return self.backward[node]
+        
+    def get_nodes(self):
+        return self.forward.keys() | self.backward.keys()
 
     def link(self, from_node: T, to_node: T):
         '''
@@ -53,6 +56,18 @@ class Graph(Generic[T]):
                 if len(self.backward[to]) == 0:
                     self.backward.pop(to)
             self.forward.pop(node)
+
+    def clear_backward_link(self, node: T):
+        if node in self.backward:
+            for from_node in self.backward[node]:
+                self.forward[from_node].remove(node)
+                if len(self.forward[from_node]) == 0:
+                    self.forward.pop(from_node)
+            self.backward.pop(node)
+
+    def remove_node(self, node: T):
+        self.clear_forward_links(node)
+        self.clear_backward_link(node)
 
     def find_cycle(self, root: T):
         '''

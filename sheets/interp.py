@@ -16,6 +16,9 @@ def number_arg(index):
                 except decimal.InvalidOperation as e:
                     pass
 
+            if type(values[index]) == sheets.CellError:
+                    return values[index]
+            
             if type(values[index]) != decimal.Decimal:
                     return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, f"{values[index]} failed on parsing")
 
@@ -87,9 +90,9 @@ class FormulaEvaluator(lark.visitors.Interpreter):
         try:
             return self.workbook.get_cell_value(sheet_name, cell_ref) 
         except ValueError as e:
-            return sheets.CellError(sheets.CellErrorType.BAD_REFERENCE, "!".join([sheet_name, cell_ref]), e)
+            assert "Uncaught bad reference!!!"
         except KeyError as e:
-            return sheets.CellError(sheets.CellErrorType.BAD_REFERENCE, "!".join([sheet_name, cell_ref]), e)
+            assert "Uncaught bad reference!!!"
 
     @visit_children_decor
     def concat_expr(self, values):
@@ -105,15 +108,26 @@ class FormulaEvaluator(lark.visitors.Interpreter):
     def string(self, values):
         # if values[0] is a cell location
         return values[0].value[1:-1]
+    
+    @visit_children_decor
+    def error(self, values):
+        return sheets.CellError(sheets.CellErrorType.from_string(values[0]), "")
+    
+    @visit_children_decor
+    def parens(self, values):
+        return values[0]
 
-def evaluate_formula(workbook, sheet, formula):
+def parse_formula(formula):
+    try:
+        return parser.parse(formula)
+    except lark.exceptions.ParseError:
+        return None
+
+def evaluate_formula(workbook, sheet, tree):
     evaluator = FormulaEvaluator(workbook, sheet)
-    tree = parser.parse(formula)
-    value = evaluator.visit(tree)
-    return value
+    return evaluator.visit(tree)
 
-def find_refs(formula):
+def find_refs(workbook, sheet, tree):
     finder = CellRefFinder()
-    tree = parser.parse(formula)
     finder.visit(tree)
     return finder.refs
