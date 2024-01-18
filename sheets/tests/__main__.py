@@ -5,6 +5,9 @@ import sheets
 import decimal
 import traceback
 
+def fail(message):
+        assert False, (message, traceback.extract_stack(limit=2)[-2])
+
 def assert_eq(a, b):
         assert a == b, (f'{str(a)} != {str(b)}', traceback.extract_stack(limit=2)[-2])
 
@@ -23,6 +26,15 @@ def test_quoted_contents():
         sheet_num, sheet_name = wb.new_sheet(None)
         wb.set_cell_contents(sheet_name, "A1", "'1.000")
         assert_eq(wb.get_cell_value(sheet_name, "A1"), "1.000")
+
+def test_bad_location():
+        wb = sheets.Workbook()
+        sheet_num, sheet_name = wb.new_sheet(None)
+        try:
+            wb.set_cell_contents(sheet_name, "A 1", "'1.000")
+            fail("Expected ValueError")
+        except ValueError:
+            pass
 
 def test_one_plus_one():
         wb = sheets.Workbook("wb")
@@ -369,6 +381,8 @@ def test_formula_in_parenthesis():
 def test_all():
         tests = [
                 test_default_sheet_name,
+                test_quoted_contents,
+                test_bad_location,
                 test_one_plus_one,
                 test_one_plus_string,
                 test_one_minus_unary_string,
