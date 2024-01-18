@@ -39,8 +39,8 @@ D1.  [3pts] Briefly describe the high-level design abstractions (e.g. classes
      used often and a formulas.lark file to use for the formula evaluator.
 
      The workbook class includes a list of sheets which is keeping track of creation of Sheets,
-     a sheet map which keeps track of each sheet name to actual Sheet object, a sheet reference 
-     graph which keeps track of the sheet references by each cell, the number of sheets, and 
+     a sheet map which keeps track of each sheet name to actual sheet object, a sheet reference
+     graph which keeps track of the cells referencing each sheet, the number of sheets, and
      another graph for keeping track of the cell's that reference each other. The workbook
      class is used to initialize a workbook and all the components it should include. The sheet class
      includes a tuple of extent which just keeps track of the size of the spreadsheet, the name
@@ -118,9 +118,9 @@ D6.  [3pts] What steps does your spreadsheet engine go through when a sheet is
      recomputed after a sheet-deletion operation?
 
      When a spreadsheet is deleted from a workbook, we first remove the spreadsheet from
-     the sheet map which is a dictionary from sheet name to actual Sheet. Then, we remove the sheet
+     the sheet map which is a dictionary from sheet name to actual sheet. Then, we remove the sheet
      from the list of sheets which keeps track of the order sheets are added. We have a graph
-     that keeps track of what sheets a cell references. So the sheet that being deleted points to 
+     that keeps track of what sheets a cell references. So the sheet that's being deleted points to
      the cells that use that sheet. Those cells that the sheet points to get a value of bad reference
      because we have removed that reference. The links are kept so that if the user adds a sheet with
      the same name, we can recompute the values of those cells. 
