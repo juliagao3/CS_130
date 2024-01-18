@@ -1,4 +1,5 @@
 from typing import *
+import re
 from .sheet import Sheet
 from .graph import Graph
 from .cell import Cell, CellError, CellErrorType
@@ -63,20 +64,26 @@ class Workbook:
         # If the spreadsheet name is an empty string (not None), or it is
         # otherwise invalid, a ValueError is raised.
 
-        if (sheet_name != None) and not (sheet_name.lower() in self.sheet_map.keys()) and (sheet_name != ""):
+       # pattern = r'[^A-Za-z0-9\.\?\!\,\:\;\@\#\$\%\^\&\*\(\)\-\_\s+]'
 
+       # if (sheet_name != None) and re.search(pattern, sheet_name) == None and (sheet_name != ""):
+        #    sheet_name = sheet_name.strip()
+         #   pattern_2 = r'[^\_A-Za-z0-9]'
+          #  if not (sheet_name[0].isalpha() or sheet_name[0] == "_") or ' ' in sheet_name or re.search(pattern_2, sheet_name) != None:
+           #     new_sheet_name = "'" + sheet_name + "'"
+       # else:
+        #    new_sheet_name = sheet_name
+
+        if (sheet_name != None) and not (sheet_name.lower() in self.sheet_map.keys()) and (sheet_name != ""):# and re.search(pattern, sheet_name) == None:
+            #sheet_name = new_sheet_name
             pass
-
         elif (sheet_name == None):
-
             sheet_name = 'Sheet' + str(self.sheet_num)
-            self.sheet_num += 1
-
+            self.sheet_num += 1  
         else:
-
             raise ValueError
 
-        sheet = Sheet(sheet_name)
+        sheet = Sheet(sheet_name.lower())
         self.sheet_map[sheet_name.lower()] = sheet
         self.sheets.append(sheet)
 
@@ -155,6 +162,8 @@ class Workbook:
         #
         # This method will never return a zero-length string; instead, empty
         # cells are indicated by a value of None.
+
+        location = location_utils.check_location(location)
         return self.sheet_map[sheet_name.lower()].get_cell_contents(location)
 
     def get_cell_value(self, sheet_name: str, location: str) -> Any:
@@ -175,6 +184,7 @@ class Workbook:
         # decimal place, and will not include a decimal place if the value is a
         # whole number.  For example, this function would not return
         # Decimal('1.000'); rather it would return Decimal('1').
+
         location = location_utils.check_location(location)
         return self.sheet_map[sheet_name.lower()].get_cell_value(self, location)
     

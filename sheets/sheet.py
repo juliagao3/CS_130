@@ -41,7 +41,6 @@ class Sheet:
         """
         location - string like '[col][row]'
         """
-        location = location_utils.check_location(location)
         if not location in self.cells:
             return None
         return self.cells[location].contents

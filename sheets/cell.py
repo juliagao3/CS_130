@@ -49,6 +49,8 @@ class Cell:
                 except decimal.InvalidOperation:
                     # if it failed to parse store the contents as a string
                     self.value = self.contents
+                if num == "NaN" or num == "Infinity" or num == "-Infinity" or num == "Inf" or num == "-Inf":
+                    self.value = self.contents
 
         # evaluate formulas in workbook
         return self.value

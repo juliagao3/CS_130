@@ -10,8 +10,8 @@ def location_split(location: str):
     while alpha_end < len(location) and location[alpha_end].isalpha():
         alpha_end += 1
 
-    if alpha_end == 0 or alpha_end == len(location) or location[alpha_end].isspace():
-        raise ValueError
+    if alpha_end == 0 or alpha_end == len(location) or ' ' in location:
+        raise KeyError
 
     col = location[:alpha_end]
     row = location[alpha_end:]
