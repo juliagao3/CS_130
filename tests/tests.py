@@ -42,6 +42,13 @@ class TestClass(unittest.TestCase):
                 with self.assertRaises(ValueError):
                         wb.set_cell_contents(sheet_name, "ZZZZ99999", "1")
 
+        def test_empty_ref(self):
+                wb = sheets.Workbook("wb")
+                sheet_num, sheet_name = wb.new_sheet(None)
+
+                wb.set_cell_contents(sheet_name, "A2", "=A1")
+                self.assertEqual(wb.get_cell_value(sheet_name, "A2"), decimal.Decimal(0))
+
         def test_one_plus_one(self):
                 wb = sheets.Workbook("wb")
                 sheet_num, sheet_name = wb.new_sheet(None)
