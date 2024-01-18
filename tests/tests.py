@@ -14,10 +14,10 @@ class TestClass(unittest.TestCase):
                 sheet_num, sheet_name = wb.new_sheet(None)
                 self.assertEqual(sheet_name, "Sheet1")            
                 
-        #def test_special_name(self):
-        #        wb = sheets.Workbook("wb")
-        #        with self.assertRaises(ValueError):
-        #                wb.new_sheet("~Sheet")
+        def test_special_name(self):
+               wb = sheets.Workbook("wb")
+               with self.assertRaises(ValueError):
+                       wb.new_sheet("~Sheet")
 
         def test_empty_sheet(self):
                 wb = sheets.Workbook("wb")
@@ -435,8 +435,8 @@ class TestClass(unittest.TestCase):
         def test_spec_2(self):
                 wb = sheets.Workbook()
                 (index, name) = wb.new_sheet("July Totals")
-                # with self.assertRaises(ValueError):
-                #      wb.new_sheet("july totals")
+                with self.assertRaises(ValueError):
+                     wb.new_sheet("july totals")
                 wb.set_cell_contents(name, 'a1', "'=")
                 self.assertEqual(wb.get_cell_value(name, 'a1'), "=")
                 wb.set_cell_contents(name, 'a2', "''")
