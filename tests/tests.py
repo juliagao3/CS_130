@@ -464,9 +464,9 @@ class TestClass(unittest.TestCase):
                 wb.set_cell_contents(name, 'c3', "=C1*c2")
                 value = wb.get_cell_value(name, 'c3')
                 self.assertEqual(value, decimal.Decimal('651.9')) 
-                # wb.set_cell_contents(name, 'd1', None)
-                # wb.set_cell_contents(name, 'd2', '=D1')
-                # self.assertEqual(wb.get_cell_value(name, 'd2'), decimal.Decimal(0))
+                wb.set_cell_contents(name, 'd1', None)
+                wb.set_cell_contents(name, 'd2', '=D1')
+                self.assertEqual(wb.get_cell_value(name, 'd2'), decimal.Decimal(0))
 
 if __name__ == "__main__":
         unittest.main(verbosity=2)
