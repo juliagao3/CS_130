@@ -4,6 +4,7 @@ import decimal
 from typing import *
 
 from . import interp
+from . import location as location_utils
 
 def is_empty_content_string(contents):
     return contents == None or contents == "" or contents.isspace()
@@ -64,11 +65,8 @@ class Cell:
         self.value = interp.evaluate_formula(workbook, sheet, self.formula_tree)
         
     def check_contents(self, workbook, sheet):
-        if not '*' in self.contents and not '/' in self.contents and not '+' in self.contents and not '-' in self.contents and not '&' in self.contents and self.contents[1].isalpha():
-            location = location_utils.check_location(self.contents[1:])
-            cell = workbook.get_cell(sheet.sheet_name.lower(), location)
-            if cell.value == None and cell.contents == None:
-                self.value = decimal.Decimal(0)
+        if self.value == None:
+            self.value = decimal.Decimal(0)
 
     def update_referencing_nodes(self, workbook, sheet):
         ancestors = workbook.graph.get_ancestors(self)
