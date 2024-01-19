@@ -64,7 +64,7 @@ class Cell:
         self.value = interp.evaluate_formula(workbook, sheet, self.formula_tree)
         
     def check_contents(self, workbook, sheet):
-        if not '*' in self.contents and not '/' in self.contents and not '+' in self.contents and not '-' in self.contents and self.contents[1].isalpha():
+        if not '*' in self.contents and not '/' in self.contents and not '+' in self.contents and not '-' in self.contents and not '&' in self.contents and self.contents[1].isalpha():
             cell = workbook.get_cell(sheet.sheet_name.lower(), self.contents[1:])
             if cell.value == None and cell.contents == None:
                 self.value = decimal.Decimal(0)
