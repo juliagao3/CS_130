@@ -88,7 +88,7 @@ class Workbook:
 
             raise ValueError
 
-        sheet = Sheet(sheet_name.lower())
+        sheet = Sheet(sheet_name)
         self.sheet_map[sheet_name.lower()] = sheet
         self.sheets.append(sheet)
 

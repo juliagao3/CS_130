@@ -7,9 +7,7 @@ class Sheet:
     def __init__(self, sheet_name):
         self.extent = (0, 0)
         self.sheet_name = sheet_name
-        self.cells = {} # cell : location 
-        # Workbook.list_sheets()
-        # include workbook name ?
+        self.cells = {}
     
     def update_sheet_name(self, new_name):
         self.sheet_name = new_name
