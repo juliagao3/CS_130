@@ -93,7 +93,9 @@ class Workbook:
 
         if sheet_name.lower() in self.sheet_references.backward:
             for sheet, cell in self.sheet_references.backward[sheet_name.lower()]:
-                cell.recompute_value(self, sheet)
+                cell.check_references(self, sheet)
+                cell.evaluate_formula(self, sheet)
+                cell.update_referencing_nodes(self, sheet)
 
         return (len(self.sheets)-1, sheet_name)
 

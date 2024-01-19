@@ -8,10 +8,15 @@ from . import interp
 def is_empty_content_string(contents):
     return contents == None or contents == "" or contents.isspace()
 
+class FormulaError(Exception):
+    def __init__(self, value):
+        self.value = value
+
 class Cell: 
     def __init__(self):
         self.value = None
         self.contents = None
+        self.formula_tree = None
     
     def __str__(self):
         if self.contents == None:
@@ -20,95 +25,88 @@ class Cell:
             return self.contents
         
     def get_value(self, workbook, sheet):
-        # if not None, we've already evaluated the contents
-        if self.value == None and self.contents != None:
-            # if the first char is =, evaluate as a formula
-            if self.contents[0] == "=":
-                # call evaluate formula function? also set self.value?
-                # evaluate formula will return a value or raise an error
-                self.value = interp.evaluate_formula(workbook, sheet, interp.parse_formula(self.contents))
-            elif CellErrorType.from_string(self.contents) != None:
-                self.value = CellError(CellErrorType.from_string(self.contents), "")
-            elif self.contents[0] == "'":
-                self.value = self.contents[1:]
-            else:
-                # evaluate as a literal (number, date, etc.)
-                # for now, just numbers and strings
-                # TODO: other values (NaN, Infinity, -Infinity) should not be converted to nums
-                # can us decimal.is_finite() method to check
-                # remove trailing zeros from number (str)
-                if "." in self.contents:
-                    num = self.contents.rstrip("0")
-                else:
-                    num = self.contents
-                if num[-1] == ".":
-                    num = num[:-1]
-                try:
-                    # store value as a Decimal
-                    self.value = decimal.Decimal(num)
-                except decimal.InvalidOperation:
-                    # if it failed to parse store the contents as a string
-                    self.value = self.contents
-                if num == "NaN" or num == "Infinity" or num == "-Infinity" or num == "Inf" or num == "-Inf":
-                    self.value = self.contents
-
-        # evaluate formulas in workbook
         return self.value
 
-    def recompute_value(self, workbook, sheet):
-        if type(self.value) != CellError or self.value.get_type() != CellErrorType.CIRCULAR_REFERENCE:
-            self.value = None
-            self.get_value(workbook, sheet)
-    
+    def parse_formula(self, workbook, sheet):
+        self.formula_tree = interp.parse_formula(self.contents)
+
+        if self.formula_tree == None:
+            raise FormulaError(CellError(CellErrorType.PARSE_ERROR, ""))
+
+    def check_references(self, workbook, sheet):
+        for ref in interp.find_refs(workbook, sheet, self.formula_tree):
+            sheet_name = sheet.sheet_name.lower()
+            location = ref
+            if "!" in ref:
+                index = ref.index("!")
+                sheet_name = ref[:index].lower()
+                location = ref[index+1:]
+
+            workbook.sheet_references.link((sheet, self), sheet_name)
+
+            try:
+                cell = workbook.get_cell(sheet_name, location)
+                workbook.graph.link(self, cell)
+            except KeyError:
+                raise FormulaError(CellError(CellErrorType.BAD_REFERENCE, ""))
+            except ValueError:
+                raise FormulaError(CellError(CellErrorType.BAD_REFERENCE, ""))
+
+    def check_cycles(self, workbook, sheet):
+        cycle = workbook.graph.find_cycle(self)
+        if cycle != None:
+            for cell in cycle:
+                cell.value = CellError(CellErrorType.CIRCULAR_REFERENCE, "")
+        if cycle != None and self in cycle:
+            raise FormulaError(CellError(CellErrorType.CIRCULAR_REFERENCE, ""))
+
+    def evaluate_formula(self, workbook, sheet):
+        self.value = interp.evaluate_formula(workbook, sheet, self.formula_tree)
+
     def update_referencing_nodes(self, workbook, sheet):
         ancestors = workbook.graph.get_ancestors(self)
         ordered = ancestors.topological_sort()
         for c in ordered:
-            c.recompute_value(workbook, sheet)
+            if c == self:
+                continue
+            c.evaluate_formula(workbook, sheet)
 
-    def set_contents(self, workbook, sheet, location, contents: str):
-        # if contents == "" or only whitespace, contents + value are still None
+    def set_contents(self, workbook, sheet, location: str, contents: str):
+        workbook.sheet_references.clear_forward_links((sheet, self))
+        workbook.graph.clear_forward_links(self)
+
         if is_empty_content_string(contents):
             self.contents = None
-            workbook.graph.clear_forward_links(self)
-            self.update_referencing_nodes(workbook, sheet)
+            self.value = None
             return
 
         self.contents = contents.strip()
-        self.value = None
 
-        workbook.sheet_references.clear_forward_links((sheet, self))
-        workbook.graph.clear_forward_links(self)
-        # if it's a formula, scan for references
         if contents[0] == "=":
-            tree = interp.parse_formula(self.contents)
-            if tree == None:
-                self.value = CellError(CellErrorType.PARSE_ERROR, "")
-            else:
-                for ref in interp.find_refs(workbook, sheet, tree):
-                    sheet_name = sheet.sheet_name.lower()
-                    location = ref
-                    if "!" in ref:
-                        index = ref.index("!")
-                        sheet_name = ref[:index].lower()
-                        location = ref[index+1:]
+            try:
+                self.parse_formula(workbook, sheet)
+                self.check_references(workbook, sheet)
+                self.check_cycles(workbook, sheet)
+                self.evaluate_formula(workbook, sheet)
+            except FormulaError as e:
+                self.value = e.value
+                workbook.sheet_references.clear_forward_links((sheet, self))
+                workbook.graph.clear_forward_links(self)
+        elif contents[0] == "'":
+            self.value = contents[1:]
+        elif CellErrorType.from_string(contents) != None:
+            self.value = CellError(CellErrorType.from_string(contents), "")
+        else:
+            try:
+                num = contents
+                if "." in num:
+                    num = num.rstrip("0")
+                self.value = decimal.Decimal(num)
 
-                    workbook.sheet_references.link((sheet, self), sheet_name)
-
-                    try:
-                        cell = workbook.get_cell(sheet_name, location)
-                        workbook.graph.link(self, cell)
-                    except KeyError:
-                        self.value = CellError(CellErrorType.BAD_REFERENCE, "")
-                        return
-                    except ValueError:
-                        self.value = CellError(CellErrorType.BAD_REFERENCE, "")
-                        return
-
-                cycle = workbook.graph.find_cycle(self)
-                if cycle != None:
-                    for cell in cycle:
-                        cell.value = CellError(CellErrorType.CIRCULAR_REFERENCE, "")
+                if not self.value.is_finite():
+                    self.value = contents
+            except decimal.InvalidOperation:
+                self.value = contents
 
         self.update_referencing_nodes(workbook, sheet)
     
