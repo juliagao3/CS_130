@@ -19,10 +19,7 @@ class Cell:
         self.formula_tree = None
     
     def __str__(self):
-        if self.contents == None:
-            return "{None}"
-        else:
-            return self.contents
+        return str(self.contents)
         
     def get_value(self, workbook, sheet):
         return self.value
