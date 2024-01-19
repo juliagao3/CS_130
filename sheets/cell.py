@@ -4,7 +4,6 @@ import decimal
 from typing import *
 
 from . import interp
-from . import location as location_utils
 
 def is_empty_content_string(contents):
     return contents == None or contents == "" or contents.isspace()
