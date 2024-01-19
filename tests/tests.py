@@ -49,6 +49,14 @@ class TestClass(unittest.TestCase):
                 wb.set_cell_contents(sheet_name, "A2", "=A1")
                 self.assertEqual(wb.get_cell_value(sheet_name, "A2"), decimal.Decimal(0))
 
+        def test_concat_empty(self):
+                wb = sheets.Workbook("wb")
+                sheet_num, sheet_name = wb.new_sheet(None)
+
+                wb.set_cell_contents(sheet_name, "A2", "hello")
+                wb.set_cell_contents(sheet_name, "A3", "=A1 & A2")
+                self.assertEqual(wb.get_cell_value(sheet_name, "A3"), "hello")
+
         def test_one_plus_one(self):
                 wb = sheets.Workbook("wb")
                 sheet_num, sheet_name = wb.new_sheet(None)
