@@ -1,4 +1,5 @@
 from typing import *
+import decimal
 import re
 from .sheet import Sheet
 from .graph import Graph
@@ -198,7 +199,15 @@ class Workbook:
         # Decimal('1.000'); rather it would return Decimal('1').
 
         location = location_utils.check_location(location)
-        return self.sheet_map[sheet_name.lower()].get_cell_value(self, location)
+        solution = self.sheet_map[sheet_name.lower().strip()].get_cell_value(self, location)
+        if isinstance(solution, decimal.Decimal):
+            solution = str(solution)
+            if "." in solution:
+                solution = solution.rstrip("0")
+            if solution[-1] == ".":
+                solution = solution[:-1]
+            solution = decimal.Decimal(solution)
+        return solution
     
     def get_cell(self, sheet_name: str, location:str):
         location = location_utils.check_location(location)
