@@ -62,6 +62,12 @@ class Cell:
 
     def evaluate_formula(self, workbook, sheet):
         self.value = interp.evaluate_formula(workbook, sheet, self.formula_tree)
+        
+    def check_contents(self, workbook, sheet):
+        if not '*' in self.contents and not '/' in self.contents and not '+' in self.contents and not '-' in self.contents and self.contents[1].isalpha():
+            cell = workbook.get_cell(sheet.sheet_name.lower(), self.contents[1:])
+            if cell.value == None and cell.contents == None:
+                self.value = decimal.Decimal(0)
 
     def update_referencing_nodes(self, workbook, sheet):
         ancestors = workbook.graph.get_ancestors(self)
@@ -88,6 +94,7 @@ class Cell:
                 self.check_references(workbook, sheet)
                 self.check_cycles(workbook, sheet)
                 self.evaluate_formula(workbook, sheet)
+                self.check_contents(workbook, sheet)
             except FormulaError as e:
                 self.value = e.value
                 workbook.sheet_references.clear_forward_links((sheet, self))

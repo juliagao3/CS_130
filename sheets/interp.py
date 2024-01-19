@@ -59,11 +59,11 @@ class FormulaEvaluator(lark.visitors.Interpreter):
     @number_arg(0)
     @number_arg(2)
     def mul_expr(self, values):
-        if values[2] == decimal.Decimal(0):
-            return sheets.CellError(sheets.CellErrorType.DIVIDE_BY_ZERO, "");
         if values[1] == "*":
             return values[0] * values[2]
         elif values[1] == '/':
+            if values[2] == decimal.Decimal(0):
+                return sheets.CellError(sheets.CellErrorType.DIVIDE_BY_ZERO, "")
             return values[0] / values[2]
         else:
             assert f"Unexpected mul_expr operator: {values[1]}"
