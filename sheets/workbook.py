@@ -93,8 +93,14 @@ class Workbook:
 
         if sheet_name.lower() in self.sheet_references.backward:
             for sheet, cell in self.sheet_references.backward[sheet_name.lower()]:
-                cell.check_references(self, sheet)
-                cell.evaluate_formula(self, sheet)
+                try:
+                    cell.check_references(self, sheet)
+                    cell.evaluate_formula(self, sheet)
+                except FormulaError as e:
+                    cell.value = e.value
+
+                # this step is probly slow... it would be better to update
+                # every affected cell outside this loop
                 cell.update_referencing_nodes(self, sheet)
 
         return (len(self.sheets)-1, sheet_name)
