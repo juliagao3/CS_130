@@ -495,6 +495,44 @@ class TestClass(unittest.TestCase):
 
                 self.assertEqual(wb.list_sheets(), [sheet_name1, sheet_name2, sheet_name3])
 
+        def test_double_cycle(self):
+                wb = sheets.Workbook()
+                (index, name) = wb.new_sheet()
+
+                wb.set_cell_contents(name, "A1", "=A2")
+                wb.set_cell_contents(name, "A3", "=A2")
+                wb.set_cell_contents(name, "A2", "=A1+A3")
+
+                value = wb.get_cell_value(name, "A1")
+                self.assertEqual(type(value), sheets.CellError)
+                self.assertEqual(value.get_type(), sheets.CellErrorType.CIRCULAR_REFERENCE)
+
+                value = wb.get_cell_value(name, "A2")
+                self.assertEqual(type(value), sheets.CellError)
+                self.assertEqual(value.get_type(), sheets.CellErrorType.CIRCULAR_REFERENCE)
+
+                value = wb.get_cell_value(name, "A3")
+                self.assertEqual(type(value), sheets.CellError)
+                self.assertEqual(value.get_type(), sheets.CellErrorType.CIRCULAR_REFERENCE)
+
+                wb.set_cell_contents(name, "A1", "1")
+
+                self.assertEqual(wb.get_cell_value(name, "A1"), decimal.Decimal(1.0))
+
+                value = wb.get_cell_value(name, "A2")
+                self.assertEqual(type(value), sheets.CellError)
+                self.assertEqual(value.get_type(), sheets.CellErrorType.CIRCULAR_REFERENCE)
+
+                value = wb.get_cell_value(name, "A3")
+                self.assertEqual(type(value), sheets.CellError)
+                self.assertEqual(value.get_type(), sheets.CellErrorType.CIRCULAR_REFERENCE)
+
+                wb.set_cell_contents(name, "A3", "2")
+
+                self.assertEqual(wb.get_cell_value(name, "A1"), decimal.Decimal(1.0))
+                self.assertEqual(wb.get_cell_value(name, "A2"), decimal.Decimal(3.0))
+                self.assertEqual(wb.get_cell_value(name, "A3"), decimal.Decimal(2.0))
+
         def test_spec(self):
                 self.assertEqual(sheets.version, "1.0")
                 wb = sheets.Workbook()
