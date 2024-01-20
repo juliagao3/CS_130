@@ -340,9 +340,6 @@ class TestClass(unittest.TestCase):
                 self.assertIsInstance(value_2, sheets.CellError)
                 self.assertEqual(value_2.get_type(), sheets.CellErrorType.BAD_REFERENCE)                
 
-        # def test_bad_name():
-        #         pass
-
         def test_error_string_reps(self):
                 wb = sheets.Workbook()
                 sheet_num, sheet_name = wb.new_sheet()
@@ -549,4 +546,4 @@ class TestClass(unittest.TestCase):
                 self.assertEqual(wb.get_cell_value(name, 'd2'), decimal.Decimal(0))
 
 if __name__ == "__main__":
-        unittest.main(verbosity=2)
+        unittest.main()
