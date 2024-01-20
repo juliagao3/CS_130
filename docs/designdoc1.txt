@@ -89,6 +89,32 @@ D3.  [4pts] At a high level (e.g. pseudocode or higher), enumerate the steps
      sheet between the cells and raise the circular reference error. We then recompute all the values of the
      cells that reference this cell and update the cells accordingly.
 
+     1. Clear previous links in the dependency graphs for the workbook.
+     2. If the contents are empty, whitespace, or None then the cell's value and contents are None
+     3. Otherwise...
+
+	1. The cell's contents are updated and stripped of leading and trailing whitespace.
+        2. If the contents are a formula...
+
+	   1. The formula is parsed.
+	   2. The references in the formula are checked for validity and links are created in the
+	      workbook's dependency graphs.
+	   3. The dependency graph is searched for cycles.
+	      - If found then all cells in the cycle have their value changed to a value error
+	   4. The formula is evaluated and the value of the cell is the result.
+	   5. If the result of the formula was None, then the cell gets a value of Decimal(0)
+
+	   - If the process fails at any point (parse errors, bad references, cycles) an exception
+	     is raised and caught and the value of the cell is set to an appropriate error value.
+
+	3. If the contents are a single quote string then that's the cell's value.
+	4. If the contents are an error string representation then that's the cell's value.
+	5. If the contents parse as a finite decimal, then that's the cell's value.
+	6. If none of the above cases apply, then the cell's value is its contents.
+
+     4. Cells with formulas referencing this cell (directly or indirectly) have their formulas
+        re-evaluated.
+
 
 D4.  [3pts] How does your spreadsheet engine identify what other cells need
      updating when a cell's contents are changed, and what order to update them?
