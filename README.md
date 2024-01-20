@@ -3,7 +3,7 @@
 ## Testing
 
 ```
-python3 -m sheets.tests
+python -m unittest tests.tests
 ```
 
 ## TODO
