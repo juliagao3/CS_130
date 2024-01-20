@@ -1,11 +1,13 @@
 #! /usr/bin/env python3
 import unittest
+import unittest.mock
 
 import sys
 import sheets
 import decimal
 import traceback
 import re
+import io
 
 class TestClass(unittest.TestCase):
 
@@ -49,6 +51,14 @@ class TestClass(unittest.TestCase):
                 wb.set_cell_contents(sheet_name, "A2", "=A1")
                 self.assertEqual(wb.get_cell_value(sheet_name, "A2"), decimal.Decimal(0))
 
+        def test_concat_empty(self):
+                wb = sheets.Workbook("wb")
+                sheet_num, sheet_name = wb.new_sheet(None)
+
+                wb.set_cell_contents(sheet_name, "A2", "hello")
+                wb.set_cell_contents(sheet_name, "A3", "=A1 & A2")
+                self.assertEqual(wb.get_cell_value(sheet_name, "A3"), "hello")
+
         def test_one_plus_one(self):
                 wb = sheets.Workbook("wb")
                 sheet_num, sheet_name = wb.new_sheet(None)
@@ -64,6 +74,18 @@ class TestClass(unittest.TestCase):
               a1 = wb.get_cell_value(sheet_name, "A1")
               self.assertIsInstance(a1, sheets.CellError)
               self.assertEqual(a1.get_type(), sheets.CellErrorType.TYPE_ERROR)
+
+        def test_basic_unary_ops(self):
+                wb = sheets.Workbook()
+                sheet_num, sheet_name = wb.new_sheet()
+
+                wb.set_cell_contents(sheet_name, "A1", "=-20.000")
+                a1 = wb.get_cell_value(sheet_name, "A1")
+                self.assertEqual(a1, decimal.Decimal(-20))
+
+                wb.set_cell_contents(sheet_name, "A2", "=-A1")
+                a2 = wb.get_cell_value(sheet_name, "A2")
+                self.assertEqual(a2, decimal.Decimal(20))
                 
         def test_one_minus_unary_string(self):
                 wb = sheets.Workbook("wb")
@@ -111,6 +133,15 @@ class TestClass(unittest.TestCase):
                 self.assertIsInstance(a3, sheets.CellError)
                 self.assertEqual(a3.get_type(), sheets.CellErrorType.TYPE_ERROR)
 
+        def test_basic_division(self):
+                wb = sheets.Workbook()
+                sheet_num, sheet_name = wb.new_sheet()
+
+                wb.set_cell_contents(sheet_name, "A1", "=10.0/2.0")
+                a1 = wb.get_cell_value(sheet_name, "A1")
+
+                self.assertEqual(a1, decimal.Decimal(5))
+
         def test_cell_update(self):
                 wb = sheets.Workbook("wb")
                 sheet_num, sheet_name = wb.new_sheet(None)
@@ -138,6 +169,34 @@ class TestClass(unittest.TestCase):
                 wb.set_cell_contents(sheet_name, "A1", "2")
 
                 self.assertEqual(wb.get_cell_value(sheet_name, "A3"), decimal.Decimal(4))
+
+        @unittest.mock.patch('sys.stdout', new_callable=io.StringIO)
+        def assert_stdout_for_object(self, obj, expected_print, mock_print):
+                print(obj)
+                self.assertEqual(mock_print.getvalue(), expected_print)
+
+        def test_print_cell(self):
+                wb = sheets.Workbook()
+                sheet_num, sheet_name = wb.new_sheet()
+
+                wb.set_cell_contents(sheet_name, "A1", "testing print")
+                a1 = wb.get_cell(sheet_name, "A1")
+                self.assert_stdout_for_object(a1, "testing print\n") 
+
+                a2 = wb.get_cell(sheet_name, "A2")
+                self.assert_stdout_for_object(a2, "None\n")
+
+        def test_non_finite_value(self):
+                wb = sheets.Workbook()
+                sheet_num, sheet_name = wb.new_sheet()
+
+                wb.set_cell_contents(sheet_name, "A1", "-Infinity")
+                a1 = wb.get_cell_value(sheet_name, "A1")
+                self.assertEqual(a1, "-Infinity")
+
+                wb.set_cell_contents(sheet_name, "A2", "NaN")
+                a2 = wb.get_cell_value(sheet_name, "A2")
+                self.assertEqual(a2, "NaN")
 
         def test_circular_refs(self):
                 wb = sheets.Workbook("wb")
@@ -281,9 +340,6 @@ class TestClass(unittest.TestCase):
                 self.assertIsInstance(value_2, sheets.CellError)
                 self.assertEqual(value_2.get_type(), sheets.CellErrorType.BAD_REFERENCE)                
 
-        # def test_bad_name():
-        #         pass
-
         def test_error_string_reps(self):
                 wb = sheets.Workbook()
                 sheet_num, sheet_name = wb.new_sheet()
@@ -418,6 +474,27 @@ class TestClass(unittest.TestCase):
                 with self.assertRaises(KeyError):
                         wb.get_cell_value(sheet_name, "A2")
 
+        def test_get_cell_contents(self):
+                wb = sheets.Workbook()
+                sheet_num, sheet_name = wb.new_sheet()
+
+                a1 = wb.get_cell_contents(sheet_name, "A1")
+                self.assertEqual(a1, None)
+
+                wb.set_cell_contents(sheet_name, "A2", "contents")
+                a2 = wb.get_cell_contents(sheet_name, "A2")
+                self.assertEqual(a2, "contents")
+
+        def test_num_sheets_and_list_sheets(self):
+                wb = sheets.Workbook()
+                sheet_num1, sheet_name1 = wb.new_sheet()
+                sheet_num2, sheet_name2 = wb.new_sheet()
+                sheet_num3, sheet_name3 = wb.new_sheet()
+                
+                self.assertEqual(wb.num_sheets(), 3)
+
+                self.assertEqual(wb.list_sheets(), [sheet_name1, sheet_name2, sheet_name3])
+
         def test_spec(self):
                 self.assertEqual(sheets.version, "1.0")
                 wb = sheets.Workbook()
@@ -464,9 +541,9 @@ class TestClass(unittest.TestCase):
                 wb.set_cell_contents(name, 'c3', "=C1*c2")
                 value = wb.get_cell_value(name, 'c3')
                 self.assertEqual(value, decimal.Decimal('651.9')) 
-                # wb.set_cell_contents(name, 'd1', None)
-                # wb.set_cell_contents(name, 'd2', '=D1')
-                # self.assertEqual(wb.get_cell_value(name, 'd2'), decimal.Decimal(0))
+                wb.set_cell_contents(name, 'd1', None)
+                wb.set_cell_contents(name, 'd2', '=D1')
+                self.assertEqual(wb.get_cell_value(name, 'd2'), decimal.Decimal(0))
 
 if __name__ == "__main__":
-        unittest.main(verbosity=2)
+        unittest.main()
