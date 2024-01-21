@@ -17,7 +17,7 @@ class Sheet:
         location - string like '[col][row]'
         """
         if not location in self.cells:
-            self.cells[location] = Cell()
+            self.cells[location] = Cell(self)
         self.cells[location].set_contents(workbook, self, location, content)
         
         if content == None or content == "" or content.isspace():
@@ -53,6 +53,6 @@ class Sheet:
     
     def get_cell(self, location: str):
         if not location in self.cells:
-            self.cells[location] = Cell()
+            self.cells[location] = Cell(self)
         
         return self.cells[location]

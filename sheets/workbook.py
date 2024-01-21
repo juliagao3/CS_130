@@ -92,6 +92,7 @@ class Workbook:
         self.sheet_map[sheet_name.lower()] = sheet
         self.sheets.append(sheet)
 
+        working = set()
         if sheet_name.lower() in self.sheet_references.backward:
             for sheet, cell in self.sheet_references.backward[sheet_name.lower()]:
                 try:
@@ -102,7 +103,9 @@ class Workbook:
 
                 # this step is probly slow... it would be better to update
                 # every affected cell outside this loop
-                cell.update_referencing_nodes(self, sheet)
+                working.add(cell)
+
+        self.update_ancestors(working)
 
         return (len(self.sheets)-1, sheet_name)
 
@@ -119,8 +122,11 @@ class Workbook:
         # nodes that reference this cell will have their value recomputed
         # and find that they now have a bad reference since the sheet has
         # been removed from the workbook
+        broken = set()
         for sheet, cell in self.sheet_references.backward[sheet_name.lower()]:
             cell.value = CellError(CellErrorType.BAD_REFERENCE, "")
+            broken.add(cell)
+        self.update_ancestors(broken)
 
     def get_sheet_extent(self, sheet_name: str) -> Tuple[int, int]:
         # Return a tuple (num-cols, num-rows) indicating the current extent of
@@ -212,3 +218,19 @@ class Workbook:
     def get_cell(self, sheet_name: str, location:str):
         location = location_utils.check_location(location)
         return self.sheet_map[sheet_name.lower()].get_cell(location)
+
+    def update_ancestors(self, nodes):
+        order = self.graph.get_topological_order()
+        ancestors = self.graph.get_ancestors_of_set(nodes)
+        for cell in order:
+            if cell in ancestors:
+                cell.evaluate_formula(self, cell.sheet)
+
+    def check_cycles(self):
+        cycles = self.graph.get_cycles()
+        circular = set()
+        for cycle in cycles:
+            for cell in cycle:
+                cell.value = CellError(CellErrorType.CIRCULAR_REFERENCE, "")
+                circular.add(cell)
+        self.update_ancestors(circular)

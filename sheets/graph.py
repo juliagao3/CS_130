@@ -158,29 +158,20 @@ class Graph(Generic[T]):
 
         return sccs, topological_order
 
-    def get_ancestors(self, root: T):
+    def get_ancestors_of_set(self, nodes):
         '''
-        Return the nodes reachable from root by following backward links.
+        Returns the set of nodes reachable by following backward links starting
+        from any node in the given set. Does not return any nodes in the set.
         '''
-        seen = set()
-        path = []
-        stack = [(0, root, list(self.get_backward_links(root)))]
-        subgraph = Graph()
-        while len(stack) > 0:
-            i, cur, children = stack.pop()
+        ancestors = set()
+        queue = [n for n in nodes]
+        while len(queue) > 0:
+            v = queue.pop(0)
 
-            if i == 0:
-                if len(path) > 0:
-                    subgraph.link(path[-1], cur)
-                if cur in seen:
-                    continue
-                seen.add(cur)
-                path.append(cur)
+            if not v in nodes:
+                ancestors.add(v)
 
-            if i < len(children):
-                stack.append((i+1, cur, children))
-                stack.append((0, children[i], list(self.get_backward_links(children[i]))))
-            else:
-                path.pop()
-        
-        return subgraph
+            for w in self.get_backward_links(v):
+                if not w in ancestors and not w in nodes:
+                    queue.append(w)
+        return ancestors

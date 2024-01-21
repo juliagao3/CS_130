@@ -13,7 +13,8 @@ class FormulaError(Exception):
         self.value = value
 
 class Cell: 
-    def __init__(self):
+    def __init__(self, sheet):
+        self.sheet = sheet
         self.value = None
         self.contents = None
         self.formula_tree = None
@@ -50,16 +51,9 @@ class Cell:
                 raise FormulaError(CellError(CellErrorType.BAD_REFERENCE, ""))
 
     def check_cycles(self, workbook, sheet):
-        in_cycle = False
         for cycle in workbook.graph.get_cycles():
-            for cell in cycle:
-                if cell == self:
-                    in_cycle = True
-                cell.value = CellError(CellErrorType.CIRCULAR_REFERENCE, "")
-                cell.update_referencing_nodes(workbook, sheet)
-
-        if in_cycle:
-            raise FormulaError(CellError(CellErrorType.CIRCULAR_REFERENCE, ""))
+            if self in cycle:
+                raise FormulaError(CellError(CellErrorType.CIRCULAR_REFERENCE, ""))
 
     def evaluate_formula(self, workbook, sheet):
         self.value = interp.evaluate_formula(workbook, sheet, self.formula_tree)
@@ -69,12 +63,12 @@ class Cell:
             self.value = decimal.Decimal(0)
 
     def update_referencing_nodes(self, workbook, sheet):
-        ancestors = workbook.graph.get_ancestors(self)
+        ancestors = workbook.graph.get_ancestors_of_set(set([self]))
         ordered = workbook.graph.get_topological_order()
         for c in ordered:
             if c == self:
                 continue
-            if not c in ancestors.forward and not c in ancestors.backward:
+            if not c in ancestors:
                 continue
             c.evaluate_formula(workbook, sheet)
 
@@ -93,6 +87,7 @@ class Cell:
             try:
                 self.parse_formula(workbook, sheet)
                 self.check_references(workbook, sheet)
+                workbook.check_cycles()
                 self.check_cycles(workbook, sheet)
                 self.evaluate_formula(workbook, sheet)
                 self.check_contents(workbook, sheet)
