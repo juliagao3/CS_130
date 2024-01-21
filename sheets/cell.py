@@ -50,11 +50,15 @@ class Cell:
                 raise FormulaError(CellError(CellErrorType.BAD_REFERENCE, ""))
 
     def check_cycles(self, workbook, sheet):
-        cycle = workbook.graph.find_cycle(self)
-        if cycle != None:
+        in_cycle = False
+        for cycle in workbook.graph.get_cycles():
             for cell in cycle:
+                if cell == self:
+                    in_cycle = True
                 cell.value = CellError(CellErrorType.CIRCULAR_REFERENCE, "")
-        if cycle != None and self in cycle:
+                cell.update_referencing_nodes(workbook, sheet)
+
+        if in_cycle:
             raise FormulaError(CellError(CellErrorType.CIRCULAR_REFERENCE, ""))
 
     def evaluate_formula(self, workbook, sheet):
@@ -66,9 +70,11 @@ class Cell:
 
     def update_referencing_nodes(self, workbook, sheet):
         ancestors = workbook.graph.get_ancestors(self)
-        ordered = ancestors.topological_sort()
+        ordered = workbook.graph.get_topological_order()
         for c in ordered:
             if c == self:
+                continue
+            if not c in ancestors.forward and not c in ancestors.backward:
                 continue
             c.evaluate_formula(workbook, sheet)
 
@@ -92,8 +98,6 @@ class Cell:
                 self.check_contents(workbook, sheet)
             except FormulaError as e:
                 self.value = e.value
-                workbook.sheet_references.clear_forward_links((sheet, self))
-                workbook.graph.clear_forward_links(self)
         elif contents[0] == "'":
             self.value = contents[1:]
         elif CellErrorType.from_string(contents) != None:
