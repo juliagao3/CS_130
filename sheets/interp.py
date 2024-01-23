@@ -123,6 +123,8 @@ def parse_formula(formula):
         return parser.parse(formula)
     except lark.exceptions.ParseError:
         return None
+    except lark.exceptions.UnexpectedCharacters:
+        return None
 
 def evaluate_formula(workbook, sheet, tree):
     evaluator = FormulaEvaluator(workbook, sheet)

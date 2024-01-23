@@ -9,6 +9,12 @@ class Sheet:
         self.sheet_name = sheet_name
         self.cells = {}
     
+    def to_json(self):
+        return {
+            "name": self.sheet_name,
+            "cell-contents": self.cells
+        }
+
     def update_sheet_name(self, new_name):
         self.sheet_name = new_name
 
@@ -18,7 +24,7 @@ class Sheet:
         """
         if not location in self.cells:
             self.cells[location] = Cell(self)
-        self.cells[location].set_contents(workbook, self, location, content)
+        self.cells[location].set_contents(workbook, content)
         
         if content == None or content == "" or content.isspace():
             self.extent = (0, 0)
@@ -43,9 +49,9 @@ class Sheet:
             return None
         return self.cells[location].contents
 
-    def get_cell_value(self, workbook, location: str):
+    def get_cell_value(self, location: str):
         try:
-            return self.cells[location].get_value(workbook, self)
+            return self.cells[location].get_value()
         except KeyError:
             # cell is not in the dict;
             # its value has not been set and it is empty

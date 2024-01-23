@@ -24,10 +24,25 @@ class TestClass(unittest.TestCase):
                 wb.del_sheet(n)
                 self.assertEqual(wb.list_sheets(), ["Sheet2"])
 
-        def test_special_name(self):
-               wb = sheets.Workbook("wb")
-               with self.assertRaises(ValueError):
-                       wb.new_sheet("~Sheet")
+        def test_overlapping_sheets(self):
+                wb = sheets.Workbook()
+                i, n = wb.new_sheet("Sheet1")
+                j, m = wb.new_sheet()
+
+                self.assertEqual(wb.list_sheets(), ["Sheet1", "Sheet2"])
+
+        def test_empty_sheet_name(self):
+                wb = sheets.Workbook()
+                with self.assertRaises(ValueError):
+                        wb.new_sheet("\t")
+                with self.assertRaises(ValueError):
+                        wb.new_sheet("\n")
+                with self.assertRaises(ValueError):
+                        wb.new_sheet("")
+                with self.assertRaises(ValueError):
+                        wb.new_sheet("  ")
+                with self.assertRaises(ValueError):
+                        wb.new_sheet("~Sheet")
 
         def test_empty_sheet(self):
                 wb = sheets.Workbook("wb")
@@ -39,6 +54,12 @@ class TestClass(unittest.TestCase):
                 sheet_num, sheet_name = wb.new_sheet(None)
                 wb.set_cell_contents(sheet_name, "A1", "'1.000")
                 self.assertEqual(wb.get_cell_value(sheet_name, "A1"), "1.000")
+
+                wb.set_cell_contents(sheet_name, "A1", "'   1.000")
+                self.assertEqual(wb.get_cell_value(sheet_name, "A1"), "   1.000")
+
+                wb.set_cell_contents(sheet_name, "A1", "   '   1.000")
+                self.assertEqual(wb.get_cell_value(sheet_name, "A1"), "   1.000")
 
         def test_bad_location(self):
                 wb = sheets.Workbook()
@@ -66,6 +87,15 @@ class TestClass(unittest.TestCase):
                 wb.set_cell_contents(sheet_name, "A2", "hello")
                 wb.set_cell_contents(sheet_name, "A3", "=A1 & A2")
                 self.assertEqual(wb.get_cell_value(sheet_name, "A3"), "hello")
+
+        def test_leading_whitespace(self):
+                wb = sheets.Workbook()
+                sheet_num, sheet_name = wb.new_sheet()
+
+                wb.set_cell_contents(sheet_name, "A1","'      grrr  grrr   ")
+                a1 = wb.get_cell_value(sheet_name, "A1")
+
+                self.assertEqual(a1, "      grrr  grrr")
 
         def test_one_plus_one(self):
                 wb = sheets.Workbook("wb")
@@ -145,11 +175,20 @@ class TestClass(unittest.TestCase):
                 wb = sheets.Workbook()
                 sheet_num, sheet_name = wb.new_sheet()
 
-                wb.set_cell_contents(sheet_name, "A1", "=10.0/2.0")
+                wb.set_cell_contents(sheet_name, "A1", "=  10.0   /2.0  ")
                 a1 = wb.get_cell_value(sheet_name, "A1")
 
                 self.assertEqual(a1, decimal.Decimal(5))
-
+                
+        def test_multiplication(self):
+                wb = sheets.Workbook()
+                sheet_num, sheet_name = wb.new_sheet()
+                
+                wb.set_cell_contents(sheet_name, "A1", "= 5")
+                wb.set_cell_contents(sheet_name, "A2", " =A1 *    6")
+                
+                self.assertEqual(wb.get_cell_value(sheet_name, "A2"), decimal.Decimal(30))
+         
         def test_cell_update(self):
                 wb = sheets.Workbook("wb")
                 sheet_num, sheet_name = wb.new_sheet(None)
@@ -320,11 +359,37 @@ class TestClass(unittest.TestCase):
                 wb = sheets.Workbook()
                 sheet_num, sheet_name = wb.new_sheet()
                 
-                wb.set_cell_contents(sheet_name, "A1", "=10+")
+                wb.set_cell_contents(sheet_name, "A1", "=10+  ")
                 a1 = wb.get_cell_value(sheet_name, "A1")
 
                 self.assertIsInstance(a1, sheets.CellError)
                 self.assertEqual(a1.get_type(), sheets.CellErrorType.PARSE_ERROR)
+
+                # TODO: ??? "The formulas that are tested here are bad bc
+                # they are missing one or more quotes for strings"
+                wb.set_cell_contents(sheet_name, "A2", "=\"string     ")
+                a2 = wb.get_cell_value(sheet_name, "A2")
+
+                self.assertIsInstance(a2, sheets.CellError)
+                self.assertEqual(a2.get_type(), sheets.CellErrorType.PARSE_ERROR)
+
+                wb.set_cell_contents(sheet_name, "A3", "=  A1 +  5   ")
+                a3 = wb.get_cell_value(sheet_name, "A3")
+
+                self.assertIsInstance(a3, sheets.CellError)
+                self.assertEqual(a3.get_type(), sheets.CellErrorType.PARSE_ERROR)
+
+                wb.set_cell_contents(sheet_name, "A4", "=-A3")
+                a4 = wb.get_cell_value(sheet_name, "A4")
+
+                self.assertIsInstance(a4, sheets.CellError)
+                self.assertEqual(a4.get_type(), sheets.CellErrorType.PARSE_ERROR)
+
+                wb.set_cell_contents(sheet_name, "A4", "=-")
+                a4 = wb.get_cell_value(sheet_name, "A4")
+
+                self.assertIsInstance(a4, sheets.CellError)
+                self.assertEqual(a4.get_type(), sheets.CellErrorType.PARSE_ERROR)
                 
         def test_bad_reference(self):
                 wb = sheets.Workbook()
@@ -381,13 +446,20 @@ class TestClass(unittest.TestCase):
                 wb = sheets.Workbook()
                 sheet_num, sheet_name = wb.new_sheet()
                 
-                wb.set_cell_contents(sheet_name, "A1", "=#REF!+5")
-
-                a1 = wb.get_cell_value(sheet_name, "A1")
-
-                self.assertIsInstance(a1, sheets.CellError)
-                self.assertEqual(a1.get_type(), sheets.CellErrorType.BAD_REFERENCE)
-
+                def test_error_type(s: str, e: sheets.CellErrorType):
+                        nonlocal wb
+                        nonlocal sheet_name
+                        wb.set_cell_contents(sheet_name, "A1", "=-" + s + "")
+                        a1 = wb.get_cell_value(sheet_name, "A1")
+                        self.assertIsInstance(a1, sheets.CellError)
+                        self.assertEqual(a1.get_type(), e)
+                        
+                test_error_type("#ERROR!", sheets.CellErrorType.PARSE_ERROR)
+                test_error_type("#REF!", sheets.CellErrorType.BAD_REFERENCE)
+                test_error_type("#CIRCREF!", sheets.CellErrorType.CIRCULAR_REFERENCE)
+                test_error_type("#NAME?", sheets.CellErrorType.BAD_NAME)
+                test_error_type("#VALUE!", sheets.CellErrorType.TYPE_ERROR)
+                test_error_type("#DIV/0!", sheets.CellErrorType.DIVIDE_BY_ZERO)
 
         def test_error_priorities(self):
                 wb = sheets.Workbook()
@@ -503,6 +575,10 @@ class TestClass(unittest.TestCase):
 
                 self.assertEqual(wb.list_sheets(), [sheet_name1, sheet_name2, sheet_name3])
 
+                wb.del_sheet(sheet_name3)
+                self.assertEqual(wb.num_sheets(), 2)
+                self.assertEqual(wb.list_sheets(), [sheet_name1, sheet_name2])
+
         def test_double_cycle(self):
                 wb = sheets.Workbook()
                 (index, name) = wb.new_sheet()
@@ -590,6 +666,89 @@ class TestClass(unittest.TestCase):
                 wb.set_cell_contents(name, 'd1', None)
                 wb.set_cell_contents(name, 'd2', '=D1')
                 self.assertEqual(wb.get_cell_value(name, 'd2'), decimal.Decimal(0))
+
+        def test_bad_ref_missing_sheet(self):
+                wb = sheets.Workbook()
+                sheet_num1, sheet_name1 = wb.new_sheet()
+
+                wb.set_cell_contents(sheet_name1, "A1", "=Sheet2!A1 + 10 ")
+                wb.set_cell_contents(sheet_name1, "A2", "=A1 + 5")
+
+                sheet1_a1 = wb.get_cell_value(sheet_name1, "A1")
+                self.assertIsInstance(sheet1_a1, sheets.CellError)
+                self.assertEqual(sheet1_a1.get_type(), sheets.CellErrorType.BAD_REFERENCE)
+
+                sheet1_a2 = wb.get_cell_value(sheet_name1, "A2")
+                self.assertIsInstance(sheet1_a2, sheets.CellError)
+                self.assertEqual(sheet1_a2.get_type(), sheets.CellErrorType.BAD_REFERENCE)
+
+                sheet_num2, sheet_name2 = wb.new_sheet()
+                wb.set_cell_contents(sheet_name2, "A1", "15")
+                sheet1_a1 = wb.get_cell_value(sheet_name1, "A1")
+                self.assertEqual(sheet1_a1, decimal.Decimal(25))
+
+                sheet1_a2 = wb.get_cell_value(sheet_name1, "A2")
+                self.assertEqual(sheet1_a2, decimal.Decimal(30))
+
+                wb.del_sheet(sheet_name2)
+                sheet1_a1 = wb.get_cell_value(sheet_name1, "A1")
+                self.assertIsInstance(sheet1_a1, sheets.CellError)
+                self.assertEqual(sheet1_a1.get_type(), sheets.CellErrorType.BAD_REFERENCE)
+                
+                sheet1_a2 = wb.get_cell_value(sheet_name1, "A2")
+                self.assertIsInstance(sheet1_a2, sheets.CellError)
+                self.assertEqual(sheet1_a2.get_type(), sheets.CellErrorType.BAD_REFERENCE)
+
+        def test_add_cell_into_cycle(self):
+                wb = sheets.Workbook()
+                sheet_num, sheet_name = wb.new_sheet()
+                
+                wb.set_cell_contents(sheet_name, "A1", "=B1")
+                wb.set_cell_contents(sheet_name, "C1", "=8/0 + #REF! + A1")
+
+                value_2 = wb.get_cell_value(sheet_name, "C1")
+                self.assertIsInstance(value_2, sheets.CellError)
+                
+                wb.set_cell_contents(sheet_name, "B1", "=C1")
+                
+                value_1 = wb.get_cell_value(sheet_name, "A1")
+                self.assertIsInstance(value_1, sheets.CellError)
+                self.assertEqual(value_1.get_type(), sheets.CellErrorType.CIRCULAR_REFERENCE)
+                
+                value_2 = wb.get_cell_value(sheet_name, "B1")
+                self.assertIsInstance(value_2, sheets.CellError)
+                self.assertEqual(value_2.get_type(), sheets.CellErrorType.CIRCULAR_REFERENCE)
+                
+                value_3 = wb.get_cell_value(sheet_name, "C1")
+                self.assertIsInstance(value_3, sheets.CellError)
+                self.assertEqual(value_3.get_type(), sheets.CellErrorType.CIRCULAR_REFERENCE)
+                
+                wb.set_cell_contents(sheet_name, "D1", "=A1")
+                value_4 = wb.get_cell_value(sheet_name, "D1")
+                self.assertIsInstance(value_4, sheets.CellError)
+                self.assertEqual(value_4.get_type(), sheets.CellErrorType.CIRCULAR_REFERENCE)
+                
+        def test_removing_trailing_spaces_after_operation(self):
+                wb = sheets.Workbook()
+                sheet_num, sheet_name = wb.new_sheet()
+                
+                wb.set_cell_contents(sheet_name, "A1", "=1.0001")
+                wb.set_cell_contents(sheet_name, "A3", "=0.0001")
+                wb.set_cell_contents(sheet_name, "A4", "=A1 - A3")
+                self.assertEqual(str(wb.get_cell_value(sheet_name, "A4")), '1')
+
+                wb.set_cell_contents(sheet_name, "A2", "=A4 & \"word\"")
+                self.assertEqual(wb.get_cell_value(sheet_name, "A2"), "1word")
+                
+        def test_error_setting(self):
+                wb = sheets.Workbook()
+                sheet_num, sheet_name = wb.new_sheet()
+                
+                wb.set_cell_contents(sheet_name, "A1", " #REF!")
+
+                a1 = wb.get_cell_value(sheet_name, "A1")
+                self.assertIsInstance(a1, sheets.CellError)
+                self.assertEqual(a1.get_type(), sheets.CellErrorType.BAD_REFERENCE)
 
 if __name__ == "__main__":
         unittest.main()

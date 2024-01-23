@@ -3,8 +3,11 @@ import decimal
 import re
 from .sheet import Sheet
 from .graph import Graph
-from .cell import Cell, CellError, CellErrorType
+from .cell import Cell, CellError, CellErrorType, FormulaError
 from . import location as location_utils
+
+from typing import TextIO
+
 
 class Workbook:
     # A workbook containing zero or more named spreadsheets.
@@ -32,7 +35,7 @@ class Workbook:
         self.sheet_num: int = 1
 
         # Graph
-        self.graph = Graph[Cell]()
+        self.dependency_graph = Graph[Cell]()
 
     def num_sheets(self) -> int:
         # Return the number of spreadsheets in the workbook.
@@ -67,7 +70,7 @@ class Workbook:
 
         pattern = r'[^A-Za-z0-9.?!,:;@#$%^&*()-_\s+]'
 
-        if (sheet_name != None) and re.search(pattern, sheet_name) == None and (sheet_name != ""):
+        if (sheet_name != None) and re.search(pattern, sheet_name) == None and (sheet_name != "") and (not sheet_name.isspace()):
 
             sheet_name = sheet_name.strip()
 
@@ -80,9 +83,10 @@ class Workbook:
                 raise ValueError
 
         elif sheet_name == None:
-
             sheet_name = 'Sheet' + str(self.sheet_num)
-            self.sheet_num += 1
+            while sheet_name.lower() in self.sheet_map.keys():                
+                self.sheet_num += 1
+                sheet_name = 'Sheet' + str(self.sheet_num)  
 
         else:
 
@@ -96,8 +100,8 @@ class Workbook:
         if sheet_name.lower() in self.sheet_references.backward:
             for sheet, cell in self.sheet_references.backward[sheet_name.lower()]:
                 try:
-                    cell.check_references(self, sheet)
-                    cell.evaluate_formula(self, sheet)
+                    cell.check_references(self)
+                    cell.evaluate_formula(self)
                 except FormulaError as e:
                     cell.value = e.value
 
@@ -208,14 +212,8 @@ class Workbook:
         # Decimal('1.000'); rather it would return Decimal('1').
 
         location = location_utils.check_location(location)
-        solution = self.sheet_map[sheet_name.lower().strip()].get_cell_value(self, location)
-        if isinstance(solution, decimal.Decimal):
-            solution = str(solution)
-            if "." in solution:
-                solution = solution.rstrip("0")
-            if solution[-1] == ".":
-                solution = solution[:-1]
-            solution = decimal.Decimal(solution)
+        solution = self.sheet_map[sheet_name.lower().strip()].get_cell_value(location)
+        # if isinstance(solution, decimal.Decimal):
         return solution
     
     def get_cell(self, sheet_name: str, location:str):
@@ -223,17 +221,129 @@ class Workbook:
         return self.sheet_map[sheet_name.lower()].get_cell(location)
 
     def update_ancestors(self, nodes):
-        order = self.graph.get_topological_order()
-        ancestors = self.graph.get_ancestors_of_set(nodes)
+        order = self.dependency_graph.get_topological_order()
+        ancestors = self.dependency_graph.get_ancestors_of_set(nodes)
         for cell in order:
             if cell in ancestors:
-                cell.evaluate_formula(self, cell.sheet)
+                cell.evaluate_formula(self)
 
     def check_cycles(self):
-        cycles = self.graph.get_cycles()
+        cycles = self.dependency_graph.get_cycles()
         circular = set()
         for cycle in cycles:
             for cell in cycle:
                 cell.value = CellError(CellErrorType.CIRCULAR_REFERENCE, "")
                 circular.add(cell)
         self.update_ancestors(circular)
+
+    @staticmethod
+    def load_workbook(fp: TextIO) -> Any:
+        # returns Workbook
+
+        # This is a static method (not an instance method) to load a workbook
+        # from a text file or file-like object in JSON format, and return the
+        # new Workbook instance.  Note that the _caller_ of this function is
+        # expected to have opened the file; this function merely reads the file.
+        #
+        # If the contents of the input cannot be parsed by the Python json
+        # module then a json.JSONDecodeError should be raised by the method.
+        # (Just let the json module's exceptions propagate through.)  Similarly,
+        # if an IO read error occurs (unlikely but possible), let any raised
+        # exception propagate through.
+        #
+        # If any expected value in the input JSON is missing (e.g. a sheet
+        # object doesn't have the "cell-contents" key), raise a KeyError with
+        # a suitably descriptive message.
+        #
+        # If any expected value in the input JSON is not of the proper type
+        # (e.g. an object instead of a list, or a number instead of a string),
+        # raise a TypeError with a suitably descriptive message.
+        pass
+
+    def save_workbook(self, fp: TextIO) -> None:
+        # Instance method (not a static/class method) to save a workbook to a
+        # text file or file-like object in JSON format.  Note that the _caller_
+        # of this function is expected to have opened the file; this function
+        # merely writes the file.
+        #
+        # If an IO write error occurs (unlikely but possible), let any raised
+        # exception propagate through.
+        pass
+
+    def notify_cells_changed(self,
+            notify_function: Callable[[Any, Iterable[Tuple[str, str]]], None]) -> None:
+        # notify_function (Workbook, Iterable...) -> None
+
+        # Request that all changes to cell values in the workbook are reported
+        # to the specified notify_function.  The values passed to the notify
+        # function are the workbook, and an iterable of 2-tuples of strings,
+        # of the form ([sheet name], [cell location]).  The notify_function is
+        # expected not to return any value; any return-value will be ignored.
+        #
+        # Multiple notification functions may be registered on the workbook;
+        # functions will be called in the order that they are registered.
+        #
+        # A given notification function may be registered more than once; it
+        # will receive each notification as many times as it was registered.
+        #
+        # If the notify_function raises an exception while handling a
+        # notification, this will not affect workbook calculation updates or
+        # calls to other notification functions.
+        #
+        # A notification function is expected to not mutate the workbook or
+        # iterable that it is passed to it.  If a notification function violates
+        # this requirement, the behavior is undefined.
+        pass
+
+    def rename_sheet(self, sheet_name: str, new_sheet_name: str) -> None:
+        # Rename the specified sheet to the new sheet name.  Additionally, all
+        # cell formulas that referenced the original sheet name are updated to
+        # reference the new sheet name (using the same case as the new sheet
+        # name, and single-quotes iff [if and only if] necessary).
+        #
+        # The sheet_name match is case-insensitive; the text must match but the
+        # case does not have to.
+        #
+        # As with new_sheet(), the case of the new_sheet_name is preserved by
+        # the workbook.
+        #
+        # If the sheet_name is not found, a KeyError is raised.
+        #
+        # If the new_sheet_name is an empty string or is otherwise invalid, a
+        # ValueError is raised.
+        pass
+
+    def move_sheet(self, sheet_name: str, index: int) -> None:
+        # Move the specified sheet to the specified index in the workbook's
+        # ordered sequence of sheets.  The index can range from 0 to
+        # workbook.num_sheets() - 1.  The index is interpreted as if the
+        # specified sheet were removed from the list of sheets, and then
+        # re-inserted at the specified index.
+        #
+        # The sheet name match is case-insensitive; the text must match but the
+        # case does not have to.
+        #
+        # If the specified sheet name is not found, a KeyError is raised.
+        #
+        # If the index is outside the valid range, an IndexError is raised.
+        pass
+
+    def copy_sheet(self, sheet_name: str) -> Tuple[int, str]:
+        # Make a copy of the specified sheet, storing the copy at the end of the
+        # workbook's sequence of sheets.  The copy's name is generated by
+        # appending "_1", "_2", ... to the original sheet's name (preserving the
+        # original sheet name's case), incrementing the number until a unique
+        # name is found.  As usual, "uniqueness" is determined in a
+        # case-insensitive manner.
+        #
+        # The sheet name match is case-insensitive; the text must match but the
+        # case does not have to.
+        #
+        # The copy should be added to the end of the sequence of sheets in the
+        # workbook.  Like new_sheet(), this function returns a tuple with two
+        # elements:  (0-based index of copy in workbook, copy sheet name).  This
+        # allows the function to report the new sheet's name and index in the
+        # sequence of sheets.
+        #
+        # If the specified sheet name is not found, a KeyError is raised.
+        pass

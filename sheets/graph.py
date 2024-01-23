@@ -77,6 +77,7 @@ class Graph(Generic[T]):
                 if len(self.backward[to]) == 0:
                     self.backward.pop(to)
             self.forward.pop(node)
+        self.cycles_dirty = True
 
     def clear_backward_link(self, node: T):
         if node in self.backward:
@@ -85,6 +86,7 @@ class Graph(Generic[T]):
                 if len(self.forward[from_node]) == 0:
                     self.forward.pop(from_node)
             self.backward.pop(node)
+        self.cycles_dirty = True
 
     def remove_node(self, node: T):
         self.clear_forward_links(node)
