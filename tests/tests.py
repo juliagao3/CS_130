@@ -16,6 +16,14 @@ class TestClass(unittest.TestCase):
                 sheet_num, sheet_name = wb.new_sheet(None)
                 self.assertEqual(sheet_name, "Sheet1")            
                 
+        def test_remove_sheet(self):
+                wb = sheets.Workbook()
+                i, n = wb.new_sheet()
+                j, m = wb.new_sheet()
+                self.assertEqual(wb.list_sheets(), ["Sheet1", "Sheet2"])
+                wb.del_sheet(n)
+                self.assertEqual(wb.list_sheets(), ["Sheet2"])
+
         def test_special_name(self):
                wb = sheets.Workbook("wb")
                with self.assertRaises(ValueError):
