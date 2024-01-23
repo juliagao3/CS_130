@@ -13,7 +13,8 @@ class FormulaError(Exception):
         self.value = value
 
 class Cell: 
-    def __init__(self):
+    def __init__(self, sheet):
+        self.sheet = sheet
         self.value = None
         self.contents = None
         self.formula_tree = None
@@ -50,12 +51,9 @@ class Cell:
                 raise FormulaError(CellError(CellErrorType.BAD_REFERENCE, ""))
 
     def check_cycles(self, workbook, sheet):
-        cycle = workbook.graph.find_cycle(self)
-        if cycle != None:
-            for cell in cycle:
-                cell.value = CellError(CellErrorType.CIRCULAR_REFERENCE, "")
-        if cycle != None and self in cycle:
-            raise FormulaError(CellError(CellErrorType.CIRCULAR_REFERENCE, ""))
+        for cycle in workbook.graph.get_cycles():
+            if self in cycle:
+                raise FormulaError(CellError(CellErrorType.CIRCULAR_REFERENCE, ""))
 
     def evaluate_formula(self, workbook, sheet):
         self.value = interp.evaluate_formula(workbook, sheet, self.formula_tree)
@@ -65,10 +63,12 @@ class Cell:
             self.value = decimal.Decimal(0)
 
     def update_referencing_nodes(self, workbook, sheet):
-        ancestors = workbook.graph.get_ancestors(self)
-        ordered = ancestors.topological_sort()
+        ancestors = workbook.graph.get_ancestors_of_set(set([self]))
+        ordered = workbook.graph.get_topological_order()
         for c in ordered:
             if c == self:
+                continue
+            if not c in ancestors:
                 continue
             c.evaluate_formula(workbook, sheet)
 
@@ -87,13 +87,12 @@ class Cell:
             try:
                 self.parse_formula(workbook, sheet)
                 self.check_references(workbook, sheet)
+                workbook.check_cycles()
                 self.check_cycles(workbook, sheet)
                 self.evaluate_formula(workbook, sheet)
                 self.check_contents(workbook, sheet)
             except FormulaError as e:
                 self.value = e.value
-                workbook.sheet_references.clear_forward_links((sheet, self))
-                workbook.graph.clear_forward_links(self)
         elif contents[0] == "'":
             self.value = contents[1:]
         elif CellErrorType.from_string(contents) != None:

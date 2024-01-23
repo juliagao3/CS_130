@@ -16,21 +16,40 @@ class Graph(Generic[T]):
     def __init__(self):
         self.forward: Dict[T, T] = {}
         self.backward: Dict[T, T] = {}
+        self.topological_order: List[T] = []
+        self.cycles: List[Set[T]] = []
+        self.cycles_dirty: bool = False
 
     def get_forward_links(self, node):
         if not node in self.forward:
             return []
         else:
-            return self.forward[node]
+            return self.forward[node].copy()
         
     def get_backward_links(self, node):
         if not node in self.backward:
             return []
         else:
-            return self.backward[node]
+            return self.backward[node].copy()
         
     def get_nodes(self):
         return self.forward.keys() | self.backward.keys()
+
+    def get_cycles(self):
+        if self.cycles_dirty:
+            sccs, topo = self.tarjan()
+            self.cycles = list(filter(lambda s: len(s) > 1, sccs))
+            self.topological_order = topo
+            self.cycles_dirty = False
+        return self.cycles
+
+    def get_topological_order(self):
+        if self.cycles_dirty:
+            sccs, topo = self.tarjan()
+            self.cycles = list(filter(lambda s: len(s) > 1, sccs))
+            self.topological_order = topo
+            self.cycles_dirty = False
+        return self.topological_order
 
     def link(self, from_node: T, to_node: T):
         '''
@@ -45,6 +64,8 @@ class Graph(Generic[T]):
 
         self.forward[from_node].add(to_node)
         self.backward[to_node].add(from_node)
+
+        self.cycles_dirty = True
 
     def clear_forward_links(self, node: T):
         '''
@@ -69,72 +90,88 @@ class Graph(Generic[T]):
         self.clear_forward_links(node)
         self.clear_backward_link(node)
 
-    def find_cycle(self, root: T):
-        '''
-        Returns a cycle containing this node or None if no such cycle exists.
-        '''
-        # this is a non-recursive dfs... I think this could've probly been
-        # done better
-        seen = set()
-        path = []
-        stack = [(0, root, list(self.get_forward_links(root)))]
-        while len(stack) > 0:
-            i, cur, children = stack.pop()
+    def tarjan(self):
+        stack: List[T] = []
+        stack_set: Set[T] = set()
 
-            if i == 0:
-                if cur in seen and cur in path:
-                    path = path[path.index(cur):]
-                    break
-                seen.add(cur)
-                path.append(cur)
+        next_number: int = 0
+        number: Dict[T, int] ={}
+        lowlink: Dict[T, int] = {}
 
-            if i < len(children):
-                stack.append((i+1, cur, children))
-                stack.append((0, children[i], list(self.get_forward_links(children[i]))))
-            else:
-                path.pop()
+        sccs: List[List[T]] = []
+        topological_order = []
 
-        if len(path) == 0:
-            return None
-        else:
-            return path
+        def strongconnect(root):
+            nonlocal self
+            nonlocal stack
+            nonlocal stack_set
 
-    def topological_sort(self):
-        ordering = []
-        vertices = self.forward.keys() | self.backward.keys()
-        while len(vertices) > 0:
-            no_incoming = vertices - self.backward.keys()
-            if len(no_incoming) == 0:
-                break
-            node = no_incoming.pop()
-            vertices.remove(node)
-            self.clear_forward_links(node)
-            ordering.append(node)
-        return ordering
+            nonlocal next_number
+            nonlocal number
+            nonlocal lowlink
 
-    def get_ancestors(self, root: T):
-        '''
-        Return the nodes reachable from root by following backward links.
-        '''
-        seen = set()
-        path = []
-        stack = [(0, root, list(self.get_backward_links(root)))]
-        subgraph = Graph()
-        while len(stack) > 0:
-            i, cur, children = stack.pop()
+            nonlocal sccs
 
-            if i == 0:
-                if len(path) > 0:
-                    subgraph.link(path[-1], cur)
-                if cur in seen:
+            dfs = [(root, None, self.get_forward_links(root))]
+            while len(dfs) > 0:
+                v, w, children = dfs.pop()
+
+                if w == None:
+                    number[v] = next_number
+                    lowlink[v] = next_number
+                    next_number += 1
+                    stack.append(v)
+                    stack_set.add(v)
+                else:
+                    lowlink[v] = min(lowlink[v], lowlink[w])
+
+                recurse = False
+
+                while len(children) > 0:
+                    w = children.pop()
+                    if not w in number:
+                        dfs.append((v, w, children))
+                        dfs.append((w, None, self.get_forward_links(w)))
+                        recurse = True
+                        break
+                    elif w in stack_set:
+                        lowlink[v] = min(lowlink[v], number[w])
+
+                if recurse:
                     continue
-                seen.add(cur)
-                path.append(cur)
 
-            if i < len(children):
-                stack.append((i+1, cur, children))
-                stack.append((0, children[i], list(self.get_backward_links(children[i]))))
-            else:
-                path.pop()
-        
-        return subgraph
+                topological_order.append(v)
+                if lowlink[v] == number[v]:
+                    scc = []
+                    while True:
+                        w = stack.pop()
+                        stack_set.remove(w)
+                        scc.append(w)
+                        if w == v:
+                            break
+                    sccs.append(scc)
+
+        vertices = self.forward.keys() | self.backward.keys()
+        for v in vertices:
+            if not v in number:
+                strongconnect(v)
+
+        return sccs, topological_order
+
+    def get_ancestors_of_set(self, nodes):
+        '''
+        Returns the set of nodes reachable by following backward links starting
+        from any node in the given set. Does not return any nodes in the set.
+        '''
+        ancestors = set()
+        queue = [n for n in nodes]
+        while len(queue) > 0:
+            v = queue.pop(0)
+
+            if not v in nodes:
+                ancestors.add(v)
+
+            for w in self.get_backward_links(v):
+                if not w in ancestors and not w in nodes:
+                    queue.append(w)
+        return ancestors
