@@ -7,6 +7,7 @@ from .cell import Cell, CellError, CellErrorType, FormulaError
 from . import location as location_utils
 
 from typing import TextIO
+import json
 
 
 class Workbook:
@@ -167,7 +168,7 @@ class Workbook:
         # If the cell contents appear to be a formula, and the formula is
         # invalid for some reason, this method does not raise an exception;
         # rather, the cell's value will be a CellError object indicating the
-        # naure of the issue.
+        # nature of the issue.
         
         location = location_utils.check_location(location)
         self.sheet_map[sheet_name.lower()].set_cell_contents(self, location, contents)
@@ -237,7 +238,7 @@ class Workbook:
         self.update_ancestors(circular)
 
     @staticmethod
-    def load_workbook(fp: TextIO) -> Any:
+    def load_workbook(self, fp: TextIO) -> Any:
         # returns Workbook
 
         # This is a static method (not an instance method) to load a workbook
@@ -258,7 +259,29 @@ class Workbook:
         # If any expected value in the input JSON is not of the proper type
         # (e.g. an object instead of a list, or a number instead of a string),
         # raise a TypeError with a suitably descriptive message.
-        pass
+        
+        workbook_json = json.load(fp)
+        
+        wb = Workbook()
+
+        # sheet names
+        try:
+            sheets_list = workbook_json["sheets"]
+            for sheet_dict in sheets_list:
+                try:
+                    # TODO: check that the name of the sheet is a str
+                    name, num = wb.new_sheet(sheet_dict["name"])
+                    # TODO: check that the content is a str
+                    cell_contents = sheet_dict["cell-contents"]
+                    for location in cell_contents.keys():
+                        wb.set_cell_contents(name, location, cell_contents[location])                        
+                except TypeError as t:
+                    # TODO: raise errors with descriptive messages
+                    pass  
+        except KeyError as k:
+            pass
+
+        return wb
 
     def save_workbook(self, fp: TextIO) -> None:
         # Instance method (not a static/class method) to save a workbook to a
@@ -268,7 +291,14 @@ class Workbook:
         #
         # If an IO write error occurs (unlikely but possible), let any raised
         # exception propagate through.
-        pass
+        # TODO: double quotes within cell formulas must be escaped??
+        workbook_dict = dict()
+        workbook_dict["sheets"] = list()
+
+        for sheet in self.sheets:
+            workbook_dict["sheets"].append(sheet.to_json())
+              
+        json.dump(workbook_dict, fp, indent=4)
 
     def notify_cells_changed(self,
             notify_function: Callable[[Any, Iterable[Tuple[str, str]]], None]) -> None:
