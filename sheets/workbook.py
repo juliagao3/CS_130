@@ -311,7 +311,11 @@ class Workbook:
         #
         # If the new_sheet_name is an empty string or is otherwise invalid, a
         # ValueError is raised.
-        pass
+        if not sheet.name_is_valid(new_sheet_name):
+            raise ValueError
+
+        if new_sheet_name.lower() in self.sheet_map:
+            raise ValueError
 
     def move_sheet(self, sheet_name: str, index: int) -> None:
         # Move the specified sheet to the specified index in the workbook's

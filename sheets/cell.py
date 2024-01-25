@@ -87,6 +87,9 @@ class Cell:
             except FormulaError as e:
                 c.value = e.value
 
+    def rename_sheet(self, old_name, new_name):
+        pass
+
     def set_contents(self, workbook, contents: str):
         workbook.sheet_references.clear_forward_links((self.sheet, self))
         workbook.dependency_graph.clear_forward_links(self)

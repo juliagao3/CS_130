@@ -2,6 +2,7 @@ import sheets
 import decimal
 import lark
 from lark.visitors import visit_children_decor
+from lark.visitors import v_args
 
 parser = lark.Lark.open('formulas.lark', rel_to=__file__, start='formula')
 
@@ -38,6 +39,34 @@ class CellRefFinder(lark.Visitor):
             assert len(tree.children) == 2
             self.refs.append('!'.join(tree.children))
 
+class QuoteScanner(lark.visitors.Visitor):
+    def __init__(self):
+        self.need_quotes = False
+
+    def cell(self, tree):
+        values = tree.children
+        if len(values) > 1:
+            if sheets.name_needs_quotes(values[0]):
+                self.need_quotes = True
+
+class SheetRenamer(lark.visitors.Transformer_InPlace):
+
+    def __init__(self, old_name, new_name, quotes):
+        self.old_name = old_name
+        self.new_name = new_name
+        self.quotes = quotes
+        print(quotes)
+
+    @v_args(tree=True)
+    def cell(self, tree):
+        values = tree.children
+        if len(values) > 1:
+            if values[0] == self.old_name:
+                values[0] = self.new_name
+            if self.quotes and values[0][0] != "'":
+                values[0] = "'" + values[0] + "'"
+        return tree
+        
 class FormulaEvaluator(lark.visitors.Interpreter):
 
     def __init__(self, workbook, sheet):
@@ -134,3 +163,18 @@ def find_refs(workbook, sheet, tree):
     finder = CellRefFinder()
     finder.visit(tree)
     return finder.refs
+
+def test_rename(old, new):
+    print(f"RENAMING {old} to {new}")
+    tree = parse_formula(f"=Sheet1!A1 + {old}!A1")
+    print(tree.pretty())
+    scanner = QuoteScanner()
+    scanner.visit(tree)
+    renamer = SheetRenamer(old, new, scanner.need_quotes or sheets.name_needs_quotes(new))
+    renamer.transform(tree)
+    print(tree.pretty())
+
+if __name__ == "__main__":
+    print(sheets.name_needs_quotes("sheet bla"))
+    test_rename("Sheet2", "SheetBla")
+    test_rename("Sheet2", "Sheet Bla")
