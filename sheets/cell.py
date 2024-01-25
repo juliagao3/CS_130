@@ -54,6 +54,7 @@ class Cell:
                 cell = workbook.get_cell(sheet_name, location)
                 workbook.dependency_graph.link(self, cell)
             except KeyError:
+                print("keyerror")
                 raise FormulaError(CellError(CellErrorType.BAD_REFERENCE, ""))
             except ValueError:
                 raise FormulaError(CellError(CellErrorType.BAD_REFERENCE, ""))
@@ -82,13 +83,14 @@ class Cell:
             if not c in ancestors:
                 continue
             try:
+                c.check_references(workbook)
                 c.check_cycles(workbook)
                 c.evaluate_formula(workbook)
             except FormulaError as e:
                 c.value = e.value
 
     def rename_sheet(self, old_name, new_name):
-        pass
+        self.contents = interp.rename_sheet(old_name, new_name, self.formula_tree)
 
     def set_contents(self, workbook, contents: str):
         workbook.sheet_references.clear_forward_links((self.sheet, self))
@@ -111,6 +113,7 @@ class Cell:
                 self.evaluate_formula(workbook)
                 self.check_value()
             except FormulaError as e:
+                print("error!!")
                 self.value = e.value
         elif contents[0] == "'":
             self.value = contents[1:]

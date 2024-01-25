@@ -3,6 +3,7 @@ import decimal
 import lark
 from lark.visitors import visit_children_decor
 from lark.visitors import v_args
+from . import sheet as sheet_util
 
 parser = lark.Lark.open('formulas.lark', rel_to=__file__, start='formula')
 
@@ -32,7 +33,6 @@ class CellRefFinder(lark.Visitor):
         self.refs = []
         
     def cell(self, tree):
-        #print(tree.children)
         if len(tree.children) == 1:
             self.refs.append(str(tree.children[0]))
         else:
@@ -46,7 +46,7 @@ class QuoteScanner(lark.visitors.Visitor):
     def cell(self, tree):
         values = tree.children
         if len(values) > 1:
-            if sheets.name_needs_quotes(values[0]):
+            if sheet_util.name_needs_quotes(values[0]):
                 self.need_quotes = True
 
 class SheetRenamer(lark.visitors.Transformer_InPlace):
@@ -55,17 +55,51 @@ class SheetRenamer(lark.visitors.Transformer_InPlace):
         self.old_name = old_name
         self.new_name = new_name
         self.quotes = quotes
-        print(quotes)
 
     @v_args(tree=True)
     def cell(self, tree):
         values = tree.children
         if len(values) > 1:
-            if values[0] == self.old_name:
+            if values[0].lower() == self.old_name.lower():
                 values[0] = self.new_name
             if self.quotes and values[0][0] != "'":
                 values[0] = "'" + values[0] + "'"
         return tree
+    
+class FormulaPrinter(lark.visitors.Interpreter):
+    
+    @visit_children_decor
+    def add_expr(self, values):
+        return " ".join(values)
+    
+    @visit_children_decor
+    def mul_expr(self, values):
+        return " ".join(values)
+    
+    @visit_children_decor
+    def unary_op(self, values):
+        return "".join(values)
+    
+    @visit_children_decor
+    def cell(self, values):
+        return "!".join(values)
+    
+    @visit_children_decor
+    def number(self, values):
+        return str(values[0])
+    
+    @visit_children_decor
+    def string(self, values):
+        return values[0]
+    
+    @visit_children_decor
+    def error(self, values):
+        return values[0]
+    
+    @visit_children_decor
+    def parens(self, values):
+        return '(' + values[0] + ')'
+    
         
 class FormulaEvaluator(lark.visitors.Interpreter):
 
@@ -164,17 +198,10 @@ def find_refs(workbook, sheet, tree):
     finder.visit(tree)
     return finder.refs
 
-def test_rename(old, new):
-    print(f"RENAMING {old} to {new}")
-    tree = parse_formula(f"=Sheet1!A1 + {old}!A1")
-    print(tree.pretty())
+def rename_sheet(old, new, tree):
     scanner = QuoteScanner()
     scanner.visit(tree)
-    renamer = SheetRenamer(old, new, scanner.need_quotes or sheets.name_needs_quotes(new))
+    renamer = SheetRenamer(old, new, scanner.need_quotes or sheet_util.name_needs_quotes(new))
     renamer.transform(tree)
-    print(tree.pretty())
-
-if __name__ == "__main__":
-    print(sheets.name_needs_quotes("sheet bla"))
-    test_rename("Sheet2", "SheetBla")
-    test_rename("Sheet2", "Sheet Bla")
+    printer = FormulaPrinter()
+    return "=" + printer.visit(tree) 
