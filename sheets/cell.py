@@ -21,8 +21,9 @@ class FormulaError(Exception):
         self.value = value
 
 class Cell: 
-    def __init__(self, sheet):
+    def __init__(self, sheet, location):
         self.sheet = sheet
+        self.location = location
         self.value = None
         self.contents = None
         self.formula_tree = None
@@ -30,6 +31,10 @@ class Cell:
     def __str__(self):
         return str(self.contents)
         
+    def set_value(self, value):
+        self.value = value
+        self.sheet.on_update([(self.sheet.sheet_name, self.location)])
+
     def get_value(self):
         return self.value
 
@@ -65,14 +70,14 @@ class Cell:
                 raise FormulaError(CellError(CellErrorType.CIRCULAR_REFERENCE, ""))
 
     def evaluate_formula(self, workbook):
-        self.value = interp.evaluate_formula(workbook, self.sheet, self.formula_tree)
+        self.set_value(interp.evaluate_formula(workbook, self.sheet, self.formula_tree))
         
     def check_value(self):
         if self.value == None:
-            self.value = decimal.Decimal(0)
+            self.set_value(decimal.Decimal(0))
 
         if type(self.value) == decimal.Decimal:
-            self.value = remove_trailing_zeros(self.value)
+            self.set_value(remove_trailing_zeros(self.value))
 
     def update_referencing_nodes(self, workbook):
         ancestors = workbook.dependency_graph.get_ancestors_of_set(set([self]))
@@ -87,7 +92,7 @@ class Cell:
                 c.check_cycles(workbook)
                 c.evaluate_formula(workbook)
             except FormulaError as e:
-                c.value = e.value
+                c.set_value(e.value)
 
     def rename_sheet(self, old_name, new_name):
         self.contents = interp.rename_sheet(old_name, new_name, self.formula_tree)
@@ -98,7 +103,7 @@ class Cell:
 
         if is_empty_content_string(contents):
             self.contents = None
-            self.value = None
+            self.set_value(None)
             return
 
         contents = contents.strip()
@@ -113,19 +118,18 @@ class Cell:
                 self.evaluate_formula(workbook)
                 self.check_value()
             except FormulaError as e:
-                print("error!!")
-                self.value = e.value
+                self.set_value(e.value)
         elif contents[0] == "'":
-            self.value = contents[1:]
+            self.set_value(contents[1:])
         elif CellErrorType.from_string(contents) != None:
-            self.value = CellError(CellErrorType.from_string(contents), "")
+            self.set_value(CellError(CellErrorType.from_string(contents), ""))
         else:
             try:
-                self.value = remove_trailing_zeros(decimal.Decimal(contents))
+                self.set_value(remove_trailing_zeros(decimal.Decimal(contents)))
                 if not self.value.is_finite():
-                    self.value = contents
+                    self.set_value(contents)
             except decimal.InvalidOperation:
-                self.value = contents
+                self.set_value(contents)
 
         self.update_referencing_nodes(workbook)
     
