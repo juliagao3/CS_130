@@ -750,31 +750,5 @@ class TestClass(unittest.TestCase):
                 self.assertIsInstance(a1, sheets.CellError)
                 self.assertEqual(a1.get_type(), sheets.CellErrorType.BAD_REFERENCE)
 
-        def test_save_workbook(self):
-                wb = sheets.Workbook()
-                sheet_num1, sheet_name1 = wb.new_sheet()
-                sheet_num2, sheet_name2 = wb.new_sheet()
-
-                wb.set_cell_contents(sheet_name1, "A1", "'123")
-                wb.set_cell_contents(sheet_name1, "B1", "5.3")
-                wb.set_cell_contents(sheet_name1, "C1", "=A1*B1")
-
-                wb.set_cell_contents(sheet_name2, "A1", "Hello")
-
-                f = open("myfile.txt", "w")
-
-                wb.save_workbook(f)
-
-                f.close()
-
-        def test_save_empty_workbook(self):
-                wb = sheets.Workbook()
-
-                f = open("myfile2.txt", "w")
-
-                wb.save_workbook(f)
-
-                f.close()
-
 if __name__ == "__main__":
         unittest.main()

@@ -238,7 +238,7 @@ class Workbook:
         self.update_ancestors(circular)
 
     @staticmethod
-    def load_workbook(self, fp: TextIO) -> Any:
+    def load_workbook(fp: TextIO) -> Any:
         # returns Workbook
 
         # This is a static method (not an instance method) to load a workbook
@@ -259,27 +259,25 @@ class Workbook:
         # If any expected value in the input JSON is not of the proper type
         # (e.g. an object instead of a list, or a number instead of a string),
         # raise a TypeError with a suitably descriptive message.
-        
         workbook_json = json.load(fp)
-        
+
         wb = Workbook()
 
-        # sheet names
         try:
             sheets_list = workbook_json["sheets"]
             for sheet_dict in sheets_list:
                 try:
-                    # TODO: check that the name of the sheet is a str
-                    name, num = wb.new_sheet(sheet_dict["name"])
-                    # TODO: check that the content is a str
+                    num, name = wb.new_sheet(sheet_dict["name"])
                     cell_contents = sheet_dict["cell-contents"]
                     for location in cell_contents.keys():
-                        wb.set_cell_contents(name, location, cell_contents[location])                        
-                except TypeError as t:
-                    # TODO: raise errors with descriptive messages
-                    pass  
-        except KeyError as k:
-            pass
+                        if type(cell_contents[location]) == str:
+                            wb.set_cell_contents(name, location, cell_contents[location])
+                        else:
+                            raise TypeError("Input JSON has an incorrect type: cell contents should be strings.")            
+                except TypeError:
+                    raise TypeError("Input JSON has an incorrect type: sheet name should be a string.")
+        except KeyError:
+            raise KeyError("Input JSON is missing an expected key: 'sheets', 'name', or 'cell-contents'.")
 
         return wb
 
