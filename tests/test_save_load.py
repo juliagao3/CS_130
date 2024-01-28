@@ -24,11 +24,11 @@ class TestClass(unittest.TestCase):
 
                 wb.set_cell_contents(sheet_name2, "A1", "Hello")
 
-                f = open("myfile.txt", "w")
+                f = open("test_file.txt", "w")
                 wb.save_workbook(f)
                 f.close()
 
-                file = open("myfile.txt", "r")
+                file = open("test_file.txt", "r")
                 file_read = file.read()
 
                 expected_json = {
@@ -55,11 +55,11 @@ class TestClass(unittest.TestCase):
 
         def test_save_empty_workbook(self):
                 wb = sheets.Workbook()
-                f = open("myfile2.txt", "w")
+                f = open("test_file.txt", "w")
                 wb.save_workbook(f)
                 f.close()
 
-                file = open("myfile2.txt", "r")
+                file = open("test_file.txt", "r")
                 file_read = file.read()
 
                 expected_json = {
@@ -82,11 +82,11 @@ class TestClass(unittest.TestCase):
                     ]
                 }
 
-                f = open("myfile3.txt", "w")
+                f = open("test_file.txt", "w")
                 json.dump(test_json, f, indent=4)
                 f.close()
 
-                fp = open("myfile3.txt", "r")
+                fp = open("test_file.txt", "r")
                 wb1 = sheets.Workbook.load_workbook(fp)
                 fp.close()
 
@@ -115,11 +115,11 @@ class TestClass(unittest.TestCase):
                     ]
                 }
 
-                f = open("myfile3.txt", "w")
+                f = open("test_file.txt", "w")
                 json.dump(test_json, f, indent=4)
                 f.close()
 
-                fp = open("myfile3.txt", "r")
+                fp = open("test_file.txt", "r")
 
                 with self.assertRaises(KeyError):
                         sheets.Workbook.load_workbook(fp)
@@ -137,11 +137,11 @@ class TestClass(unittest.TestCase):
                     ]
                 }
 
-                f = open("myfile3.txt", "w")
+                f = open("test_file.txt", "w")
                 json.dump(test_json, f, indent=4)
                 f.close()
 
-                fp = open("myfile3.txt", "r")
+                fp = open("test_file.txt", "r")
 
                 with self.assertRaises(TypeError):
                         sheets.Workbook.load_workbook(fp)
@@ -159,11 +159,11 @@ class TestClass(unittest.TestCase):
                     ]
                 }
 
-                f = open("myfile3.txt", "w")
+                f = open("test_file.txt", "w")
                 json.dump(test_json, f, indent=4)
                 f.close()
 
-                fp = open("myfile3.txt", "r")
+                fp = open("test_file.txt", "r")
 
                 with self.assertRaises(TypeError):
                         sheets.Workbook.load_workbook(fp)
@@ -181,18 +181,59 @@ class TestClass(unittest.TestCase):
                     ]
                 }
 
-                f = open("myfile3.txt", "w")
+                f = open("test_file.txt", "w")
                 json.dump(test_json, f, indent=4)
                 f.close()
 
-                fp = open("myfile3.txt", "r")
+                fp = open("test_file.txt", "r")
 
                 with self.assertRaises(TypeError):
                         sheets.Workbook.load_workbook(fp)
                 fp.close()
 
-        def test_escape_double_quotes(self):
-                pass
+        def test_escape_double_quotes_save(self):
+                wb = sheets.Workbook()
+                sheet_num, sheet_name = wb.new_sheet()
+                wb.set_cell_contents(sheet_name, "A1", "double \" quotes")
+                a1_contents = wb.get_cell_contents(sheet_name, "A1")
+                a1_value = wb.get_cell_value(sheet_name, "A1")
+
+                f = open("test_file.txt", "w")
+                wb.save_workbook(f)
+                f.close()
+
+                file = open("test_file.txt", "r")
+                wb_load = sheets.Workbook.load_workbook(file)
+                loaded_contents = wb_load.get_cell_contents(sheet_name, "A1")
+                loaded_value = wb_load.get_cell_value(sheet_name, "A1")
+
+                self.assertEqual(a1_contents, loaded_contents)
+                self.assertEqual(a1_value, loaded_value)
+
+        def test_escape_double_quotes_load(self):
+                test_json = {
+                    "sheets":[
+                        {
+                            "name":"Sheet1",
+                            "cell-contents":{
+                                "A1":"'escape \" double \" quotes"
+                            }                                        
+                        }
+                    ]
+                }
+
+                f = open("test_file.txt", "w")
+                json.dump(test_json, f, indent=4)
+                f.close()
+
+                file = open("test_file.txt", "r")
+                wb = sheets.Workbook.load_workbook(file)
+                a1_contents = wb.get_cell_contents("Sheet1", "A1")
+                a1_value = wb.get_cell_value("Sheet1", "A1")
+                file.close()
+
+                self.assertEqual(a1_contents, "'escape \" double \" quotes")
+                self.assertEqual(a1_value, "escape \" double \" quotes")          
 
 if __name__ == "__main__":
         unittest.main()
