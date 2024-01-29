@@ -416,3 +416,26 @@ class Workbook:
         # sequence of sheets.
         #
         # If the specified sheet name is not found, a KeyError is raised.
+        
+        new_name = ""   
+        if sheet_name.lower() in self.sheet_map.keys():
+            sheet_object = self.sheet_map[sheet_name.lower()]
+            new_sheet = copy.deepcopy(sheet_object)
+            
+            if sheet_name.lower() in self.num_copies.keys():
+                # make deep copy
+                # add to num_copies and sheet_map and sheets      
+                num = self.num_copies[sheet_name.lower()]
+                num += 1
+                new_name = sheet_name + '_' + str(num)
+                new_sheet.update_sheet_name(new_name)
+                self.num_copies[sheet_name.lower()] = num
+            else:
+                new_name = sheet_name + '_1'
+                new_sheet.update_sheet_name(new_name)
+                self.num_copies[sheet_name.lower()] = 1
+        
+            self.sheets.append(new_sheet)
+            self.sheet_map[new_name.lower()] = new_sheet
+            
+        return (len(self.sheets) - 1, new_name)
