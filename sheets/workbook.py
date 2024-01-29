@@ -220,7 +220,7 @@ class Workbook:
     def update_cells_referencing_sheet(self, sheet_name):
         if sheet_name.lower() in self.sheet_references.backward:
             updated = set()
-            for sheet, cell in self.sheet_references.backward[sheet_name.lower()]:
+            for cell in self.sheet_references.backward[sheet_name.lower()]:
                 cell.recompute_value(self)
                 updated.add(cell)
             self.notify(updated)
@@ -352,12 +352,11 @@ class Workbook:
             raise ValueError
         
         if sheet_name.lower() in self.sheet_references.backward:
-            for sheet, cell in self.sheet_references.backward[sheet_name.lower()]:
+            for cell in self.sheet_references.backward[sheet_name.lower()]:
                 cell.rename_sheet(sheet_name, new_sheet_name)
-                self.sheet_references.link((sheet, cell), new_sheet_name.lower())
+                self.sheet_references.link(cell, new_sheet_name.lower())
         self.sheet_references.clear_backward_link(sheet_name.lower())  
-            
-            
+
         self.sheet_map[new_sheet_name.lower()] = self.sheet_map[sheet_name.lower()]
         self.sheet_map.pop(sheet_name.lower())
         self.sheet_map[new_sheet_name.lower()].sheet_name = new_sheet_name
