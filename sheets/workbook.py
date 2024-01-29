@@ -1,7 +1,7 @@
 from typing import *
 import decimal
 import re
-from .sheet import Sheet
+from .sheet import Sheet, name_is_valid
 from .graph import Graph
 from .cell import Cell, CellError, CellErrorType, FormulaError
 from . import location as location_utils
@@ -9,6 +9,7 @@ import copy
 
 from typing import TextIO
 import json
+
 
 
 class Workbook:
@@ -327,7 +328,7 @@ class Workbook:
         # this requirement, the behavior is undefined.
         pass
 
-    def rename_sheet(self, sheet_name: str, new_sheet_name: str) -> None:
+    def rename_sheet(self, sheet_name: str, new_sheet_name: str) -> str:
         # Rename the specified sheet to the new sheet name.  Additionally, all
         # cell formulas that referenced the original sheet name are updated to
         # reference the new sheet name (using the same case as the new sheet
@@ -343,7 +344,37 @@ class Workbook:
         #
         # If the new_sheet_name is an empty string or is otherwise invalid, a
         # ValueError is raised.
-        pass
+        if not name_is_valid(new_sheet_name):
+            raise ValueError
+
+        if new_sheet_name.lower() in self.sheet_map:
+            raise ValueError
+        
+        if sheet_name.lower() in self.sheet_references.backward:
+            for sheet, cell in self.sheet_references.backward[sheet_name.lower()]:
+                cell.rename_sheet(sheet_name, new_sheet_name)
+                self.sheet_references.link((sheet, cell), new_sheet_name.lower())
+        self.sheet_references.clear_backward_link(sheet_name.lower())  
+            
+            
+        self.sheet_map[new_sheet_name.lower()] = self.sheet_map[sheet_name.lower()]
+        self.sheet_map.pop(sheet_name.lower())
+        self.sheet_map[new_sheet_name.lower()].sheet_name = new_sheet_name
+        
+            
+        if new_sheet_name.lower() in self.sheet_references.backward:
+            working = set() 
+            for sheet, cell in self.sheet_references.backward[new_sheet_name.lower()]:
+                try:
+                    cell.check_references(self)
+                    cell.evaluate_formula(self)
+                except FormulaError as e:
+                    cell.value = e.value
+                    
+                working.add(cell)
+            self.update_ancestors(working)
+            
+        return new_sheet_name
 
     def move_sheet(self, sheet_name: str, index: int) -> None:
         # Move the specified sheet to the specified index in the workbook's
@@ -385,26 +416,3 @@ class Workbook:
         # sequence of sheets.
         #
         # If the specified sheet name is not found, a KeyError is raised.
-        
-        new_name = ""   
-        if sheet_name.lower() in self.sheet_map.keys():
-            sheet_object = self.sheet_map[sheet_name.lower()]
-            new_sheet = copy.deepcopy(sheet_object)
-            
-            if sheet_name.lower() in self.num_copies.keys():
-                # make deep copy
-                # add to num_copies and sheet_map and sheets      
-                num = self.num_copies[sheet_name.lower()]
-                num += 1
-                new_name = sheet_name + '_' + str(num)
-                new_sheet.update_sheet_name(new_name)
-                self.num_copies[sheet_name.lower()] = num
-            else:
-                new_name = sheet_name + '_1'
-                new_sheet.update_sheet_name(new_name)
-                self.num_copies[sheet_name.lower()] = 1
-        
-            self.sheets.append(new_sheet)
-            self.sheet_map[new_name.lower()] = new_sheet
-            
-        return (len(self.sheets) - 1, new_name)
