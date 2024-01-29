@@ -5,6 +5,7 @@ from .sheet import Sheet
 from .graph import Graph
 from .cell import Cell, CellError, CellErrorType, FormulaError
 from . import location as location_utils
+import copy
 
 from typing import TextIO
 import json
@@ -37,6 +38,9 @@ class Workbook:
 
         # Graph
         self.dependency_graph = Graph[Cell]()
+        
+        # map from names to copies
+        self.num_copies: Dict[str, int] = {}
 
     def num_sheets(self) -> int:
         # Return the number of spreadsheets in the workbook.
@@ -354,7 +358,14 @@ class Workbook:
         # If the specified sheet name is not found, a KeyError is raised.
         #
         # If the index is outside the valid range, an IndexError is raised.
-        pass
+        if index >= len(self.sheets) or index < 0:
+            raise IndexError
+        
+        sheet_object = self.sheet_map[sheet_name.lower()]
+        index_sheet = self.sheets.index(sheet_object)
+        del self.sheets[index_sheet]
+        
+        self.sheets.insert(index, sheet_object)
 
     def copy_sheet(self, sheet_name: str) -> Tuple[int, str]:
         # Make a copy of the specified sheet, storing the copy at the end of the
@@ -374,4 +385,26 @@ class Workbook:
         # sequence of sheets.
         #
         # If the specified sheet name is not found, a KeyError is raised.
-        pass
+        
+        new_name = ""   
+        if sheet_name.lower() in self.sheet_map.keys():
+            sheet_object = self.sheet_map[sheet_name.lower()]
+            new_sheet = copy.deepcopy(sheet_object)
+            
+            if sheet_name.lower() in self.num_copies.keys():
+                # make deep copy
+                # add to num_copies and sheet_map and sheets      
+                num = self.num_copies[sheet_name.lower()]
+                num += 1
+                new_name = sheet_name + '_' + str(num)
+                new_sheet.update_sheet_name(new_name)
+                self.num_copies[sheet_name.lower()] = num
+            else:
+                new_name = sheet_name + '_1'
+                new_sheet.update_sheet_name(new_name)
+                self.num_copies[sheet_name.lower()] = 1
+        
+            self.sheets.append(new_sheet)
+            self.sheet_map[new_name.lower()] = new_sheet
+            
+        return (len(self.sheets) - 1, new_name)
