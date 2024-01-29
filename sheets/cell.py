@@ -33,7 +33,6 @@ class Cell:
         
     def set_value(self, value):
         self.value = value
-        self.sheet.on_update([(self.sheet.sheet_name, self.location)])
 
     def get_value(self):
         return self.value
@@ -77,21 +76,6 @@ class Cell:
 
         if type(self.value) == decimal.Decimal:
             self.set_value(remove_trailing_zeros(self.value))
-
-    def update_referencing_nodes(self, workbook):
-        ancestors = workbook.dependency_graph.get_ancestors_of_set(set([self]))
-        ordered = workbook.dependency_graph.get_topological_order()
-        for c in ordered:
-            if c == self:
-                continue
-            if not c in ancestors:
-                continue
-            try:
-                c.check_references(workbook)
-                c.check_cycles(workbook)
-                c.evaluate_formula(workbook)
-            except FormulaError as e:
-                c.set_value(e.value)
 
     def rename_sheet(self, old_name, new_name):
         self.contents = interp.rename_sheet(old_name, new_name, self.formula_tree)
@@ -138,8 +122,6 @@ class Cell:
                     self.set_value(contents)
             except decimal.InvalidOperation:
                 self.set_value(contents)
-
-        self.update_referencing_nodes(workbook)
     
 class CellErrorType(enum.Enum):
     '''

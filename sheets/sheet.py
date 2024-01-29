@@ -71,6 +71,8 @@ class Sheet:
             location_num = location_utils.location_string_to_tuple(location)
             self.extent = (max(self.extent[0], location_num[0]),
                             max(self.extent[1], location_num[1]))
+
+        return self.cells[location]
     
 
     def get_cell_contents(self, location: str):
