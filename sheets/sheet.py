@@ -33,10 +33,15 @@ class Sheet:
         self.cells = {}
     
     def to_json(self):
-        return {
-            "name": self.sheet_name,
-            "cell-contents": self.cells
+        json_obj = {
+            "name": self.sheet_name
         }
+        locations = self.cells.keys()
+        cell_contents = dict()
+        for location in locations:
+            cell_contents[location] = str(self.cells[location])
+        json_obj["cell-contents"] = cell_contents
+        return json_obj
 
     def update_sheet_name(self, new_name):
         self.sheet_name = new_name

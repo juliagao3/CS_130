@@ -5,8 +5,10 @@ from .sheet import Sheet, name_is_valid
 from .graph import Graph
 from .cell import Cell, CellError, CellErrorType, FormulaError
 from . import location as location_utils
+import copy
 
 from typing import TextIO
+import json
 
 
 
@@ -37,6 +39,9 @@ class Workbook:
 
         # Graph
         self.dependency_graph = Graph[Cell]()
+        
+        # map from names to copies
+        self.num_copies: Dict[str, int] = {}
 
     def num_sheets(self) -> int:
         # Return the number of spreadsheets in the workbook.
@@ -168,7 +173,7 @@ class Workbook:
         # If the cell contents appear to be a formula, and the formula is
         # invalid for some reason, this method does not raise an exception;
         # rather, the cell's value will be a CellError object indicating the
-        # naure of the issue.
+        # nature of the issue.
         
         location = location_utils.check_location(location)
         self.sheet_map[sheet_name.lower()].set_cell_contents(self, location, contents)
@@ -259,7 +264,27 @@ class Workbook:
         # If any expected value in the input JSON is not of the proper type
         # (e.g. an object instead of a list, or a number instead of a string),
         # raise a TypeError with a suitably descriptive message.
-        pass
+        workbook_json = json.load(fp)
+
+        wb = Workbook()
+
+        try:
+            sheets_list = workbook_json["sheets"]
+            for sheet_dict in sheets_list:
+                try:
+                    num, name = wb.new_sheet(sheet_dict["name"])
+                    cell_contents = sheet_dict["cell-contents"]
+                    for location in cell_contents.keys():
+                        if type(cell_contents[location]) == str:
+                            wb.set_cell_contents(name, location, cell_contents[location])
+                        else:
+                            raise TypeError("Input JSON has an incorrect type: cell contents should be strings.")            
+                except TypeError:
+                    raise TypeError("Input JSON has an incorrect type: sheet name should be a string.")
+        except KeyError:
+            raise KeyError("Input JSON is missing an expected key: 'sheets', 'name', or 'cell-contents'.")
+
+        return wb
 
     def save_workbook(self, fp: TextIO) -> None:
         # Instance method (not a static/class method) to save a workbook to a
@@ -269,7 +294,14 @@ class Workbook:
         #
         # If an IO write error occurs (unlikely but possible), let any raised
         # exception propagate through.
-        pass
+        # TODO: double quotes within cell formulas must be escaped??
+        workbook_dict = dict()
+        workbook_dict["sheets"] = list()
+
+        for sheet in self.sheets:
+            workbook_dict["sheets"].append(sheet.to_json())
+              
+        json.dump(workbook_dict, fp, indent=4)
 
     def notify_cells_changed(self,
             notify_function: Callable[[Any, Iterable[Tuple[str, str]]], None]) -> None:
@@ -357,7 +389,14 @@ class Workbook:
         # If the specified sheet name is not found, a KeyError is raised.
         #
         # If the index is outside the valid range, an IndexError is raised.
-        pass
+        if index >= len(self.sheets) or index < 0:
+            raise IndexError
+        
+        sheet_object = self.sheet_map[sheet_name.lower()]
+        index_sheet = self.sheets.index(sheet_object)
+        del self.sheets[index_sheet]
+        
+        self.sheets.insert(index, sheet_object)
 
     def copy_sheet(self, sheet_name: str) -> Tuple[int, str]:
         # Make a copy of the specified sheet, storing the copy at the end of the
@@ -377,4 +416,3 @@ class Workbook:
         # sequence of sheets.
         #
         # If the specified sheet name is not found, a KeyError is raised.
-        pass
