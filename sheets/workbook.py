@@ -117,9 +117,6 @@ class Workbook:
         sheet = self.sheet_map.pop(sheet_name.lower())
         self.sheets.remove(sheet)
         
-        if not sheet_name.lower() in self.sheet_references.backward:
-            return
-
         # nodes that reference this cell will have their value recomputed
         # and find that they now have a bad reference since the sheet has
         # been removed from the workbook
