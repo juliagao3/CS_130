@@ -432,6 +432,6 @@ class Workbook:
             cell.sheet = new_sheet
             cell.recompute_value(self)
 
-        self.update_cells_referencing_sheet(new_sheet)
+        self.update_cells_referencing_sheet(new_name)
 
         return (len(self.sheets) - 1, new_name)
