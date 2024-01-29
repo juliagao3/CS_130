@@ -96,6 +96,15 @@ class Cell:
     def rename_sheet(self, old_name, new_name):
         self.contents = interp.rename_sheet(old_name, new_name, self.formula_tree)
 
+    def recompute_value(self, workbook):
+        try:
+            self.check_references(workbook)
+            self.check_cycles(workbook)
+            self.evaluate_formula(workbook)
+            self.check_value()
+        except FormulaError as e:
+            self.set_value(e.value)
+
     def set_contents(self, workbook, contents: str):
         workbook.sheet_references.clear_forward_links((self.sheet, self))
         workbook.dependency_graph.clear_forward_links(self)

@@ -106,11 +106,7 @@ class Workbook:
         working = set()
         if sheet_name.lower() in self.sheet_references.backward:
             for sheet, cell in self.sheet_references.backward[sheet_name.lower()]:
-                try:
-                    cell.check_references(self)
-                    cell.evaluate_formula(self)
-                except FormulaError as e:
-                    cell.set_value(e.value)
+                cell.recompute_value(self)
 
                 # this step is probly slow... it would be better to update
                 # every affected cell outside this loop
@@ -373,11 +369,7 @@ class Workbook:
         if new_sheet_name.lower() in self.sheet_references.backward:
             working = set() 
             for sheet, cell in self.sheet_references.backward[new_sheet_name.lower()]:
-                try:
-                    cell.check_references(self)
-                    cell.evaluate_formula(self)
-                except FormulaError as e:
-                    cell.set_value(e.value)
+                cell.recompute_value(self)
                     
                 working.add(cell)
             self.update_ancestors(working)
@@ -445,21 +437,16 @@ class Workbook:
             self.sheets.append(new_sheet)
             self.sheet_map[new_name.lower()] = new_sheet
             
-        if new_name.lower() in self.sheet_references.backward:
-            working = set() 
-            for sheet, cell in self.sheet_references.backward[new_name.lower()]:
-                try:
-                    cell.check_references(self)
-                    cell.evaluate_formula(self)
-                except FormulaError as e:
-                    cell.set_value(e.value)
-                    
-                working.add(cell)
-            self.update_ancestors(working)
-            
         new_sheet = self.sheet_map[new_name.lower()]
         for cell in new_sheet.cells.values():
             cell.sheet = new_sheet
-            cell.check_references(self)
+            cell.recompute_value(self)
             
+        if new_name.lower() in self.sheet_references.backward:
+            working = set() 
+            for sheet, cell in self.sheet_references.backward[new_name.lower()]:
+                cell.recompute_value(self)
+                working.add(cell)
+            self.update_ancestors(working)
+
         return (len(self.sheets) - 1, new_name)

@@ -90,6 +90,7 @@ class TestClass(unittest.TestCase):
         self.assertEqual(value.get_type(), sheets.CellErrorType.BAD_REFERENCE)
         
         copy_num, copy_name = wb.copy_sheet(sheet_name)
+        # wb.set_cell_contents(copy_name, "A1", f"={sheet_name}!A1")
         
         value1 = wb.get_cell_value(copy_name, "A1")
         self.assertIsInstance(value1, sheets.CellError)
