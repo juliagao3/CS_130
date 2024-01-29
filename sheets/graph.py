@@ -35,10 +35,15 @@ class Graph(Generic[T]):
     def get_nodes(self):
         return self.forward.keys() | self.backward.keys()
 
+    def is_cycle(self, scc):
+        if len(scc) > 1:
+            return True
+        return (scc[0] in self.forward) and (scc[0] in self.forward[scc[0]])
+
     def get_cycles(self):
         if self.cycles_dirty:
             sccs, topo = self.tarjan()
-            self.cycles = list(filter(lambda s: len(s) > 1, sccs))
+            self.cycles = list(filter(lambda s: self.is_cycle(s), sccs))
             self.topological_order = topo
             self.cycles_dirty = False
         return self.cycles
@@ -46,7 +51,7 @@ class Graph(Generic[T]):
     def get_topological_order(self):
         if self.cycles_dirty:
             sccs, topo = self.tarjan()
-            self.cycles = list(filter(lambda s: len(s) > 1, sccs))
+            self.cycles = list(filter(lambda s: self.is_cycle(s), sccs))
             self.topological_order = topo
             self.cycles_dirty = False
         return self.topological_order
