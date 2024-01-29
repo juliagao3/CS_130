@@ -27,7 +27,8 @@ def name_needs_quotes(name: str):
     return False
 
 class Sheet:
-    def __init__(self, sheet_name):
+    def __init__(self, workbook, sheet_name):
+        self.workbook = workbook
         self.extent = (0, 0)
         self.sheet_name = sheet_name
         self.cells = {}
@@ -43,6 +44,9 @@ class Sheet:
         json_obj["cell-contents"] = cell_contents
         return json_obj
 
+    def on_update(self, locations):
+        self.workbook.on_update(locations)
+
     def update_sheet_name(self, new_name):
         self.sheet_name = new_name
 
@@ -51,7 +55,7 @@ class Sheet:
         location - string like '[col][row]'
         """
         if not location in self.cells:
-            self.cells[location] = Cell(self)
+            self.cells[location] = Cell(self, location)
         self.cells[location].set_contents(workbook, content)
         
         if content == None or content == "" or content.isspace():
@@ -87,6 +91,6 @@ class Sheet:
     
     def get_cell(self, location: str):
         if not location in self.cells:
-            self.cells[location] = Cell(self)
+            self.cells[location] = Cell(self, location)
         
         return self.cells[location]

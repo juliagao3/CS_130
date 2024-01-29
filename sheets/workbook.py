@@ -43,6 +43,9 @@ class Workbook:
         # map from names to copies
         self.num_copies: Dict[str, int] = {}
 
+        # function to call when cells update
+        self.notify_functions = []
+
     def num_sheets(self) -> int:
         # Return the number of spreadsheets in the workbook.
         return len(self.sheets)
@@ -98,7 +101,7 @@ class Workbook:
 
             raise ValueError
 
-        sheet = Sheet(sheet_name)
+        sheet = Sheet(self, sheet_name)
         self.sheet_map[sheet_name.lower()] = sheet
         self.sheets.append(sheet)
 
@@ -109,7 +112,7 @@ class Workbook:
                     cell.check_references(self)
                     cell.evaluate_formula(self)
                 except FormulaError as e:
-                    cell.value = e.value
+                    cell.set_value(e.value)
 
                 # this step is probly slow... it would be better to update
                 # every affected cell outside this loop
@@ -137,7 +140,7 @@ class Workbook:
         # been removed from the workbook
         broken = set()
         for sheet, cell in self.sheet_references.backward[sheet_name.lower()]:
-            cell.value = CellError(CellErrorType.BAD_REFERENCE, "")
+            cell.set_value(CellError(CellErrorType.BAD_REFERENCE, ""))
             broken.add(cell)
         self.update_ancestors(broken)
 
@@ -238,7 +241,7 @@ class Workbook:
         circular = set()
         for cycle in cycles:
             for cell in cycle:
-                cell.value = CellError(CellErrorType.CIRCULAR_REFERENCE, "")
+                cell.set_value(CellError(CellErrorType.CIRCULAR_REFERENCE, ""))
                 circular.add(cell)
         self.update_ancestors(circular)
 
@@ -303,6 +306,13 @@ class Workbook:
               
         json.dump(workbook_dict, fp, indent=4)
 
+    def on_update(self, locations):
+        for func in self.notify_functions:
+            try:
+                func(self, locations)
+            except:
+                pass
+
     def notify_cells_changed(self,
             notify_function: Callable[[Any, Iterable[Tuple[str, str]]], None]) -> None:
         # notify_function (Workbook, Iterable...) -> None
@@ -326,7 +336,7 @@ class Workbook:
         # A notification function is expected to not mutate the workbook or
         # iterable that it is passed to it.  If a notification function violates
         # this requirement, the behavior is undefined.
-        pass
+        self.notify_functions.append(notify_function)
 
     def rename_sheet(self, sheet_name: str, new_sheet_name: str) -> str:
         # Rename the specified sheet to the new sheet name.  Additionally, all
@@ -416,7 +426,6 @@ class Workbook:
         # sequence of sheets.
         #
         # If the specified sheet name is not found, a KeyError is raised.
-        
         new_name = ""   
         if sheet_name.lower() in self.sheet_map.keys():
             sheet_object = self.sheet_map[sheet_name.lower()]
