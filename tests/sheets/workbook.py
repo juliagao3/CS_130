@@ -10,6 +10,8 @@ import copy
 from typing import TextIO
 import json
 
+
+
 class Workbook:
     # A workbook containing zero or more named spreadsheets.
     #
@@ -377,7 +379,7 @@ class Workbook:
                     cell.check_references(self)
                     cell.evaluate_formula(self)
                 except FormulaError as e:
-                    cell.set_value(e.value)
+                    cell.value = e.value
                     
                 working.add(cell)
             self.update_ancestors(working)
@@ -444,22 +446,5 @@ class Workbook:
         
             self.sheets.append(new_sheet)
             self.sheet_map[new_name.lower()] = new_sheet
-            
-        if new_name.lower() in self.sheet_references.backward:
-            working = set() 
-            for sheet, cell in self.sheet_references.backward[new_name.lower()]:
-                try:
-                    cell.check_references(self)
-                    cell.evaluate_formula(self)
-                except FormulaError as e:
-                    cell.set_value(e.value)
-                    
-                working.add(cell)
-            self.update_ancestors(working)
-            
-        new_sheet = self.sheet_map[new_name.lower()]
-        for cell in new_sheet.cells.values():
-            cell.sheet = new_sheet
-            cell.check_references(self)
             
         return (len(self.sheets) - 1, new_name)

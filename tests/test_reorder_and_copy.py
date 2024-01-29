@@ -78,6 +78,26 @@ class TestClass(unittest.TestCase):
         self.assertEqual(sheet1_copy1, "Sheet1_1")
         self.assertEqual(sheet1_copy2, "Sheet1_2")
         self.assertEqual(sheet1_copy1_copy, "Sheet1_1_1")
+        
+    def test_bad_reference(self):
+        wb = sheets.Workbook()
+        sheet_num, sheet_name = wb.new_sheet("sheet1")
+        
+        wb.set_cell_contents(sheet_name, "A1", f"={sheet_name}_1!A1")
+        
+        value = wb.get_cell_value(sheet_name, "A1")
+        self.assertIsInstance(value, sheets.CellError)
+        self.assertEqual(value.get_type(), sheets.CellErrorType.BAD_REFERENCE)
+        
+        copy_num, copy_name = wb.copy_sheet(sheet_name)
+        
+        value1 = wb.get_cell_value(copy_name, "A1")
+        self.assertIsInstance(value1, sheets.CellError)
+        self.assertEqual(value1.get_type(), sheets.CellErrorType.CIRCULAR_REFERENCE)
+        
+        wb.set_cell_contents(copy_name, "A1", "5")
+        self.assertEqual(wb.get_cell_value(copy_name, "A1"), decimal.Decimal(5))       
+        
 
 if __name__ == "__main__":
         unittest.main()
