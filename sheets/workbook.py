@@ -103,16 +103,7 @@ class Workbook:
         self.sheet_map[sheet_name.lower()] = sheet
         self.sheets.append(sheet)
 
-        working = set()
-        if sheet_name.lower() in self.sheet_references.backward:
-            for sheet, cell in self.sheet_references.backward[sheet_name.lower()]:
-                cell.recompute_value(self)
-
-                # this step is probly slow... it would be better to update
-                # every affected cell outside this loop
-                working.add(cell)
-
-        self.update_ancestors(working)
+        self.update_cells_referencing_sheet(sheet_name)
 
         return (len(self.sheets)-1, sheet_name)
 
