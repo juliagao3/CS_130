@@ -16,17 +16,20 @@ Logistics (7 pts)
 -----------------
 
 L1.  [2pts] Enumerate all teammates here.
+
     Cecilia Noble, Sebastian Lamas, Jacob Acosta, Julia Gao
 
 
 L2.  [2pts] What did each teammate focus on during this project?
+
     Cecilia - Reordering/copying and saving/loading
     Sebastian - Saving/loading and update cell notifications
     Jacob - Renaming sheets and update cell notifications
     Julia - Reordering/copying and renaming sheets
 
 L3.  [3pts] Approximately how many hours did each teammate spend on the project? 
-    Each member spent around 9 hours.
+
+    Each member spent around 10 hours.
 
 
 
@@ -88,6 +91,11 @@ A1.  [4pts] Briefly enumerate the performance tests you created to exercise
 
 A2.  [2pts] What profiler did you choose to run your performance tests with?
      Why?  Give an example of how to invoke one of your tests with the profiler.
+     
+     We chose to run our performance test with the cProfile and then viewing our
+     results in snakeviz profile. Donnie mentioned in lecture and it was written in
+     the spec so we thought it would be a good profiler to try and run. The command 
+     line to run the cProfile is python3 -m cProfile -o profile.unittest tests.stress.
 
 
 A3.  [6pts] What are ~3 of the most significant hot-spots you identified in your
