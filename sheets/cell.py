@@ -81,6 +81,8 @@ class Cell:
         self.contents = interp.rename_sheet(old_name, new_name, self.formula_tree)
 
     def recompute_value(self, workbook):
+        if self.contents[0] != "=":
+            return
         try:
             self.check_references(workbook)
             self.check_cycles(workbook)
