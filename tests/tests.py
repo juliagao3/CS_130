@@ -618,7 +618,7 @@ class TestClass(unittest.TestCase):
                 self.assertEqual(wb.get_cell_value(name, "A3"), decimal.Decimal(2.0))
 
         def test_spec(self):
-                self.assertEqual(sheets.version, "1.0")
+                self.assertEqual(sheets.version, "1.1")
                 wb = sheets.Workbook()
                 (index, name) = wb.new_sheet()
                 self.assertEqual(index, 0)
