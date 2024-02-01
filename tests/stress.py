@@ -113,4 +113,4 @@ class TestClass(unittest.TestCase):
         self.assertEqual(wb.get_cell_value(name, f"A{k}"), x**(2**(k-2)))
 
 if __name__ == "__main__":
-    unittest.main()
+    unittest.main(module="stress")
