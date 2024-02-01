@@ -16,17 +16,20 @@ Logistics (7 pts)
 -----------------
 
 L1.  [2pts] Enumerate all teammates here.
+
     Cecilia Noble, Sebastian Lamas, Jacob Acosta, Julia Gao
 
 
 L2.  [2pts] What did each teammate focus on during this project?
+
     Cecilia - Reordering/copying and saving/loading
     Sebastian - Saving/loading and update cell notifications
     Jacob - Renaming sheets and update cell notifications
     Julia - Reordering/copying and renaming sheets
 
 L3.  [3pts] Approximately how many hours did each teammate spend on the project? 
-    Each member spent around 9 hours.
+
+    Each member spent around 12 hours. 
 
 
 
@@ -38,17 +41,52 @@ D1.  [3pts] Briefly describe how your workbook-loading code operates.  Does
      workbook, such as deferring cell-value update calculations, or analyzing
      the graph of cell dependencies?
 
+     First, we read the json file and get the workbook in the json format. We
+     create a new empty workbook. We get the sheets_list from the previous json
+     object and loop through every dictionary in the sheets_list. For every
+     dictionary, we check the name and cell contents. If the cell contents is
+     not a string, we raise TypeError. For each location in cell contents, we
+     set the cell contents for that location in the specific sheet for
+     the new workbook we created. We return the newly created workbook. Our
+     function does not do anything sophisticated to optimize the performance 
+     of loading a workbook (the things stated in the question are done in 
+     set_cell_contents).
+
 
 D2.  [4pts] Sheet-level operations like copying a sheet, deleting a sheet,
      renaming a sheet, or even creating a new sheet, can cause cell values
      to be updated.  How does your workbook identify such cells and ensure
      that they are updated properly?
 
+     In each of these different operations, we make sure to call a method
+     "update_cells_referencing_sheet." This method calls "recompute_value"
+     which recomputes the value by checking for references and updating the 
+     dependency graph and making sure there are no cycles present. Then we 
+     parse the formula and recompute the value. Then, we also notify the updated 
+     cells and update the ancestors of that cell. 
+
 
 D3.  [4pts] When renaming a sheet, cells with formulas that explicitly
      reference the renamed sheet must be updated with the new sheet name.
      Give an overview of how your implementation updates these formulas.
 
+     First, we check if the name is valid and make sure that the new name is not
+     the original name. Then, we go through the sheet_references.backward to get
+     all of the cells that reference the sheet and update the sheet to the new name
+     and add links from those references to the new sheet name. We clear all 
+     backward links between those cells that reference the old sheet. We update
+     our dicionary of sheet_map accordingly with setting the new sheet name to the sheet from
+     the old sheet name. We remove the old sheet name and set the new sheet name to
+     the new name. We then update all the cell referencing the sheet. We also want to update 
+     the cell contents to reflect the new sheet name. We create two new classes SheetRenamer() 
+     and FormulaPrinter() in interp.py which is where we evaluate formulas. SheetRenamer() is 
+     defined as a lark.visitors.Transformer_InPlace since we want non-recursive transformation 
+     of our tree. We visit the nodes and check that if a cell's contents references a sheet name, 
+     we update the name accordingly. If the name needs quotes, then we add quotes. Once we have 
+     changed the tree in place, we go through the FormulaPrinter() class which is defined as a 
+     lark.visitors.Interpreter which we turn the values back into strings and create the formula 
+     once again with adding parenthesis when necessary. We then return the new formula to become 
+     the cell's contents with the updated sheet name.
 
 Informal Design Reviews (16 pts)
 --------------------------------
@@ -57,20 +95,50 @@ R1.  [4pts] What insights did your team gain regarding the design of *your
      own* spreadsheet engine code?  What parts of your design are you happy
      with?  What parts might require further attention in the future?
 
+     One insight that our team gained with our design is that having more
+     than one graph could be used to our advantage as we don't easily reach
+     recursion depth limit in Python and also our graphs will take less time
+     to traverse. In addition, we also realized that implementing a generic graph
+     class was useful in applying to different objects instead of specific graphs
+     for each object. We are happy with what we mentioned above because we 
+     implemented it is iterative and it finds cycles in one pass. But that is
+     also a part we need to pay attention to since it is a bit slow (based on the 
+     performance test that we ran). 
+
 
 R2.  [4pts] Did you feel like you were effective at helping other teams
      assess *their* software designs?  Briefly discuss what went well, and
      what could have gone better, in your interview of another team.
+
+     We didn't really assess their software design. We more just talked
+     through what they implemented and perhaps ways they can improve their
+     own design. We learned about different design choices and also the
+     different challenges each group is facing. It could have been more of
+     a discussion as it seemed more like us asking questions and them answering.
+     There wasn't much of a conversation.
 
 
 R3.  [4pts] How closely did your team's design match the designs of the
      other teams you talked with?  Briefly discuss significant similaries
      and differences between your team's approach and other teams' approaches.
 
+     Our design was very similar in which we had a cell, sheet, workbook, and lark
+     class. We shared storing information in dictionaries. The main difference
+     in our approach was how we decided to recompute values and update contents
+     (because, in our case, we make use of a generic graph module to represent dependencies
+     between cells and sheets; but with the other groups that we talked to, we didn't 
+     see this approach). 
+ 
 
 R4.  [4pts] Which GRASP principles were the most pertinent in your
      discussions?  How much of your discussions referenced the GRASP
      principles?
+     
+     The GRASP principles that were the most pertinent in our discussions were
+     coupling and cohesion. I think for the group that interviewed us, we discussed
+     quite a bit about GRASP principles since it was incorporated into the questions
+     quite a bit. As for the group we interviewed, we didn't have time to cover the
+     GRASP principles.
 
 
 Performance Analysis (16 pts)
@@ -85,19 +153,54 @@ A1.  [4pts] Briefly enumerate the performance tests you created to exercise
      your implementation, along with the teammates that collaborated to
      implement each of them.
 
+     We wrote all the performance tests using pair programming and each provided
+     comments on the tests. We created a total of 5 tests. One test for testing
+     big cycles with each cell referencing the previous cell and last cell referring
+     to the first cell. We had a test to create a bunch of small cycles and break
+     each of them one by one and test that the cell contents were updated. We had 
+     a test with two sheets, sheet1 and sheet2, with cell A1 in sheet1 referencing
+     cell A1 in sheet2 and had cells 2 to 1000 in sheet1 referecing cell A1 in sheet1. 
+     We delete sheet2 and make sure that all the cells in sheet1 are set to bad reference.
+     We had another test with a very large formula and cell referencing to make sure that the 
+     final value of the cell was correct and that the performance was ok as well.
+
 
 A2.  [2pts] What profiler did you choose to run your performance tests with?
      Why?  Give an example of how to invoke one of your tests with the profiler.
+     
+     We chose to run our performance test with the cProfile and then viewing our
+     results in snakeviz profile. Donnie mentioned in lecture and it was written in
+     the spec so we thought it would be a good profiler to try and run. The command 
+     line to run the cProfile is python3 -m cProfile -o profile.unittest tests/stress.py.
+     And then we can run snakeviz profile.unittest to get the actual performance
+     tests.
 
 
 A3.  [6pts] What are ~3 of the most significant hot-spots you identified in your
      performance testing?  Did you expect these hot-spots, or were they
      surprising to you?
 
+     One of the biggest hot-spots that we identified in performance testing is the method
+     "strongconnect" which is used to find the strongly connected components of
+     the graph. It takes up a big chunck of our runtime. The other graph functionalities
+     take up quite some time as well such as "get_forward_links" and "is_cycle" to name
+     a few. We expected that most of the time would be in the graph module since
+     the new implementation of finding SCCs would be a bit slower than our previous 
+     implementation with using a dfs. There may be more hot spots that we aren't yet
+     covering in our stress tests since we mainly tested update contents and cycle detection
+     implementation. 
+
 
 A4.  [4pts] Reflect on the experience of pair-programming as you constructed
      these tests.  What went well with it?  What would you like to try to do
      better in the future?
+
+     With creating the stress tests, one thing that went well was being able
+     to communicate our ideas and bounce ideas off of each other. Another thing
+     that went well was being able to find bugs along the way by having another
+     pair of eyes looking at the code as well. I think one thing we could
+     try and do better is creating better stress tests and making sure that it
+     covers all the necessary functions. 
 
 
 Section F:  CS130 Project 2 Feedback [OPTIONAL]
