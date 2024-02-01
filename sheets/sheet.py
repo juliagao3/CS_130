@@ -1,4 +1,5 @@
 from typing import *
+import re
 from .workbook import *
 from .cell import Cell
 from . import location as location_utils
@@ -40,6 +41,8 @@ class Sheet:
         locations = self.cells.keys()
         cell_contents = dict()
         for location in locations:
+            if self.cells[location].contents == None:
+                continue
             cell_contents[location] = str(self.cells[location])
         json_obj["cell-contents"] = cell_contents
         return json_obj
