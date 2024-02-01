@@ -103,16 +103,7 @@ class Workbook:
         self.sheet_map[sheet_name.lower()] = sheet
         self.sheets.append(sheet)
 
-        working = set()
-        if sheet_name.lower() in self.sheet_references.backward:
-            for sheet, cell in self.sheet_references.backward[sheet_name.lower()]:
-                cell.recompute_value(self)
-
-                # this step is probly slow... it would be better to update
-                # every affected cell outside this loop
-                working.add(cell)
-
-        self.update_ancestors(working)
+        self.update_cells_referencing_sheet(sheet_name)
 
         return (len(self.sheets)-1, sheet_name)
 
@@ -126,17 +117,10 @@ class Workbook:
         sheet = self.sheet_map.pop(sheet_name.lower())
         self.sheets.remove(sheet)
         
-        if not sheet_name.lower() in self.sheet_references.backward:
-            return
-
         # nodes that reference this cell will have their value recomputed
         # and find that they now have a bad reference since the sheet has
         # been removed from the workbook
-        broken = set()
-        for sheet, cell in self.sheet_references.backward[sheet_name.lower()]:
-            cell.set_value(CellError(CellErrorType.BAD_REFERENCE, ""))
-            broken.add(cell)
-        self.update_ancestors(broken)
+        self.update_cells_referencing_sheet(sheet_name)
 
     def get_sheet_extent(self, sheet_name: str) -> Tuple[int, int]:
         # Return a tuple (num-cols, num-rows) indicating the current extent of
@@ -173,7 +157,9 @@ class Workbook:
         # nature of the issue.
         
         location = location_utils.check_location(location)
-        self.sheet_map[sheet_name.lower()].set_cell_contents(self, location, contents)
+        cell = self.sheet_map[sheet_name.lower()].set_cell_contents(self, location, contents)
+        self.notify({cell})
+        self.update_ancestors({cell})
 
     def get_cell_contents(self, sheet_name: str, location: str) -> Optional[str]:
         # Return the contents of the specified cell on the specified sheet.
@@ -227,8 +213,18 @@ class Workbook:
         order = self.dependency_graph.get_topological_order()
         ancestors = self.dependency_graph.get_ancestors_of_set(nodes)
         for cell in order:
-            if cell in ancestors:
-                cell.evaluate_formula(self)
+            if cell in ancestors and not cell in nodes:
+                cell.recompute_value(self)
+        self.notify(ancestors - nodes)
+
+    def update_cells_referencing_sheet(self, sheet_name):
+        if sheet_name.lower() in self.sheet_references.backward:
+            updated = set()
+            for sheet, cell in self.sheet_references.backward[sheet_name.lower()]:
+                cell.recompute_value(self)
+                updated.add(cell)
+            self.notify(updated)
+            self.update_ancestors(updated)
 
     def check_cycles(self):
         cycles = self.dependency_graph.get_cycles()
@@ -237,6 +233,7 @@ class Workbook:
             for cell in cycle:
                 cell.set_value(CellError(CellErrorType.CIRCULAR_REFERENCE, ""))
                 circular.add(cell)
+        self.notify(circular)
         self.update_ancestors(circular)
 
     @staticmethod
@@ -300,10 +297,10 @@ class Workbook:
               
         json.dump(workbook_dict, fp, indent=4)
 
-    def on_update(self, locations):
+    def notify(self, cells):
         for func in self.notify_functions:
             try:
-                func(self, locations)
+                func(self, map(lambda c: (c.sheet.sheet_name, c.location), cells))
             except:
                 pass
 
@@ -364,16 +361,9 @@ class Workbook:
         self.sheet_map[new_sheet_name.lower()] = self.sheet_map[sheet_name.lower()]
         self.sheet_map.pop(sheet_name.lower())
         self.sheet_map[new_sheet_name.lower()].sheet_name = new_sheet_name
-        
-            
-        if new_sheet_name.lower() in self.sheet_references.backward:
-            working = set() 
-            for sheet, cell in self.sheet_references.backward[new_sheet_name.lower()]:
-                cell.recompute_value(self)
-                    
-                working.add(cell)
-            self.update_ancestors(working)
-            
+
+        self.update_cells_referencing_sheet(new_sheet_name)
+
         return new_sheet_name
 
     def move_sheet(self, sheet_name: str, index: int) -> None:
@@ -441,12 +431,7 @@ class Workbook:
         for cell in new_sheet.cells.values():
             cell.sheet = new_sheet
             cell.recompute_value(self)
-            
-        if new_name.lower() in self.sheet_references.backward:
-            working = set() 
-            for sheet, cell in self.sheet_references.backward[new_name.lower()]:
-                cell.recompute_value(self)
-                working.add(cell)
-            self.update_ancestors(working)
+
+        self.update_cells_referencing_sheet(new_name)
 
         return (len(self.sheets) - 1, new_name)

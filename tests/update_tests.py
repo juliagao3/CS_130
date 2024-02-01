@@ -69,7 +69,7 @@ class TestClass(unittest.TestCase):
 
         def on_cells_changed(workbook, changed_cells):
             nonlocal wb
-            sheet_name, location = changed_cells[0]
+            sheet_name, location = next(changed_cells)
             value = wb.get_cell_value(sheet_name, location)
             actual.append(value)
 
