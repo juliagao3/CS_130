@@ -93,7 +93,22 @@ class TestClass(unittest.TestCase):
         wb.notify_cells_changed(on_update)
         wb.set_cell_contents(name, "A1", "0")
 
-        print(updated)
+        self.assertEqual(wb.get_cell_value(name, "A1"), decimal.Decimal(0))
+        
+    def test_reference(self):
+        wb = sheets.Workbook()
+        num, name = wb.new_sheet()
+        
+        for i in range(3, 140):
+            wb.set_cell_contents(name, "A" + str(i), "=A" + str(i-1) + " +" + " A" + str(i-2))
+            
+        wb.set_cell_contents(name, "A1", "=1")
+        wb.set_cell_contents(name, "A2", "=1")
+        for i in range(3, 140):
+            value_1 = wb.get_cell_value(name, "A" + str(i - 2))
+            value_2 = wb.get_cell_value(name, "A" + str(i - 1))
+            self.assertEqual(wb.get_cell_value(name, "A" + str(i)), decimal.Decimal(value_1 + value_2))
+        
       
     def test_large_formula(self):  
         wb = sheets.Workbook()
