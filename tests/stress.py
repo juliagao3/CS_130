@@ -94,6 +94,23 @@ class TestClass(unittest.TestCase):
         wb.set_cell_contents(name, "A1", "0")
 
         print(updated)
+      
+    def test_large_formula(self):  
+        wb = sheets.Workbook()
+        index, name = wb.new_sheet()
+        x = 2
+        wb.set_cell_contents("sheet1", "a1", str(x))
+        k = 10
+        for i in range(2, k+1):
+            formula = "="
+            for j in range(1, i-1):
+                formula += "A" + str(j) + "*"
+            formula += "A" + str(i-1)
+            wb.set_cell_contents("sheet1", "a" + str(i), formula)
 
-# if __name__ == "__main__":
-unittest.main(module="stress")
+        x = decimal.Decimal(x)
+        k = decimal.Decimal(k)
+        self.assertEqual(wb.get_cell_value(name, f"A{k}"), x**(2**(k-2)))
+
+if __name__ == "__main__":
+    unittest.main()
