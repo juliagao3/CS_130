@@ -39,22 +39,11 @@ class CellRefFinder(lark.Visitor):
             assert len(tree.children) == 2
             self.refs.append('!'.join(tree.children))
 
-class QuoteScanner(lark.visitors.Visitor):
-    def __init__(self):
-        self.need_quotes = False
-
-    def cell(self, tree):
-        values = tree.children
-        if len(values) > 1:
-            if sheet_util.name_needs_quotes(values[0]):
-                self.need_quotes = True
-
 class SheetRenamer(lark.visitors.Transformer_InPlace):
 
-    def __init__(self, old_name, new_name, quotes):
+    def __init__(self, old_name, new_name):
         self.old_name = old_name
         self.new_name = new_name
-        self.quotes = quotes
 
     @v_args(tree=True)
     def cell(self, tree):
@@ -62,7 +51,8 @@ class SheetRenamer(lark.visitors.Transformer_InPlace):
         if len(values) > 1:
             if values[0].lower() == self.old_name.lower():
                 values[0] = self.new_name
-            if self.quotes and values[0][0] != "'":
+            need_quotes = sheet_util.name_needs_quotes(values[0])
+            if need_quotes and values[0][0] != "'":
                 values[0] = "'" + values[0] + "'"
         return tree
     
@@ -199,9 +189,7 @@ def find_refs(workbook, sheet, tree):
     return finder.refs
 
 def rename_sheet(old, new, tree):
-    scanner = QuoteScanner()
-    scanner.visit(tree)
-    renamer = SheetRenamer(old, new, scanner.need_quotes or sheet_util.name_needs_quotes(new))
+    renamer = SheetRenamer(old, new)
     renamer.transform(tree)
     printer = FormulaPrinter()
     return "=" + printer.visit(tree) 

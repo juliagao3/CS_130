@@ -64,7 +64,7 @@ class TestClass(unittest.TestCase):
         
         new_name = wb.rename_sheet(sheet_name1, "sheet3")
         
-        self.assertEqual(wb.get_cell_contents(new_name, "A1"), f"={sheet_name}!A1 + '{new_name}'!A2")
+        self.assertEqual(wb.get_cell_contents(new_name, "A1"), f"={sheet_name}!A1 + {new_name}!A2")
         
     def test_get_value(self):
         wb = sheets.Workbook()
