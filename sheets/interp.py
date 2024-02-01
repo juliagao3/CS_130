@@ -141,6 +141,9 @@ class FormulaEvaluator(lark.visitors.Interpreter):
             sheet_name = values[0]
             cell_ref = values[1]
         
+        if sheet_name[0] == "'":
+            sheet_name = sheet_name[1:-1]
+
         try:
             return self.workbook.get_cell_value(sheet_name, cell_ref) 
         except ValueError as e:

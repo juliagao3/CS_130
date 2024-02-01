@@ -47,6 +47,11 @@ class Sheet:
         json_obj["cell-contents"] = cell_contents
         return json_obj
 
+    def get_quoted_name(self):
+        if name_needs_quotes(self.sheet_name):
+            return "'" + self.sheet_name + "'"
+        return self.sheet_name
+
     def on_update(self, locations):
         self.workbook.on_update(locations)
 

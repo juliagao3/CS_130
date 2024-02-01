@@ -57,7 +57,7 @@ class Workbook:
         #
         # A user should be able to mutate the return-value without affecting the
         # workbook's internal state.
-        return [sheet.sheet_name for sheet in self.sheets]
+        return [sheet.get_quoted_name() for sheet in self.sheets]
 
     def new_sheet(self, sheet_name: Optional[str] = None) -> Tuple[int, str]:
         # Add a new sheet to the workbook.  If the sheet name is specified, it
@@ -79,9 +79,6 @@ class Workbook:
             sheet_name = sheet_name.strip()
 
             pattern_2 = r'[^_A-Za-z0-9]'
-
-            if not (sheet_name[0].isalpha() or sheet_name[0] == "") or ' ' in sheet_name or re.search(pattern_2, sheet_name) != None:
-                sheet_name = "'" + sheet_name + "'"
 
             if sheet_name.lower() in self.sheet_map.keys():
                 raise ValueError
