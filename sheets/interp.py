@@ -10,12 +10,12 @@ parser = lark.Lark.open('formulas.lark', rel_to=__file__, start='formula')
 def number_arg(index):
     def check(f):
         def new_f(self, values):
-            if values[index] == None:
+            if values[index] is None:
                 values[index] = decimal.Decimal(0)
-            elif type(values[index]) == str:
+            elif isinstance(values[index], str):
                 try:
                     values[index] = decimal.Decimal(values[index])
-                except decimal.InvalidOperation as e:
+                except decimal.InvalidOperation:
                     pass
 
             if type(values[index]) == sheets.CellError:
@@ -151,14 +151,14 @@ class FormulaEvaluator(lark.visitors.Interpreter):
 
         try:
             return self.workbook.get_cell_value(sheet_name, cell_ref) 
-        except ValueError as e:
+        except ValueError:
             assert "Uncaught bad reference!!!"
-        except KeyError as e:
+        except KeyError:
             assert "Uncaught bad reference!!!"
 
     @visit_children_decor
     def concat_expr(self, values):
-        return "".join(["" if v == None else str(v) for v in values])
+        return "".join(["" if v is None else str(v) for v in values])
 
     @visit_children_decor
     def number(self, values):

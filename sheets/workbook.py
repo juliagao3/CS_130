@@ -1,9 +1,8 @@
-from typing import *
-import decimal
+from typing import List, Dict, Any, Optional, Tuple, Callable, Iterable
 import re
 from .sheet import Sheet, name_is_valid
 from .graph import Graph
-from .cell import Cell, CellError, CellErrorType, FormulaError
+from .cell import Cell, CellError, CellErrorType
 from . import location as location_utils
 import copy
 
@@ -18,7 +17,7 @@ class Workbook:
 
     def __init__(self, workbook_name: str=None):
         # Initialize a new empty workbook.
-        if workbook_name != None:
+        if workbook_name is not None:
             self.workbook_name: str = workbook_name
         else:
             self.workbook_name: str = "wb"
@@ -74,16 +73,14 @@ class Workbook:
 
         pattern = r'[^A-Za-z0-9.?!,:;@#$%^&*()-_\s+]'
 
-        if (sheet_name != None) and re.search(pattern, sheet_name) == None and (sheet_name != "") and (not sheet_name.isspace()):
+        if (sheet_name is not None) and re.search(pattern, sheet_name) is None and (sheet_name != "") and (not sheet_name.isspace()):
 
             sheet_name = sheet_name.strip()
-
-            pattern_2 = r'[^_A-Za-z0-9]'
 
             if sheet_name.lower() in self.sheet_map.keys():
                 raise ValueError
 
-        elif sheet_name == None:
+        elif sheet_name is None:
             sheet_name = 'Sheet' + str(self.sheet_num)
             while sheet_name.lower() in self.sheet_map.keys():                
                 self.sheet_num += 1
@@ -207,7 +204,7 @@ class Workbook:
         order = self.dependency_graph.get_topological_order()
         ancestors = self.dependency_graph.get_ancestors_of_set(nodes)
         for cell in order:
-            if cell in ancestors and not cell in nodes:
+            if cell in ancestors and cell not in nodes:
                 cell.recompute_value(self)
         self.notify(ancestors - nodes)
 
@@ -263,7 +260,7 @@ class Workbook:
                     num, name = wb.new_sheet(sheet_dict["name"])
                     cell_contents = sheet_dict["cell-contents"]
                     for location in cell_contents.keys():
-                        if type(cell_contents[location]) == str:
+                        if isinstance(cell_contents[location], str):
                             wb.set_cell_contents(name, location, cell_contents[location])
                         else:
                             raise TypeError("Input JSON has an incorrect type: cell contents should be strings.")            
