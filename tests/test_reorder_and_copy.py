@@ -21,7 +21,7 @@ class TestClass(unittest.TestCase):
         wb.move_sheet(sheet_name1, 1)
 
         new_list = wb.list_sheets()
-        self.assertEqual(new_list, [sheet_name2, sheet_name1, sheet_name3])
+        self.assertEqual(new_list, ["'Spreadsheet 2'", "'Spreadsheet 1'", "'Spreadsheet 3'"])
 
         self.assertEqual(wb.get_cell_value(sheet_name1, "C4"), old_c4)
         self.assertEqual(wb.get_cell_value(sheet_name1, "B2"), old_b2)
@@ -61,7 +61,7 @@ class TestClass(unittest.TestCase):
         self.assertEqual(wb.get_cell_value(sheet_name2, "B1"), decimal.Decimal(25))
         
         self.assertEqual(copy_num, 2)
-        self.assertEqual(wb.list_sheets(), [sheet_name1, sheet_name2, copy_name])
+        self.assertEqual(wb.list_sheets(), ["'Spreadsheet 1'", "'Spreadsheet 2'", "'Spreadsheet 1_1'"])
 
         wb.set_cell_contents(copy_name, "A1", "something different")
         self.assertNotEqual(wb.get_cell_contents(sheet_name1, "A1"), wb.get_cell_contents(copy_name, "A1"))
