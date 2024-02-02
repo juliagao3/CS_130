@@ -7,20 +7,19 @@ def test_error(test, wb, sheet_name, location, error_type):
     test.assertIsInstance(value, sheets.CellError)
     test.assertEqual(value.get_type(), error_type)
 
-def tree_workbook(branching_factor, levels):
+def tree_workbook(branching_factor, levels): 
     wb = sheets.Workbook()
     index, name = wb.new_sheet()
-
-    total_nodes = branching_factor ** levels - 1
-    root_index = branching_factor - 1
-
-    if root_index != 1:
-        wb.set_cell_contents(name, f"A{root_index}", "=A1")
-
-    for i in range(root_index + 1, root_index + total_nodes):
-        parent = i // branching_factor
-        wb.set_cell_contents(name, f"A{i}", f"=A{parent}")
-
+    
+    total_nodes = (branching_factor**levels - 1) // (branching_factor - 1)
+    root_index = 2
+    
+    wb.set_cell_contents(name, f"A{root_index}", "=A1")
+    
+    for i in range(root_index + 1, root_index + total_nodes - 1): 
+        parent = (i - root_index - 1) // branching_factor + root_index 
+        wb.set_cell_contents(name, f"A{i}", f"=A{parent}") 
+        
     return (wb, index, name)
 
 class TestClass(unittest.TestCase):    
