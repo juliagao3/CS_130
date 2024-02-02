@@ -5,12 +5,12 @@ from .cell import Cell
 from . import location as location_utils
 
 def name_is_valid(name: str):
-    if name == None or name == "" or name.isspace():
+    if name is None or name == "" or name.isspace():
         return False
 
     disallowed = r'[^A-Za-z0-9.?!,:;@#$%^&*()-_\s+]'
 
-    if re.search(disallowed, name) != None:
+    if re.search(disallowed, name) is not None:
         return False
 
     return True
@@ -41,7 +41,7 @@ class Sheet:
         locations = self.cells.keys()
         cell_contents = dict()
         for location in locations:
-            if self.cells[location].contents == None:
+            if self.cells[location].contents is None:
                 continue
             cell_contents[location] = str(self.cells[location])
         json_obj["cell-contents"] = cell_contents
@@ -62,15 +62,15 @@ class Sheet:
         """
         location - string like '[col][row]'
         """
-        if not location in self.cells:
+        if location not in self.cells:
             self.cells[location] = Cell(self, location)
         self.cells[location].set_contents(workbook, content)
         
-        if content == None or content == "" or content.isspace():
+        if content is None or content == "" or content.isspace():
             self.extent = (0, 0)
             for location in self.cells.keys():
                 cell_content = self.cells[location].contents
-                if cell_content == None or cell_content == "" or cell_content.isspace():
+                if cell_content is None or cell_content == "" or cell_content.isspace():
                     continue
                 location_num = location_utils.location_string_to_tuple(location)
                 self.extent = (max(self.extent[0], location_num[0]),
@@ -87,7 +87,7 @@ class Sheet:
         """
         location - string like '[col][row]'
         """
-        if not location in self.cells:
+        if location not in self.cells:
             return None
         return self.cells[location].contents
 
@@ -100,7 +100,7 @@ class Sheet:
             return None
     
     def get_cell(self, location: str):
-        if not location in self.cells:
+        if location not in self.cells:
             self.cells[location] = Cell(self, location)
         
         return self.cells[location]

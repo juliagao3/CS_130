@@ -1,12 +1,12 @@
 from .workbook import *
 import enum
 import decimal
-from typing import *
+from typing import Optional
 
 from . import interp
 
 def is_empty_content_string(contents):
-    return contents == None or contents == "" or contents.isspace()
+    return contents is None or contents == "" or contents.isspace()
 
 def remove_trailing_zeros(d: decimal.Decimal):
     num = str(d)
@@ -40,7 +40,7 @@ class Cell:
     def parse_formula(self):
         self.formula_tree = interp.parse_formula(self.contents)
 
-        if self.formula_tree == None:
+        if self.formula_tree is None:
             raise FormulaError(CellError(CellErrorType.PARSE_ERROR, ""))
 
     def check_references(self, workbook):
@@ -71,7 +71,7 @@ class Cell:
         self.set_value(interp.evaluate_formula(workbook, self.sheet, self.formula_tree))
         
     def check_value(self):
-        if self.value == None:
+        if self.value is None:
             self.set_value(decimal.Decimal(0))
 
         if type(self.value) == decimal.Decimal:
@@ -115,7 +115,7 @@ class Cell:
                 self.set_value(e.value)
         elif contents[0] == "'":
             self.set_value(contents[1:])
-        elif CellErrorType.from_string(contents) != None:
+        elif CellErrorType.from_string(contents) is not None:
             self.set_value(CellError(CellErrorType.from_string(contents), ""))
         else:
             try:

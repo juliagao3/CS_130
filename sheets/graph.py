@@ -1,4 +1,4 @@
-from typing import *
+from typing import TypeVar, Generic, Dict, List, Set
 
 T = TypeVar("T")
 
@@ -21,13 +21,13 @@ class Graph(Generic[T]):
         self.cycles_dirty: bool = False
 
     def get_forward_links(self, node):
-        if not node in self.forward:
+        if node not in self.forward:
             return []
         else:
             return self.forward[node].copy()
         
     def get_backward_links(self, node):
-        if not node in self.backward:
+        if node not in self.backward:
             return []
         else:
             return self.backward[node].copy()
@@ -61,10 +61,10 @@ class Graph(Generic[T]):
         Add entries to the forward and backward maps to create a link between
         the from_node and to_node.
         '''
-        if not from_node in self.forward:
+        if from_node not in self.forward:
             self.forward[from_node] = set()
 
-        if not to_node in self.backward:
+        if to_node not in self.backward:
             self.backward[to_node] = set()
 
         self.forward[from_node].add(to_node)
@@ -123,7 +123,7 @@ class Graph(Generic[T]):
             while len(dfs) > 0:
                 v, w, children = dfs.pop()
 
-                if w == None:
+                if w is None:
                     number[v] = next_number
                     lowlink[v] = next_number
                     next_number += 1
@@ -136,7 +136,7 @@ class Graph(Generic[T]):
 
                 while len(children) > 0:
                     w = children.pop()
-                    if not w in number:
+                    if w not in number:
                         dfs.append((v, w, children))
                         dfs.append((w, None, self.get_forward_links(w)))
                         recurse = True
@@ -160,7 +160,7 @@ class Graph(Generic[T]):
 
         vertices = self.forward.keys() | self.backward.keys()
         for v in vertices:
-            if not v in number:
+            if v not in number:
                 strongconnect(v)
 
         return sccs, topological_order
@@ -175,10 +175,10 @@ class Graph(Generic[T]):
         while len(queue) > 0:
             v = queue.pop(0)
 
-            if not v in nodes:
+            if v not in nodes:
                 ancestors.add(v)
 
             for w in self.get_backward_links(v):
-                if not w in ancestors and not w in nodes:
+                if w not in ancestors and w not in nodes:
                     queue.append(w)
         return ancestors
