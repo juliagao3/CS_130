@@ -60,7 +60,7 @@ ERROR_VALUE: ("#ERROR!"i | "#CIRCREF!"i | "#REF!"i | "#NAME?"i | "#VALUE!"i | "#
 CELLREF: /[A-Za-z]+[1-9][0-9]*/
 
 // Unquoted sheet names cannot contain spaces, and are otherwise very simple.
-SHEET_NAME: /[A-Za-z_][A-Za-z0-9_]*/
+SHEET_NAME: /[A-Za-z_][A-Za-z0-9_][A-Za-z0-9.?,:;@#$%^&*()-_\s+]*/
 
 // Quoted sheet names can contain spaces and other interesting characters.  Note
 // that this lexer rule also matches invalid sheet names, but that isn't a big

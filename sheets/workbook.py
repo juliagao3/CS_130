@@ -323,7 +323,7 @@ class Workbook:
         # this requirement, the behavior is undefined.
         self.notify_functions.append(notify_function)
 
-    def rename_sheet(self, sheet_name: str, new_sheet_name: str) -> str:
+    def rename_sheet(self, sheet_name: str, new_sheet_name: str) -> None:
         # Rename the specified sheet to the new sheet name.  Additionally, all
         # cell formulas that referenced the original sheet name are updated to
         # reference the new sheet name (using the same case as the new sheet
@@ -356,8 +356,6 @@ class Workbook:
         self.sheet_map[new_sheet_name.lower()].sheet_name = new_sheet_name
 
         self.update_cells_referencing_sheet(new_sheet_name)
-
-        return new_sheet_name
 
     def move_sheet(self, sheet_name: str, index: int) -> None:
         # Move the specified sheet to the specified index in the workbook's

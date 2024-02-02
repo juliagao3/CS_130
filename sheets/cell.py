@@ -57,23 +57,26 @@ class Cell:
             raise FormulaError(CellError(CellErrorType.PARSE_ERROR, ""))
 
     def check_references(self, workbook):
+        is_error = False
+
         for ref in interp.find_refs(workbook, self.sheet, self.formula_tree):
             sheet_name = self.sheet.sheet_name.lower()
             location = ref
             if "!" in ref:
-                index = ref.index("!")
+                index = ref.rfind("!")
                 sheet_name = ref[:index].lower()
                 location = ref[index+1:]
-
             workbook.sheet_references.link(self, sheet_name)
 
             try:
                 cell = workbook.get_cell(sheet_name, location)
                 workbook.dependency_graph.link(self, cell)
-            except KeyError:
-                raise FormulaError(CellError(CellErrorType.BAD_REFERENCE, ""))
-            except ValueError:
-                raise FormulaError(CellError(CellErrorType.BAD_REFERENCE, ""))
+            except:
+                is_error = True
+                pass
+                
+        if is_error:
+            raise FormulaError(CellError(CellErrorType.BAD_REFERENCE, ""))
 
     def check_cycles(self, workbook):
         for cycle in workbook.dependency_graph.get_cycles():
