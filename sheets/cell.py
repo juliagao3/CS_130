@@ -71,7 +71,7 @@ class Cell:
             try:
                 cell = workbook.get_cell(sheet_name, location)
                 workbook.dependency_graph.link(self, cell)
-            except:
+            except (KeyError, ValueError):
                 is_error = True
                 pass
                 

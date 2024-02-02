@@ -152,7 +152,6 @@ class Workbook:
         
         location = location_utils.check_location(location)
         cell = self.sheet_map[sheet_name.lower()].set_cell_contents(self, location, contents)
-        #self.notify({cell})
         self.update_ancestors({cell})
 
     def get_cell_contents(self, sheet_name: str, location: str) -> Optional[str]:
@@ -209,7 +208,6 @@ class Workbook:
         for cell in order:
             if cell in ancestors and not cell in nodes:
                 cell.recompute_value(self)
-        #self.notify(ancestors - nodes)
 
     def update_cells_referencing_sheet(self, sheet_name):
         if sheet_name.lower() in self.sheet_references.backward:
@@ -217,7 +215,6 @@ class Workbook:
             for cell in self.sheet_references.backward[sheet_name.lower()]:
                 cell.recompute_value(self)
                 updated.add(cell)
-            #self.notify(updated)
             self.update_ancestors(updated)
 
     def check_cycles(self):
@@ -227,7 +224,6 @@ class Workbook:
             for cell in cycle:
                 cell.set_value(CellError(CellErrorType.CIRCULAR_REFERENCE, ""))
                 circular.add(cell)
-        #self.notify(circular)
         self.update_ancestors(circular)
 
     @staticmethod
@@ -290,13 +286,6 @@ class Workbook:
             workbook_dict["sheets"].append(sheet.to_json())
               
         json.dump(workbook_dict, fp, indent=4)
-
-#    def notify(self, cells):
-#        for func in self.notify_functions:
-#            try:
-#                func(self, map(lambda c: (c.sheet.sheet_name, c.location), cells))
-#            except:
-#                pass
 
     def notify_cells_changed(self,
             notify_function: Callable[[Any, Iterable[Tuple[str, str]]], None]) -> None:
