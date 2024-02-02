@@ -10,7 +10,7 @@ class TestClass(unittest.TestCase):
         sheet_num, sheet_name = wb.new_sheet("sheet1")
         
         wb.rename_sheet(sheet_name, "sheet bla")
-        self.assertEqual(wb.list_sheets(), ["sheet bla"])  
+        self.assertEqual(wb.list_sheets(), ["'sheet bla'"])  
         
     def test_formula_with_quotes(self):
         wb = sheets.Workbook()
@@ -64,7 +64,7 @@ class TestClass(unittest.TestCase):
         
         new_name = wb.rename_sheet(sheet_name1, "sheet3")
         
-        self.assertEqual(wb.get_cell_contents(new_name, "A1"), f"={sheet_name}!A1 + {new_name}!A2")
+        self.assertEqual(wb.get_cell_contents(new_name, "A1"), f"='{sheet_name}'!A1 + {new_name}!A2")
         
     def test_get_value(self):
         wb = sheets.Workbook()
@@ -72,7 +72,7 @@ class TestClass(unittest.TestCase):
         sheet_num1, sheet_name1 = wb.new_sheet("sheet2")
         
         wb.set_cell_contents(sheet_name, "A1", "=sheEt2!A1")
-        wb.set_cell_contents(sheet_name, "A3", f"={sheet_name}!A1 + sheet3!A1")
+        wb.set_cell_contents(sheet_name, "A3", "='sheet 1'!A1 + sheet3!A1")
         wb.set_cell_contents(sheet_name1, "A1", "4")
         wb.set_cell_contents(sheet_name, "A4", "=A3")
         

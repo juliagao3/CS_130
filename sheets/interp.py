@@ -28,6 +28,11 @@ def number_arg(index):
         return new_f
     return check
 
+def strip_quotes(s: str):
+    if s[0] != "'":
+        return s
+    return s[1: -1]
+
 class CellRefFinder(lark.Visitor):
     def __init__(self):
         self.refs = []
@@ -37,7 +42,7 @@ class CellRefFinder(lark.Visitor):
             self.refs.append(str(tree.children[0]))
         else:
             assert len(tree.children) == 2
-            self.refs.append('!'.join(tree.children))
+            self.refs.append('!'.join(map(strip_quotes, tree.children)))
 
 class SheetRenamer(lark.visitors.Transformer_InPlace):
 
@@ -49,10 +54,11 @@ class SheetRenamer(lark.visitors.Transformer_InPlace):
     def cell(self, tree):
         values = tree.children
         if len(values) > 1:
+            values[0] = strip_quotes(values[0])
             if values[0].lower() == self.old_name.lower():
                 values[0] = self.new_name
-            need_quotes = sheet_util.name_needs_quotes(values[0])
-            if need_quotes and values[0][0] != "'":
+            
+            if sheet_util.name_needs_quotes(values[0]):
                 values[0] = "'" + values[0] + "'"
         return tree
     
@@ -141,8 +147,7 @@ class FormulaEvaluator(lark.visitors.Interpreter):
             sheet_name = values[0]
             cell_ref = values[1]
         
-        if sheet_name[0] == "'":
-            sheet_name = sheet_name[1:-1]
+        sheet_name = strip_quotes(sheet_name)
 
         try:
             return self.workbook.get_cell_value(sheet_name, cell_ref) 
