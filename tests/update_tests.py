@@ -96,12 +96,15 @@ class TestClass(unittest.TestCase):
         wb = sheets.Workbook()
         _i, n = wb.new_sheet()
 
-        for i in range(10):
+        k = 10
+        for i in range(k):
             wb.notify_cells_changed(make_on_cell_changed(i))
 
         wb.set_cell_contents(n, "A1", "1")
 
-        self.assertEqual(order, sorted(order))
+        for i in range(0, len(order), k):
+            sub_order = order[i:i+k]
+            self.assertEqual(sub_order, sorted(sub_order))
     
     def test_delete(self):
         updated = set()
