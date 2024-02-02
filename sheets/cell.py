@@ -16,6 +16,13 @@ def remove_trailing_zeros(d: decimal.Decimal):
         num = num[:-1]
     return decimal.Decimal(num)
 
+def notify(workbook, cells):
+    for func in workbook.notify_functions:
+        try:
+            func(workbook, map(lambda c: (c.sheet.sheet_name, c.location), cells))
+        except:
+            pass
+
 class FormulaError(Exception):
     def __init__(self, value):
         self.value = value
@@ -32,7 +39,13 @@ class Cell:
         return str(self.contents)
         
     def set_value(self, value):
+        old_value = self.value
         self.value = value
+        if isinstance(old_value, CellError) and isinstance(value, CellError):
+            old_value = str(old_value)
+            value = str(value)            
+        if value != old_value:
+            notify(self.sheet.workbook, {self})     
 
     def get_value(self):
         return self.value
@@ -67,15 +80,17 @@ class Cell:
             if self in cycle:
                 raise FormulaError(CellError(CellErrorType.CIRCULAR_REFERENCE, ""))
 
+    
     def evaluate_formula(self, workbook):
-        self.set_value(interp.evaluate_formula(workbook, self.sheet, self.formula_tree))
-        
-    def check_value(self):
-        if self.value == None:
-            self.set_value(decimal.Decimal(0))
+        value = interp.evaluate_formula(workbook, self.sheet, self.formula_tree)
 
-        if type(self.value) == decimal.Decimal:
-            self.set_value(remove_trailing_zeros(self.value))
+        if value == None:
+            value = decimal.Decimal(0)
+
+        if type(value) == decimal.Decimal:
+            value = remove_trailing_zeros(value)
+
+        self.set_value(value)
 
     def rename_sheet(self, old_name, new_name):
         self.contents = interp.rename_sheet(old_name, new_name, self.formula_tree)
@@ -87,7 +102,6 @@ class Cell:
             self.check_references(workbook)
             self.check_cycles(workbook)
             self.evaluate_formula(workbook)
-            self.check_value()
         except FormulaError as e:
             self.set_value(e.value)
 
@@ -110,7 +124,6 @@ class Cell:
                 workbook.check_cycles()
                 self.check_cycles(workbook)
                 self.evaluate_formula(workbook)
-                self.check_value()
             except FormulaError as e:
                 self.set_value(e.value)
         elif contents[0] == "'":
