@@ -132,5 +132,37 @@ class TestClass(unittest.TestCase):
 
         self.assertEqual(updated, set([(n, "a1")]))
 
+    def test_change_content_not_value(self):
+        updated = set()
+
+        def on_cells_changed(workbook, changed_cells):
+            nonlocal updated
+            for cell in changed_cells:
+                updated.add(cell)
+            raise Exception
+
+        # Make a workbook, and register our notification function on it.
+        wb = sheets.Workbook()
+        i, n = wb.new_sheet()
+
+        wb.notify_cells_changed(on_cells_changed)
+
+        # Generates one call to notify functions, with the argument [('Sheet1', 'A1')].
+        wb.set_cell_contents(n, "A1", "0")
+        self.assertEqual(updated, set([(n, "a1")]))
+
+        wb.set_cell_contents(n, "C1", "hello")
+        self.assertEqual(updated, set([(n, "a1"), (n, "c1")]))
+
+        wb.set_cell_contents(n, "D1", "=8/0")
+        self.assertEqual(updated, set([(n, "a1"), (n, "c1"), (n, "d1")]))
+
+        # Should not notify anything (content changes, but not value)
+        wb.set_cell_contents(n, "A1", "=B1")
+        wb.set_cell_contents(n, "A1", "=(B1+B2) + (5 - 5)")
+        wb.set_cell_contents(n, "C1", "=B1&'hello'")        
+        wb.set_cell_contents(n, "D1", "#DIV/0!")
+        self.assertEqual(updated, set([(n, "a1"), (n, "c1"), (n, "d1")]))
+
 if __name__ == "__main__":
         unittest.main()

@@ -17,7 +17,8 @@ class TestClass(unittest.TestCase):
         sheet_num, sheet_name = wb.new_sheet("sheet1")
         
         wb.set_cell_contents(sheet_name, "A1", "=sheet1!A2")
-        new_name = wb.rename_sheet(sheet_name, "sheet bla")
+        new_name = "sheet bla"
+        wb.rename_sheet(sheet_name, new_name) 
         
         self.assertEqual(wb.get_cell_contents(new_name, "A1"), f"='{new_name}'!A2")
         
@@ -26,7 +27,8 @@ class TestClass(unittest.TestCase):
         sheet_num, sheet_name = wb.new_sheet("sheet1")
         
         wb.set_cell_contents(sheet_name, "A1", "=sheet1!A2")
-        new_name = wb.rename_sheet(sheet_name, "sheet2")
+        new_name = "sheet2"
+        wb.rename_sheet(sheet_name, new_name)
         
         self.assertEqual(wb.get_cell_contents(new_name, "A1"), f"={new_name}!A2")
         
@@ -38,7 +40,8 @@ class TestClass(unittest.TestCase):
         wb.set_cell_contents(sheet_name, "A1", "=5")
         wb.set_cell_contents(sheet_name1, "A1", "=sheet1!A1 + sheet2!A2")
         
-        new_name = wb.rename_sheet(sheet_name1, "sheet bla")
+        new_name = "sheet bla"
+        wb.rename_sheet(sheet_name1, new_name)
         
         self.assertEqual(wb.get_cell_contents(new_name, "A1"), f"='{sheet_name}'!A1 + '{new_name}'!A2")
         
@@ -50,7 +53,8 @@ class TestClass(unittest.TestCase):
         wb.set_cell_contents(sheet_name, "A1", "=5")
         wb.set_cell_contents(sheet_name1, "A1", "=sheet1!A1 + sheet2!A2")
         
-        new_name = wb.rename_sheet(sheet_name1, "sheet3")
+        new_name = "sheet3"
+        wb.rename_sheet(sheet_name1, new_name)
         
         self.assertEqual(wb.get_cell_contents(new_name, "A1"), f"={sheet_name}!A1 + {new_name}!A2")
         
@@ -62,7 +66,8 @@ class TestClass(unittest.TestCase):
         wb.set_cell_contents(sheet_name, "A1", "=5")
         wb.set_cell_contents(sheet_name1, "A1", "='sheet 1'!A1 + sheet2!A2")
         
-        new_name = wb.rename_sheet(sheet_name1, "sheet3")
+        new_name = "sheet3"
+        wb.rename_sheet(sheet_name1, new_name)
         
         self.assertEqual(wb.get_cell_contents(new_name, "A1"), f"='{sheet_name}'!A1 + {new_name}!A2")
         
@@ -79,7 +84,8 @@ class TestClass(unittest.TestCase):
         self.assertIsInstance(wb.get_cell_value(sheet_name, "A4"), sheets.CellError)
         self.assertEqual(wb.get_cell_value(sheet_name, "A4").get_type(), sheets.CellErrorType.BAD_REFERENCE)
         
-        new_name = wb.rename_sheet(sheet_name1, "sheet3")
+        new_name = "sheet3"
+        wb.rename_sheet(sheet_name1, new_name)
         self.assertEqual(wb.get_cell_value(sheet_name, "A1"), decimal.Decimal(4))
         self.assertEqual(wb.get_cell_value(sheet_name, "A3"), decimal.Decimal(8))
         self.assertEqual(wb.get_cell_value(sheet_name, "A4"), decimal.Decimal(8))

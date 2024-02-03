@@ -16,6 +16,13 @@ def remove_trailing_zeros(d: decimal.Decimal):
         num = num[:-1]
     return decimal.Decimal(num)
 
+def notify(workbook, cells):
+    for func in workbook.notify_functions:
+        try:
+            func(workbook, map(lambda c: (c.sheet.sheet_name, c.location), cells))
+        except:
+            pass
+
 class FormulaError(Exception):
     def __init__(self, value):
         self.value = value
@@ -32,7 +39,13 @@ class Cell:
         return str(self.contents)
         
     def set_value(self, value):
+        old_value = self.value
         self.value = value
+        if isinstance(old_value, CellError) and isinstance(value, CellError):
+            old_value = str(old_value)
+            value = str(value)            
+        if value != old_value:
+            notify(self.sheet.workbook, {self})     
 
     def get_value(self):
         return self.value
@@ -44,50 +57,54 @@ class Cell:
             raise FormulaError(CellError(CellErrorType.PARSE_ERROR, ""))
 
     def check_references(self, workbook):
+        is_error = False
+
         for ref in interp.find_refs(workbook, self.sheet, self.formula_tree):
             sheet_name = self.sheet.sheet_name.lower()
             location = ref
             if "!" in ref:
-                index = ref.index("!")
+                index = ref.rfind("!")
                 sheet_name = ref[:index].lower()
                 location = ref[index+1:]
-
             workbook.sheet_references.link(self, sheet_name)
 
             try:
                 cell = workbook.get_cell(sheet_name, location)
                 workbook.dependency_graph.link(self, cell)
-            except KeyError:
-                raise FormulaError(CellError(CellErrorType.BAD_REFERENCE, ""))
-            except ValueError:
-                raise FormulaError(CellError(CellErrorType.BAD_REFERENCE, ""))
+            except (KeyError, ValueError):
+                is_error = True
+                pass
+                
+        if is_error:
+            raise FormulaError(CellError(CellErrorType.BAD_REFERENCE, ""))
 
     def check_cycles(self, workbook):
         for cycle in workbook.dependency_graph.get_cycles():
             if self in cycle:
                 raise FormulaError(CellError(CellErrorType.CIRCULAR_REFERENCE, ""))
 
+    
     def evaluate_formula(self, workbook):
-        self.set_value(interp.evaluate_formula(workbook, self.sheet, self.formula_tree))
-        
-    def check_value(self):
-        if self.value is None:
-            self.set_value(decimal.Decimal(0))
+        value = interp.evaluate_formula(workbook, self.sheet, self.formula_tree)
 
-        if type(self.value) == decimal.Decimal:
-            self.set_value(remove_trailing_zeros(self.value))
+        if value == None:
+            value = decimal.Decimal(0)
+
+        if type(value) == decimal.Decimal:
+            value = remove_trailing_zeros(value)
+
+        self.set_value(value)
 
     def rename_sheet(self, old_name, new_name):
         self.contents = interp.rename_sheet(old_name, new_name, self.formula_tree)
 
     def recompute_value(self, workbook):
-        if self.contents[0] != "=":
+        if self.contents == None or self.contents[0] != "=":
             return
         try:
             self.check_references(workbook)
             self.check_cycles(workbook)
             self.evaluate_formula(workbook)
-            self.check_value()
         except FormulaError as e:
             self.set_value(e.value)
 
@@ -110,7 +127,6 @@ class Cell:
                 workbook.check_cycles()
                 self.check_cycles(workbook)
                 self.evaluate_formula(workbook)
-                self.check_value()
             except FormulaError as e:
                 self.set_value(e.value)
         elif contents[0] == "'":
