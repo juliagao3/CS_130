@@ -56,7 +56,7 @@ class Workbook:
         #
         # A user should be able to mutate the return-value without affecting the
         # workbook's internal state.
-        return [sheet.get_quoted_name() for sheet in self.sheets]
+        return []
 
     def new_sheet(self, sheet_name: Optional[str] = None) -> Tuple[int, str]:
         # Add a new sheet to the workbook.  If the sheet name is specified, it
