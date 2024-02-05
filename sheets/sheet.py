@@ -68,11 +68,11 @@ class Sheet:
         
         if content is None or content == "" or content.isspace():
             self.extent = (0, 0)
-            for location in self.cells.keys():
-                cell_content = self.cells[location].contents
+            for l in self.cells.keys():
+                cell_content = self.cells[l].contents
                 if cell_content is None or cell_content == "" or cell_content.isspace():
                     continue
-                location_num = location_utils.location_string_to_tuple(location)
+                location_num = location_utils.location_string_to_tuple(l)
                 self.extent = (max(self.extent[0], location_num[0]),
                             max(self.extent[1], location_num[1]))
         else:
