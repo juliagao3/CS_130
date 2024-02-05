@@ -64,8 +64,12 @@ class Sheet:
         """
         if location not in self.cells:
             self.cells[location] = Cell(self, location)
-        self.cells[location].set_contents(workbook, content)
+
+        cell = self.cells[location]
+
+        cell.set_contents(workbook, content)
         
+
         if content is None or content == "" or content.isspace():
             self.extent = (0, 0)
             for location in self.cells.keys():
@@ -80,7 +84,7 @@ class Sheet:
             self.extent = (max(self.extent[0], location_num[0]),
                             max(self.extent[1], location_num[1]))
 
-        return self.cells[location]
+        return cell
     
 
     def get_cell_contents(self, location: str):
