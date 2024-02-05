@@ -63,6 +63,9 @@ class Graph(Generic[T]):
         '''
         if from_node not in self.forward:
             self.forward[from_node] = set()
+        elif to_node in self.forward[from_node]:
+            assert from_node in self.backward[to_node]
+            return
 
         if to_node not in self.backward:
             self.backward[to_node] = set()
