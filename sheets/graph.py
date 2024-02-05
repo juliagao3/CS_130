@@ -79,21 +79,35 @@ class Graph(Generic[T]):
         '''
         Remove all forward links coming from the given node.
         '''
-        if node in self.forward:
-            for to in self.forward[node]:
-                self.backward[to].remove(node)
-                if len(self.backward[to]) == 0:
-                    self.backward.pop(to)
-            self.forward.pop(node)
+        if node not in self.forward:
+            return
+
+        links = self.forward[node]
+        self.forward.pop(node)
+
+        if len(links) == 0:
+            return
+
+        for to in links:
+            self.backward[to].remove(node)
+            if len(self.backward[to]) == 0:
+                self.backward.pop(to)
         self.cycles_dirty = True
 
     def clear_backward_link(self, node: T):
-        if node in self.backward:
-            for from_node in self.backward[node]:
-                self.forward[from_node].remove(node)
-                if len(self.forward[from_node]) == 0:
-                    self.forward.pop(from_node)
-            self.backward.pop(node)
+        if node not in self.backward:
+            return
+
+        links = self.backward[node]
+        self.backward.pop(node)
+
+        if len(links) == 0:
+            return
+
+        for from_node in links:
+            self.forward[from_node].remove(node)
+            if len(self.forward[from_node]) == 0:
+                self.forward.pop(from_node)
         self.cycles_dirty = True
 
     def remove_node(self, node: T):
