@@ -5,6 +5,8 @@ from lark.visitors import visit_children_decor
 from lark.visitors import v_args
 from . import sheet as sheet_util
 
+from typing import Tuple
+
 parser = lark.Lark.open('formulas.lark', rel_to=__file__, start='formula')
 
 def number_arg(index):
@@ -201,3 +203,6 @@ def rename_sheet(old, new, tree):
     renamer.transform(tree)
     printer = FormulaPrinter()
     return "=" + printer.visit(tree) 
+
+def move_formula(offset: Tuple[int, int], tree):
+    pass
