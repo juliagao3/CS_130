@@ -76,15 +76,13 @@ class Cell:
                 is_error = True
                 pass
                 
-        if is_error:
-            raise FormulaError(CellError(CellErrorType.BAD_REFERENCE, ""))
-
-    def check_cycles(self, workbook):
         for cycle in workbook.dependency_graph.get_cycles():
             if self in cycle:
                 raise FormulaError(CellError(CellErrorType.CIRCULAR_REFERENCE, ""))
 
-    
+        if is_error:
+            raise FormulaError(CellError(CellErrorType.BAD_REFERENCE, ""))
+
     def evaluate_formula(self, workbook):
         value = interp.evaluate_formula(workbook, self.sheet, self.formula_tree)
 
@@ -104,7 +102,6 @@ class Cell:
             return
         try:
             self.check_references(workbook)
-            self.check_cycles(workbook)
             self.evaluate_formula(workbook)
         except FormulaError as e:
             self.set_value(e.value)
@@ -125,8 +122,6 @@ class Cell:
             try:
                 self.parse_formula()
                 self.check_references(workbook)
-                workbook.check_cycles()
-                self.check_cycles(workbook)
                 self.evaluate_formula(workbook)
             except FormulaError as e:
                 self.set_value(e.value)
