@@ -10,8 +10,9 @@ def is_empty_content_string(contents):
 
 def remove_trailing_zeros(d: decimal.Decimal):
     num = str(d)
+    e = num.rfind("E") if "E" in num else len(num)
     if "." in num:
-        num = num.rstrip("0")
+        num = num[:e].rstrip("0") + num[e:]
     if num[-1] == ".":
         num = num[:-1]
     return decimal.Decimal(num)

@@ -9,6 +9,15 @@ from typing import Tuple
 
 parser = lark.Lark.open('formulas.lark', rel_to=__file__, start='formula')
 
+def remove_trailing_zeros(d: decimal.Decimal):
+    num = str(d)
+    e = num.rfind("E") if "E" in num else len(num)
+    if "." in num:
+        num = num[:e].rstrip("0") + num[e:]
+    if num[-1] == ".":
+        num = num[:-1]
+    return decimal.Decimal(num)
+
 def number_arg(index):
     def check(f):
         def new_f(self, values):
@@ -166,7 +175,7 @@ class FormulaEvaluator(lark.visitors.Interpreter):
     def number(self, values):
         # if values[0] is a location
         # if values[0] is a CellError string representation
-        return decimal.Decimal(values[0])
+        return remove_trailing_zeros(decimal.Decimal(values[0]))
     
     @visit_children_decor
     def string(self, values):
