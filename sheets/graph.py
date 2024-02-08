@@ -24,13 +24,13 @@ class Graph(Generic[T]):
         if node not in self.forward:
             return []
         else:
-            return self.forward[node].copy()
+            return self.forward[node]
         
     def get_backward_links(self, node):
         if node not in self.backward:
             return []
         else:
-            return self.backward[node].copy()
+            return self.backward[node]
         
     def get_nodes(self):
         return self.forward.keys() | self.backward.keys()
@@ -136,7 +136,7 @@ class Graph(Generic[T]):
 
             nonlocal sccs
 
-            dfs = [(root, None, self.get_forward_links(root))]
+            dfs = [(root, None, self.get_forward_links(root).copy())]
             while len(dfs) > 0:
                 v, w, children = dfs.pop()
 
@@ -155,7 +155,7 @@ class Graph(Generic[T]):
                     w = children.pop()
                     if w not in number:
                         dfs.append((v, w, children))
-                        dfs.append((w, None, self.get_forward_links(w)))
+                        dfs.append((w, None, self.get_forward_links(w).copy()))
                         recurse = True
                         break
                     elif w in stack_set:
