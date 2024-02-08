@@ -23,6 +23,31 @@ class TestClass(unittest.TestCase):
                 self.assertEqual(wb.list_sheets(), ["Sheet1", "Sheet2"])
                 wb.del_sheet(n)
                 self.assertEqual(wb.list_sheets(), ["Sheet2"])
+                
+        def test_remove_and_add_sheet(self):
+                wb = sheets.Workbook()
+                i, n = wb.new_sheet()
+                j, m = wb.new_sheet()
+                self.assertEqual(wb.list_sheets(), [n,m])
+                wb.del_sheet(n)
+                self.assertEqual(wb.list_sheets(), [m])
+                i, n = wb.new_sheet()
+                self.assertEqual(wb.list_sheets(), [m,n])
+                k, o = i, "something"
+                wb.rename_sheet(n,o)
+                self.assertEqual(wb.list_sheets(), [m,o])
+                i, n = wb.copy_sheet(o)
+                self.assertEqual(wb.list_sheets(), [m,o,n])
+                wb.move_sheet(n, 0)
+                self.assertEqual(wb.list_sheets(), [n,m,o])
+                wb.move_sheet(o, 1)
+                self.assertEqual(wb.list_sheets(), [n,o,m])
+                wb.del_sheet(n)
+                self.assertEqual(wb.list_sheets(), [o,m])
+                wb.del_sheet(m)
+                self.assertEqual(wb.list_sheets(), [o])
+                wb.del_sheet(o)
+                self.assertEqual(wb.list_sheets(), [])
 
         def test_overlapping_sheets(self):
                 wb = sheets.Workbook()
@@ -749,6 +774,29 @@ class TestClass(unittest.TestCase):
                 a1 = wb.get_cell_value(sheet_name, "A1")
                 self.assertIsInstance(a1, sheets.CellError)
                 self.assertEqual(a1.get_type(), sheets.CellErrorType.BAD_REFERENCE)
+                
+        def test_error_circular_reference(self):
+                wb = sheets.Workbook()
+                sheet_num, sheet_name = wb.new_sheet()
+                
+                wb.set_cell_contents(sheet_name, "A1", "=A1/0")
+                a1 = wb.get_cell_value(sheet_name, "A1")
+                self.assertIsInstance(a1, sheets.CellError)
+                self.assertEqual(a1.get_type(), sheets.CellErrorType.CIRCULAR_REFERENCE)
+                
+                #fail this test, should be circular error instead of bad reference
+                wb.set_cell_contents(sheet_name, "A2", "=A2 + Nonexistent!A2")
+                a2 = wb.get_cell_value(sheet_name, "A2")
+                self.assertIsInstance(a2, sheets.CellError)
+                self.assertEqual(a2.get_type(), sheets.CellErrorType.CIRCULAR_REFERENCE)
 
+        def test_concat_trailing_zeros(self):
+                wb = sheets.Workbook()
+                sheet_num, sheet_name = wb.new_sheet()
+
+                wb.set_cell_contents(sheet_name, "A1", '=0.000 & "hi"')
+
+                self.assertEqual(wb.get_cell_value(sheet_name, 'A1'), '0hi')
+                
 if __name__ == "__main__":
         unittest.main()

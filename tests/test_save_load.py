@@ -178,7 +178,49 @@ class TestClass(unittest.TestCase):
                             "name":"Sheet1",
                             "cell-contents":{
                                 "A1":[12345]
-                            }                                        
+                            }
+                        }
+                    ]
+                }
+
+                f = open("test_file.txt", "w")
+                json.dump(test_json, f, indent=4)
+                f.close()
+
+                fp = open("test_file.txt", "r")
+
+                with self.assertRaises(TypeError):
+                        sheets.Workbook.load_workbook(fp)
+                fp.close()
+
+        def test_cell_contents_dict(self):
+                test_json = {
+                    "sheets":[
+                        {
+                            "name":"Sheet1",
+                            "cell-contents": "HI"
+                        }
+                    ]
+                }
+
+                f = open("test_file.txt", "w")
+                json.dump(test_json, f, indent=4)
+                f.close()
+
+                fp = open("test_file.txt", "r")
+
+                with self.assertRaises(TypeError):
+                        sheets.Workbook.load_workbook(fp)
+                fp.close()
+
+        def test_cell_contents_not_str(self):
+                test_json = {
+                    "sheets":[
+                        {
+                            "name":"Sheet1",
+                            "cell-contents":{
+                                "A1":[12345]
+                            }
                         }
                     ]
                 }

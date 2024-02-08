@@ -164,5 +164,25 @@ class TestClass(unittest.TestCase):
         wb.set_cell_contents(n, "D1", "#DIV/0!")
         self.assertEqual(updated, set([(n, "a1"), (n, "c1"), (n, "d1")]))
 
+    def test_copy(self):
+        wb = sheets.Workbook()
+        i, n = wb.new_sheet()
+
+        changed = set()
+
+        def on_update(wb, locations):
+            for loc in locations:
+                changed.add(loc)
+
+        wb.set_cell_contents(n, "A1", "HI")
+        wb.set_cell_contents(n, "A2", "HI")
+        
+        wb.notify_cells_changed(on_update)
+        
+        num, name = wb.copy_sheet(n)
+
+        self.assertSetEqual(changed, set([(name, "a1"), (name, "a2")]))
+
+
 if __name__ == "__main__":
         unittest.main()

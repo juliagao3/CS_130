@@ -89,6 +89,15 @@ class TestClass(unittest.TestCase):
         self.assertEqual(wb.get_cell_value(sheet_name, "A1"), decimal.Decimal(4))
         self.assertEqual(wb.get_cell_value(sheet_name, "A3"), decimal.Decimal(8))
         self.assertEqual(wb.get_cell_value(sheet_name, "A4"), decimal.Decimal(8))
+        
+    def test_concentation(self):
+        wb = sheets.Workbook()
+        sheet_num, name = wb.new_sheet("Somesheet")
+        
+        wb.set_cell_contents(name, "A1", "=Somesheet!A2 & \"hello\"")
+        wb.rename_sheet(name, "Another")
+        self.assertEqual(wb.get_cell_value("Another", "A1"), "hello")
+        self.assertEqual(wb.get_cell_contents("Another", "A1"), "=Another!A2 & \"hello\"")
     
 if __name__ == "__main__":
         unittest.main()

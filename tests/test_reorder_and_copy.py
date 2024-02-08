@@ -99,6 +99,25 @@ class TestClass(unittest.TestCase):
         wb.set_cell_contents(copy_name, "A1", "5")
         self.assertEqual(wb.get_cell_value(copy_name, "A1"), decimal.Decimal(5))       
         
+    def test_copy_error(self):
+        wb = sheets.Workbook()
+        sheet_num, sheet_name = wb.new_sheet("sheet1")
+
+        wb.set_cell_contents(sheet_name, "A2", "=A1")
+        wb.set_cell_contents(sheet_name, "A1", f"={sheet_name}_1!A2")
+
+        value1 = wb.get_cell_value(sheet_name, "A1")
+        self.assertIsInstance(value1, sheets.CellError)
+        self.assertEqual(value1.get_type(), sheets.CellErrorType.BAD_REFERENCE)
+
+        copy_num, copy_name = wb.copy_sheet(sheet_name)
+
+        value1 = wb.get_cell_value(copy_name, "A1")
+        self.assertIsInstance(value1, sheets.CellError)
+        self.assertEqual(value1.get_type(), sheets.CellErrorType.CIRCULAR_REFERENCE)
+
+        # self.assertEqual(wb.get_cell_value(copy_name, "A1"), decimal.Decimal(2))
+
 
 if __name__ == "__main__":
         unittest.main()
