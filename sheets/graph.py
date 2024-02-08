@@ -190,7 +190,7 @@ class Graph(Generic[T]):
         ancestors = set()
         queue = [n for n in nodes]
         while len(queue) > 0:
-            v = queue.pop(0)
+            v = queue.pop()
 
             if v not in nodes:
                 ancestors.add(v)
