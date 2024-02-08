@@ -2,7 +2,7 @@ from typing import List, Dict, Any, Optional, Tuple, Callable, Iterable
 import re
 from .sheet import Sheet, name_is_valid
 from .graph import Graph
-from .cell import Cell, CellError, CellErrorType
+from .cell import Cell, CellError, CellErrorType, notify
 from . import location as location_utils
 import copy
 
@@ -402,6 +402,7 @@ class Workbook:
         for cell in new_sheet.cells.values():
             cell.sheet = new_sheet
             cell.recompute_value(self)
+            notify(self, {cell})
 
         self.update_cells_referencing_sheet(new_name)
 
