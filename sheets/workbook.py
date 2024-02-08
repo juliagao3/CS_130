@@ -255,6 +255,8 @@ class Workbook:
                 try:
                     num, name = wb.new_sheet(sheet_dict["name"])
                     cell_contents = sheet_dict["cell-contents"]
+                    if not isinstance(cell_contents, dict):
+                        raise TypeError("Input JSON has an incorrect type: cell-contents should be a dict.")
                     for location in cell_contents.keys():
                         if isinstance(cell_contents[location], str):
                             wb.set_cell_contents(name, location, cell_contents[location])
