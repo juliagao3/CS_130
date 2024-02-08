@@ -4,3 +4,4 @@ sheets/__pycache__
 .DS_Store
 test_file.txt
 .vscode
+sheets-tui
