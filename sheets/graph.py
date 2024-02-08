@@ -120,7 +120,7 @@ class Graph(Generic[T]):
                 next_index: int,
                 index: Dict[T, int],
                 lowlink: Dict[T, int],
-                on_stack: Set[T],
+                on_stack: [T, int],
                 stack: List[T],
                 sccs: List[List[T]],
                 topo: List[T]
@@ -136,7 +136,7 @@ class Graph(Generic[T]):
                 lowlink[v] = next_index
                 next_index += 1
                 stack.append(v)
-                on_stack.add(v)
+                on_stack[v] = True
             else:
                 w = forward[i-1]
                 lowlink[v] = min(lowlink[v], lowlink[w])
@@ -151,7 +151,7 @@ class Graph(Generic[T]):
                     call_stack.append((w, list(self.forward[w]) if w in self.forward else [], 0))
                     recurse = True
                     break
-                elif w in on_stack:
+                elif w in on_stack and on_stack[w]:
                     lowlink[v] = min(lowlink[v], index[w])
 
             if recurse:
@@ -162,7 +162,7 @@ class Graph(Generic[T]):
                 scc = []
                 while True:
                     w = stack.pop()
-                    on_stack.remove(w)
+                    on_stack[w] = False
                     scc.append(w)
                     if w == v:
                         break
@@ -174,7 +174,7 @@ class Graph(Generic[T]):
         next_index = 0
         index = {}
         lowlink = {}
-        on_stack = set()
+        on_stack = {}
         stack = []
         sccs = []
         topo = []
