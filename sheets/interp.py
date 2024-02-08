@@ -84,6 +84,10 @@ class FormulaPrinter(lark.visitors.Interpreter):
         return " ".join(values)
     
     @visit_children_decor
+    def concat_expr(self, values):
+        return " & ".join(values)
+
+    @visit_children_decor
     def unary_op(self, values):
         return "".join(values)
     
