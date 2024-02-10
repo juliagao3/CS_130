@@ -89,8 +89,14 @@ class TestClass(unittest.TestCase):
         def test_bad_location(self):
                 wb = sheets.Workbook()
                 sheet_num, sheet_name = wb.new_sheet(None)
-                with self.assertRaises(KeyError):
+                with self.assertRaises(ValueError):
                         wb.set_cell_contents(sheet_name, "A 1", "'1.000")
+
+                with self.assertRaises(ValueError):
+                        wb.set_cell_contents(sheet_name, "a2a2", "test")
+
+                with self.assertRaises(ValueError):
+                        wb.set_cell_contents(sheet_name, "$A$A1", "invalid")
                         
         def test_out_of_bounds(self):
                 wb = sheets.Workbook()
