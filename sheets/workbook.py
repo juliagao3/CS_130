@@ -410,6 +410,53 @@ class Workbook:
 
         return (len(self.sheets) - 1, new_name)
     
+    def move_or_copy(self, sheet_name: str, start_location: str,
+            end_location: str, to_location: str, to_sheet: Optional[str] = None, is_move: bool = False) -> None:
+
+        if to_sheet is None:
+            to_sheet = sheet_name
+
+        sheet = self.sheet_map[sheet_name.lower()]
+        to_sheet = self.sheet_map[to_sheet.lower()]
+        
+        start_location = location_utils.check_location(start_location)
+        end_location = location_utils.check_location(end_location)
+        to_location = location_utils.check_location(to_location)
+        
+        start_tuple = location_utils.location_string_to_tuple(start_location)
+        end_tuple = location_utils.location_string_to_tuple(end_location)
+        to_start_tuple = location_utils.location_string_to_tuple(to_location)
+
+        offset = (to_start_tuple[0] - start_tuple[0], to_start_tuple[1] - start_tuple[1])
+        size = (end_tuple[0] - start_tuple[0], end_tuple[1] - start_tuple[1])
+        
+        to_end_tuple = (to_start_tuple[0] + size[0], to_start_tuple[1] + size[1])
+        
+        location_utils.check_location_tuple(to_end_tuple)
+
+        if offset[0] < 0:
+            col_iter = range(start_tuple[0], end_tuple[0])
+        else:
+            col_iter = range(end_tuple[0] - 1, start_tuple[0] - 1, -1)
+
+        if offset[1] < 0:
+            row_iter = range(start_tuple[1], end_tuple[1])
+        else:
+            row_iter = range(end_tuple[1] - 1, start_tuple[1] - 1, -1)
+
+        for col in col_iter:
+            for row in row_iter:
+                location = location_utils.tuple_to_location_string((col, row))
+                contents = sheet.get_cell_contents(location)
+                copy_content = copy.deepcopy(contents)
+
+                if is_move:
+                    sheet.set_cell_contents(self, location, "")
+
+                to_location = location_utils.tuple_to_location_string((col + offset[0], row + offset[1]))
+                to_sheet.set_cell_contents(self, to_location, copy_content)
+                to_sheet.get_cell(to_location).move_formula(offset)
+
     def move_cells(self, sheet_name: str, start_location: str,
             end_location: str, to_location: str, to_sheet: Optional[str] = None) -> None:
         # Move cells from one location to another, possibly moving them to
@@ -452,7 +499,8 @@ class Workbook:
         # If a formula being moved contains a relative or mixed cell-reference
         # that will become invalid after updating the cell-reference, then the
         # cell-reference is replaced with a #REF! error-literal in the formula.
-        pass
+        
+        self.move_or_copy(sheet_name, start_location, end_location, to_location, to_sheet, is_move=True)
 
     def copy_cells(self, sheet_name: str, start_location: str,
             end_location: str, to_location: str, to_sheet: Optional[str] = None) -> None:
@@ -496,4 +544,5 @@ class Workbook:
         # If a formula being copied contains a relative or mixed cell-reference
         # that will become invalid after updating the cell-reference, then the
         # cell-reference is replaced with a #REF! error-literal in the formula.
-        pass
+        self.move_or_copy(sheet_name, start_location, end_location, to_location, to_sheet, is_move=False)
+        
