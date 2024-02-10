@@ -68,7 +68,7 @@ class Cell:
                 sheet_name = ref[:index].lower()
                 location = ref[index+1:]
             workbook.sheet_references.link(self, sheet_name)
-
+            
             try:
                 cell = workbook.get_cell(sheet_name, location)
                 workbook.dependency_graph.link(self, cell)

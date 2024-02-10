@@ -91,6 +91,12 @@ class TestClass(unittest.TestCase):
                 sheet_num, sheet_name = wb.new_sheet(None)
                 with self.assertRaises(KeyError):
                         wb.set_cell_contents(sheet_name, "A 1", "'1.000")
+
+                with self.assertRaises(KeyError):
+                        wb.set_cell_contents(sheet_name, "a2a2", "test")
+
+                with self.assertRaises(KeyError):
+                        wb.set_cell_contents(sheet_name, "$A$A1", "invalid")
                         
         def test_out_of_bounds(self):
                 wb = sheets.Workbook()
