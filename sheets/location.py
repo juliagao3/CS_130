@@ -25,7 +25,7 @@ def location_split(location: str):
         row = location[alpha_end:]
               
     if alpha_end == 0 or alpha_end == len(location) or ' ' in location or not row.isnumeric():
-        raise KeyError    
+        raise ValueError    
 
     return (col, row, is_absolute_col, is_absolute_row)
 
