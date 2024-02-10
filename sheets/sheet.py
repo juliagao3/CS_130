@@ -4,6 +4,8 @@ from .workbook import *
 from .cell import Cell
 from . import location as location_utils
 
+import bisect
+
 def name_is_valid(name: str):
     if name is None or name == "" or name.isspace():
         return False
@@ -33,7 +35,9 @@ class Sheet:
         self.extent = (0, 0)
         self.sheet_name = sheet_name
         self.cells = {}
-    
+        self.cols_hist = []
+        self.rows_hist = []
+        
     def to_json(self):
         json_obj = {
             "name": self.sheet_name
@@ -67,18 +71,24 @@ class Sheet:
         self.cells[location].set_contents(workbook, content)
         
         if content is None or content == "" or content.isspace():
-            self.extent = (0, 0)
-            for location in self.cells.keys():
-                cell_content = self.cells[location].contents
-                if cell_content is None or cell_content == "" or cell_content.isspace():
-                    continue
-                location_num = location_utils.location_string_to_tuple(location)
-                self.extent = (max(self.extent[0], location_num[0]),
-                            max(self.extent[1], location_num[1]))
+            location_num = location_utils.location_string_to_tuple(location)
+            index_col = bisect.bisect_left(self.cols_hist, location_num[0])
+            index_row = bisect.bisect_left(self.rows_hist, location_num[1])
+            self.cols_hist.pop(index_col)
+            self.rows_hist.pop(index_row)
+
+            assert len(self.cols_hist) == len(self.rows_hist)
+
+            if len(self.cols_hist) == 0:
+                self.extent = (0, 0)
+            else:
+                self.extent = (self.cols_hist[len(self.cols_hist) - 1], self.rows_hist[len(self.rows_hist) - 1])
         else:
             location_num = location_utils.location_string_to_tuple(location)
             self.extent = (max(self.extent[0], location_num[0]),
                             max(self.extent[1], location_num[1]))
+            bisect.insort(self.cols_hist, location_num[0])
+            bisect.insort(self.rows_hist, location_num[1])
 
         return self.cells[location]
     
