@@ -98,6 +98,8 @@ class Cell:
         self.contents = interp.rename_sheet(old_name, new_name, self.formula_tree)
 
     def move_formula(self, offset):
+        if self.formula_tree is None:
+            return
         self.contents = interp.move_formula(offset, self.formula_tree)
 
     def recompute_value(self, workbook):
