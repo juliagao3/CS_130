@@ -45,15 +45,16 @@ def strip_quotes(s: str):
     return s[1: -1]
 
 class CellRefFinder(lark.Visitor):
-    def __init__(self):
+    def __init__(self, sheet_name):
         self.refs = []
+        self.sheet_name = sheet_name
         
     def cell(self, tree):
         if len(tree.children) == 1:
-            self.refs.append(str(tree.children[0]))
+            self.refs.append((self.sheet_name, tree.children[0]))
         else:
             assert len(tree.children) == 2
-            self.refs.append('!'.join(map(strip_quotes, tree.children)))
+            self.refs.append((strip_quotes(tree.children[0]).lower(), tree.children[1]))
 
 class SheetRenamer(lark.visitors.Transformer_InPlace):
 
@@ -207,7 +208,7 @@ def evaluate_formula(workbook, sheet, tree):
     return evaluator.visit(tree)
 
 def find_refs(workbook, sheet, tree):
-    finder = CellRefFinder()
+    finder = CellRefFinder(sheet.sheet_name.lower())
     finder.visit(tree)
     return finder.refs
 

@@ -3,7 +3,7 @@ import re
 from .sheet import Sheet, name_is_valid
 from .graph import Graph
 from .cell import Cell, CellError, CellErrorType, notify
-from . import location as location_utils
+from .reference import Reference
 import copy
 
 from typing import TextIO
@@ -147,8 +147,8 @@ class Workbook:
         # rather, the cell's value will be a CellError object indicating the
         # nature of the issue.
         
-        location = location_utils.check_location(location)
-        cell = self.sheet_map[sheet_name.lower()].set_cell_contents(self, location, contents)
+        r = Reference.from_string(location)
+        cell = self.sheet_map[sheet_name.lower()].set_cell_contents(self, r, contents)
         self.update_ancestors({cell})
 
     def get_cell_contents(self, sheet_name: str, location: str) -> Optional[str]:
@@ -168,8 +168,8 @@ class Workbook:
         # This method will never return a zero-length string; instead, empty
         # cells are indicated by a value of None.
 
-        location = location_utils.check_location(location)
-        return self.sheet_map[sheet_name.lower()].get_cell_contents(location)
+        r = Reference.from_string(location)
+        return self.sheet_map[sheet_name.lower()].get_cell_contents(r)
 
     def get_cell_value(self, sheet_name: str, location: str) -> Any:
         # Return the evaluated value of the specified cell on the specified
@@ -190,14 +190,13 @@ class Workbook:
         # whole number.  For example, this function would not return
         # Decimal('1.000'); rather it would return Decimal('1').
 
-        location = location_utils.check_location(location)
-        solution = self.sheet_map[sheet_name.lower().strip()].get_cell_value(location)
+        r = Reference.from_string(location)
+        solution = self.sheet_map[sheet_name.lower().strip()].get_cell_value(r)
         # if isinstance(solution, decimal.Decimal):
         return solution
     
-    def get_cell(self, sheet_name: str, location:str):
-        location = location_utils.check_location(location)
-        return self.sheet_map[sheet_name.lower()].get_cell(location)
+    def get_cell(self, sheet_name: str, ref: Reference):
+        return self.sheet_map[sheet_name.lower()].get_cell(ref)
 
     def update_ancestors(self, nodes):
         order = self.dependency_graph.get_topological_order()
@@ -419,43 +418,41 @@ class Workbook:
         sheet = self.sheet_map[sheet_name.lower()]
         to_sheet = self.sheet_map[to_sheet.lower()]
         
-        start_location = location_utils.check_location(start_location)
-        end_location = location_utils.check_location(end_location)
-        to_location = location_utils.check_location(to_location)
-        
-        start_tuple = location_utils.location_string_to_tuple(start_location)
-        end_tuple = location_utils.location_string_to_tuple(end_location)
-        to_start_tuple = location_utils.location_string_to_tuple(to_location)
+        start_ref = Reference.from_string(start_location)
+        end_ref = Reference.from_string(end_location)
+        to_ref = Reference.from_string(to_location)
+
+        start_tuple = start_ref.tuple()
+        end_tuple = end_ref.tuple()
+        to_start_tuple = to_ref.tuple()
 
         offset = (to_start_tuple[0] - start_tuple[0], to_start_tuple[1] - start_tuple[1])
         size = (end_tuple[0] - start_tuple[0], end_tuple[1] - start_tuple[1])
-        
-        to_end_tuple = (to_start_tuple[0] + size[0], to_start_tuple[1] + size[1])
-        
-        location_utils.check_location_tuple(to_end_tuple)
+
+        to_end_ref = to_ref.moved(size)
+        to_end_tuple = to_end_ref.tuple()
 
         if offset[0] < 0:
-            col_iter = range(start_tuple[0], end_tuple[0] + 1)
+            col_iter = range(0, size[0] + 1)
         else:
-            col_iter = range(end_tuple[0], start_tuple[0] - 1, -1)
+            col_iter = range(size[1], -1, -1)
 
         if offset[1] < 0:
-            row_iter = range(start_tuple[1], end_tuple[1] + 1)
+            row_iter = range(0, size[1] + 1)
         else:
-            row_iter = range(end_tuple[1], start_tuple[1] - 1, -1)
+            row_iter = range(size[1], -1, -1)
 
         for col in col_iter:
             for row in row_iter:
-                location = location_utils.tuple_to_location_string((col, row))
-                contents = sheet.get_cell_contents(location)
-                copy_content = copy.deepcopy(contents)
+                from_ref = start_ref.moved((col, row))
+                contents = copy.copy(sheet.get_cell_contents(from_ref))
 
                 if is_move:
-                    sheet.set_cell_contents(self, location, "")
+                    sheet.set_cell_contents(self, from_ref, "")
 
-                to_location = location_utils.tuple_to_location_string((col + offset[0], row + offset[1]))
-                to_sheet.set_cell_contents(self, to_location, copy_content)
-                to_sheet.get_cell(to_location).move_formula(offset)
+                cell = to_sheet.get_cell(to_ref.moved((col, row)))
+                cell.set_contents(self, contents)
+                cell.move_formula(offset)
 
     def move_cells(self, sheet_name: str, start_location: str,
             end_location: str, to_location: str, to_sheet: Optional[str] = None) -> None:
