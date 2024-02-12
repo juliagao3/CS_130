@@ -68,9 +68,14 @@ class Sheet:
         """
         if location not in self.cells:
             self.cells[location] = Cell(self, location)
+
+        old_contents = self.cells[location].contents
         self.cells[location].set_contents(workbook, content)
+
+        empty = content is None or content == "" or content.isspace()
+        was_empty = old_contents is None or old_contents == "" or old_contents.isspace()
         
-        if content is None or content == "" or content.isspace():
+        if empty and not was_empty:
             location_num = location_utils.location_string_to_tuple(location)
             index_col = bisect.bisect_left(self.cols_hist, location_num[0])
             index_row = bisect.bisect_left(self.rows_hist, location_num[1])
@@ -83,7 +88,7 @@ class Sheet:
                 self.extent = (0, 0)
             else:
                 self.extent = (self.cols_hist[len(self.cols_hist) - 1], self.rows_hist[len(self.rows_hist) - 1])
-        else:
+        elif not empty:
             location_num = location_utils.location_string_to_tuple(location)
             self.extent = (max(self.extent[0], location_num[0]),
                             max(self.extent[1], location_num[1]))
