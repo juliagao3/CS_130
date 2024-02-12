@@ -4,6 +4,7 @@ import decimal
 from typing import Optional
 
 from . import interp
+from . import reference
 
 def is_empty_content_string(contents):
     return contents is None or contents == "" or contents.isspace()
@@ -60,17 +61,12 @@ class Cell:
     def check_references(self, workbook):
         is_error = False
 
-        for ref in interp.find_refs(workbook, self.sheet, self.formula_tree):
-            sheet_name = self.sheet.sheet_name.lower()
-            location = ref
-            if "!" in ref:
-                index = ref.rfind("!")
-                sheet_name = ref[:index].lower()
-                location = ref[index+1:]
+        for sheet_name, location in interp.find_refs(workbook, self.sheet, self.formula_tree):
             workbook.sheet_references.link(self, sheet_name)
 
             try:
-                cell = workbook.get_cell(sheet_name, location)
+                ref = reference.Reference.from_string(location)
+                cell = workbook.get_cell(sheet_name, ref)
                 workbook.dependency_graph.link(self, cell)
             except (KeyError, ValueError):
                 is_error = True
