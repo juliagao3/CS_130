@@ -218,4 +218,5 @@ def rename_sheet(old, new, tree):
     return "=" + printer.visit(tree) 
 
 def move_formula(offset: Tuple[int, int], tree):
-    pass
+    printer = FormulaPrinter()
+    return "=" + printer.visit(tree)
