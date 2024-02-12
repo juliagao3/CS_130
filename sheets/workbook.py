@@ -435,14 +435,14 @@ class Workbook:
         location_utils.check_location_tuple(to_end_tuple)
 
         if offset[0] < 0:
-            col_iter = range(start_tuple[0], end_tuple[0])
+            col_iter = range(start_tuple[0], end_tuple[0] + 1)
         else:
-            col_iter = range(end_tuple[0] - 1, start_tuple[0] - 1, -1)
+            col_iter = range(end_tuple[0], start_tuple[0] - 1, -1)
 
         if offset[1] < 0:
-            row_iter = range(start_tuple[1], end_tuple[1])
+            row_iter = range(start_tuple[1], end_tuple[1] + 1)
         else:
-            row_iter = range(end_tuple[1] - 1, start_tuple[1] - 1, -1)
+            row_iter = range(end_tuple[1], start_tuple[1] - 1, -1)
 
         for col in col_iter:
             for row in row_iter:

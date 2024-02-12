@@ -40,8 +40,8 @@ def test_copy(self, wb: sheets.Workbook, sheet_name: str, to_sheet: str, start_t
     size = (end_tuple[0] - start_tuple[0], end_tuple[1] - start_tuple[1])
     to_end_tuple = (to_tuple[0] + size[0], to_tuple[1] + size[1])
 
-    for col in range(start_tuple[0], end_tuple[0]):
-        for row in range(start_tuple[1], end_tuple[1]):
+    for col in range(start_tuple[0], end_tuple[0] + 1):
+        for row in range(start_tuple[1], end_tuple[1] + 1):
             location = to_sheet_location((col, row))
             wb.set_cell_contents(sheet_name, location, str((col - start_tuple[0]) + (row - start_tuple[1]) * size[0]))
             
@@ -51,15 +51,15 @@ def test_copy(self, wb: sheets.Workbook, sheet_name: str, to_sheet: str, start_t
 
     wb.copy_cells(sheet_name, start_location, end_location, to_location, to_sheet)
 
-    for col in range(to_tuple[0], to_end_tuple[0]):
-        for row in range(to_tuple[1], to_end_tuple[1]):
+    for col in range(to_tuple[0], to_end_tuple[0] + 1):
+        for row in range(to_tuple[1], to_end_tuple[1] + 1):
             location = to_sheet_location((col, row))
             contents = wb.get_cell_value(to_sheet, location)
             self.assertEqual(wb.get_cell_value(to_sheet, location), decimal.Decimal((col - to_tuple[0]) + (row - to_tuple[1]) * size[0]))
 
-    for col in range(start_tuple[0], end_tuple[0]):
-        for row in range(start_tuple[1], end_tuple[1]):
-            if col < to_end_tuple[0] and col >= to_tuple[0] and row < to_end_tuple[1] and row >= to_tuple[1]:
+    for col in range(start_tuple[0], end_tuple[0] + 1):
+        for row in range(start_tuple[1], end_tuple[1] + 1):
+            if col <= to_end_tuple[0] and col >= to_tuple[0] and row <= to_end_tuple[1] and row >= to_tuple[1]:
                  continue
             location = to_sheet_location((col, row))
             self.assertEqual(wb.get_cell_value(sheet_name, location), decimal.Decimal((col - start_tuple[0]) + (row - start_tuple[1]) * size[0]))
