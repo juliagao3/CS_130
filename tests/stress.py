@@ -1,5 +1,6 @@
 import sheets
 import decimal
+import time
 import unittest
 
 from math import comb
@@ -55,9 +56,78 @@ def tree_workbook(branching_factor, levels):
         
     return (wb, index, name)
 
+def test_copy(self, wb: sheets.Workbook, sheet_name: str, to_sheet: str, start_tuple: Tuple[int, int], end_tuple: Tuple[int, int], to_tuple: Tuple[int, int]):
+    if to_sheet is None:
+        to_sheet = sheet_name
+
+    size = (end_tuple[0] - start_tuple[0], end_tuple[1] - start_tuple[1])
+    to_end_tuple = (to_tuple[0] + size[0], to_tuple[1] + size[1])
+
+    for col in range(start_tuple[0], end_tuple[0]):
+        for row in range(start_tuple[1], end_tuple[1]):
+            location = to_sheet_location((col, row))
+            wb.set_cell_contents(sheet_name, location, str((col - start_tuple[0]) + (row - start_tuple[1]) * size[0]))
+            
+    start_location = to_sheet_location(start_tuple)
+    end_location = to_sheet_location(end_tuple)
+    to_location = to_sheet_location(to_tuple)
+
+    wb.copy_cells(sheet_name, start_location, end_location, to_location, to_sheet)
+
+    for col in range(to_tuple[0], to_end_tuple[0]):
+        for row in range(to_tuple[1], to_end_tuple[1]):
+            location = to_sheet_location((col, row))
+            contents = wb.get_cell_value(to_sheet, location)
+            self.assertEqual(wb.get_cell_value(to_sheet, location), decimal.Decimal((col - to_tuple[0]) + (row - to_tuple[1]) * size[0]))
+
+    for col in range(start_tuple[0], end_tuple[0]):
+        for row in range(start_tuple[1], end_tuple[1]):
+            if col < to_end_tuple[0] and col >= to_tuple[0] and row < to_end_tuple[1] and row >= to_tuple[1]:
+                 continue
+            location = to_sheet_location((col, row))
+            self.assertEqual(wb.get_cell_value(sheet_name, location), decimal.Decimal((col - start_tuple[0]) + (row - start_tuple[1]) * size[0]))
+            
+def test_move(self, wb: sheets.Workbook, sheet_name: str, to_sheet: str, start_tuple: Tuple[int, int], end_tuple: Tuple[int, int], to_tuple: Tuple[int, int]):
+    if to_sheet is None:
+        to_sheet = sheet_name
+
+    size = (end_tuple[0] - start_tuple[0], end_tuple[1] - start_tuple[1])
+    to_end_tuple = (to_tuple[0] + size[0], to_tuple[1] + size[1])
+
+    for col in range(start_tuple[0], end_tuple[0]):
+        for row in range(start_tuple[1], end_tuple[1]):
+            location = to_sheet_location((col, row))
+            wb.set_cell_contents(sheet_name, location, str((col - start_tuple[0]) + (row - start_tuple[1]) * size[0]))
+            
+    start_location = to_sheet_location(start_tuple)
+    end_location = to_sheet_location(end_tuple)
+    to_location = to_sheet_location(to_tuple)
+
+    wb.move_cells(sheet_name, start_location, end_location, to_location, to_sheet)
+
+    for col in range(to_tuple[0], to_end_tuple[0]):
+        for row in range(to_tuple[1], to_end_tuple[1]):
+            location = to_sheet_location((col, row))
+            contents = wb.get_cell_value(to_sheet, location)
+            self.assertEqual(wb.get_cell_value(to_sheet, location), decimal.Decimal((col - to_tuple[0]) + (row - to_tuple[1]) * size[0]))
+
+    for col in range(start_tuple[0], end_tuple[0]):
+        for row in range(start_tuple[1], end_tuple[1]):
+            if col < to_end_tuple[0] and col >= to_tuple[0] and row < to_end_tuple[1] and row >= to_tuple[1]:
+                 continue
+            location = to_sheet_location((col, row))
+            self.assertEqual(wb.get_cell_value(sheet_name, location), None)
+
 class TestClass(unittest.TestCase):    
 
-    def test_big_cycle(self):
+    def setUp(self):
+        self.startTime = time.time()
+
+    def tearDown(self):
+        t = time.time() - self.startTime
+        print('%s: %.3f' % (self.id(), t))
+
+    def test_long_chain_update(self):
         wb = sheets.Workbook()
         index, name = wb.new_sheet()
 
@@ -67,6 +137,13 @@ class TestClass(unittest.TestCase):
         wb.set_cell_contents(name, "A1", "1.0")
 
         self.assertEqual(wb.get_cell_value(name, "A999"), decimal.Decimal(1.0))
+
+    def test_long_chain_cycle(self):
+        wb = sheets.Workbook()
+        index, name = wb.new_sheet()
+
+        for i in range(2,1000):
+            wb.set_cell_contents(name, "A" + str(i), "=A" + str(i-1))
 
         wb.set_cell_contents(name, "A1", "=A999")
 
@@ -187,6 +264,21 @@ class TestClass(unittest.TestCase):
         x = decimal.Decimal(x)
         k = decimal.Decimal(k)
         self.assertEqual(wb.get_cell_value(name, f"A{k}"), x**(2**(k-2)))
+        
+    def test_move_copy_cells(self):
+        start_location = (1, 1)
+        end_location = (300, 300)
+        to_location = (1, 1)
+
+        wb = sheets.Workbook()
+        sheet_num, sheet_name = wb.new_sheet()
+        sheet_num, sheet_name1 = wb.new_sheet()
+        test_copy(self, wb, sheet_name, sheet_name1, start_location, end_location, to_location)
+
+        wb = sheets.Workbook()
+        sheet_num, sheet_name = wb.new_sheet()
+        sheet_num, sheet_name1 = wb.new_sheet()
+        test_move(self, wb, sheet_name, sheet_name1, start_location, end_location, to_location)
 
 if __name__ == "__main__":
     unittest.main(module="stress")

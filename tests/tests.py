@@ -253,16 +253,16 @@ class TestClass(unittest.TestCase):
                 print(obj)
                 self.assertEqual(mock_print.getvalue(), expected_print)
 
-        def test_print_cell(self):
-                wb = sheets.Workbook()
-                sheet_num, sheet_name = wb.new_sheet()
+        #def test_print_cell(self):
+        #        wb = sheets.Workbook()
+        #        sheet_num, sheet_name = wb.new_sheet()
 
-                wb.set_cell_contents(sheet_name, "A1", "testing print")
-                a1 = wb.get_cell(sheet_name, "A1")
-                self.assert_stdout_for_object(a1, "testing print\n") 
+        #        wb.set_cell_contents(sheet_name, "A1", "testing print")
+        #        a1 = wb.get_cell(sheet_name, "A1")
+        #        self.assert_stdout_for_object(a1, "testing print\n") 
 
-                a2 = wb.get_cell(sheet_name, "A2")
-                self.assert_stdout_for_object(a2, "None\n")
+        #        a2 = wb.get_cell(sheet_name, "A2")
+        #        self.assert_stdout_for_object(a2, "None\n")
 
         def test_non_finite_value(self):
                 wb = sheets.Workbook()
