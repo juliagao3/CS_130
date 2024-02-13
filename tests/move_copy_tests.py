@@ -97,6 +97,19 @@ def test_move(self, wb: sheets.Workbook, sheet_name: str, to_sheet: str, start_t
 
 class TestClass(unittest.TestCase):
 
+    def test_copy_many(self):
+        start_location = (1, 1)
+        end_location = (3, 3)
+        to_location = (6, 1)
+
+        wb = sheets.Workbook()
+        sheet_num, sheet_name = wb.new_sheet()
+
+        wb.set_cell_contents(sheet_name, to_sheet_location(start_location), "1")
+        for row in range(start_location[0], end_location[0] + 1):
+            for col in range(start_location[1], end_location[1] + 1):
+                test_move(self, wb, sheet_name, None, start_location, start_location, (row, col))
+
     def test_copy_cells_right(self):
         start_location = (1, 1)
         end_location = (3, 3)
