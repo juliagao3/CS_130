@@ -38,7 +38,7 @@ class Reference:
         m = location_regex.fullmatch(location_string)
 
         if m is None:
-            raise KeyError
+            raise ValueError
 
         groups = m.groups()
 
