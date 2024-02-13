@@ -199,12 +199,14 @@ class Workbook:
         location = location_utils.check_location(location)
         return self.sheet_map[sheet_name.lower()].get_cell(location)
 
-    def update_ancestors(self, nodes):
+    def update_cells(self, nodes):
         order = self.dependency_graph.get_topological_order()
-        ancestors = self.dependency_graph.get_ancestors_of_set(nodes)
         for cell in order:
-            if cell in ancestors and cell not in nodes:
+            if cell in nodes:
                 cell.recompute_value(self)
+
+    def update_ancestors(self, nodes):
+        self.update_cells(self.dependency_graph.get_ancestors_of_set(nodes))
 
     def update_cells_referencing_sheet(self, sheet_name):
         if sheet_name.lower() in self.sheet_references.backward:
@@ -435,27 +437,35 @@ class Workbook:
         location_utils.check_location_tuple(to_end_tuple)
 
         if offset[0] < 0:
-            col_iter = range(start_tuple[0], end_tuple[0])
+            col_iter = range(0, size[0] + 1)
         else:
-            col_iter = range(end_tuple[0] - 1, start_tuple[0] - 1, -1)
+            col_iter = range(size[0], -1, -1)
 
         if offset[1] < 0:
-            row_iter = range(start_tuple[1], end_tuple[1])
+            row_iter = range(0, size[1] + 1)
         else:
-            row_iter = range(end_tuple[1] - 1, start_tuple[1] - 1, -1)
+            row_iter = range(size[1], -1, -1)
 
+        updated = set()
         for col in col_iter:
             for row in row_iter:
-                location = location_utils.tuple_to_location_string((col, row))
+                location = location_utils.tuple_to_location_string((start_tuple[0] + col, start_tuple[1] + row))
                 contents = sheet.get_cell_contents(location)
                 copy_content = copy.deepcopy(contents)
 
                 if is_move:
                     sheet.set_cell_contents(self, location, "")
-
-                to_location = location_utils.tuple_to_location_string((col + offset[0], row + offset[1]))
+                    
+                to_location = location_utils.tuple_to_location_string((to_start_tuple[0] + col, to_start_tuple[1] + row))
                 to_sheet.set_cell_contents(self, to_location, copy_content)
-                to_sheet.get_cell(to_location).move_formula(offset)
+                
+                cell = to_sheet.get_cell(to_location)
+                if cell.formula_tree is not None:
+                    cell.move_formula(offset)
+
+                updated.add(cell)
+        self.update_cells(updated)
+        self.update_ancestors(updated)
 
     def move_cells(self, sheet_name: str, start_location: str,
             end_location: str, to_location: str, to_sheet: Optional[str] = None) -> None:

@@ -21,20 +21,31 @@ def to_base_26(index: int) -> str:
 
 def location_split(location: str):
     alpha_end = 0
+    is_absolute_col = (location[0] == "$")
+
+    if is_absolute_col:
+         location = location[1:]
+
+    is_absolute_row = ("$" in location)
+    
     while alpha_end < len(location) and location[alpha_end].isalpha():
         alpha_end += 1
-
-    if alpha_end == 0 or alpha_end == len(location) or ' ' in location:
-        raise KeyError
-
+                         
     col = location[:alpha_end]
-    row = location[alpha_end:]
 
-    return (col, row)
+    if is_absolute_row:
+        row = location[alpha_end+1:]
+    else:
+        row = location[alpha_end:]
+              
+    if alpha_end == 0 or alpha_end == len(location) or ' ' in location or not row.isnumeric():
+        raise ValueError    
+
+    return (col, row, is_absolute_col, is_absolute_row)
 
 def location_string_to_tuple(location: str):
-    col, row = location_split(location)
-    return (from_base_26(col), int(row))
+    col, row, is_absolute_col, is_absolute_row = location_split(location)
+    return (from_base_26(col), int(row), is_absolute_col, is_absolute_row)
 
 def tuple_to_location_string(location: Tuple[int, int]) -> str:
     col, row = location
@@ -42,7 +53,7 @@ def tuple_to_location_string(location: Tuple[int, int]) -> str:
 
 def check_location_tuple(location: Tuple[int, int]):
     col, row = location
-    if col > from_base_26("zzzz") or row > 9999:
+    if col > from_base_26("zzzz") or row > 9999 or col <= 0 or row <= 0:
         raise ValueError
 
 def check_location(location: str):
@@ -54,7 +65,7 @@ def check_location(location: str):
         ValueError is raised if and only if the location is invalid
         """
         location = location.lower()
-        col, row = location_string_to_tuple(location)
+        col, row, is_absolute_col, is_absolute_row = location_string_to_tuple(location)
         if col > from_base_26("zzzz") or row > 9999:
             raise ValueError
         return location

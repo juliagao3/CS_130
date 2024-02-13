@@ -4,6 +4,7 @@ import lark
 from lark.visitors import visit_children_decor
 from lark.visitors import v_args
 from . import sheet as sheet_util
+from . import location as location_utils
 
 from typing import Tuple
 
@@ -193,7 +194,47 @@ class FormulaEvaluator(lark.visitors.Interpreter):
     @visit_children_decor
     def parens(self, values):
         return values[0]
+    
+class FormulaMover(lark.visitors.Transformer_InPlace):
+    
+    def __init__(self, offset: Tuple[int, int]):
+        self.offset = offset
 
+    @v_args(tree=True)
+    def cell(self, tree):
+        values = tree.children
+        # checks and changes the referenced cells in the formula
+        location = values[0]
+
+        if len(values) > 1:
+            location = values[1]
+
+        # sheet_name = values[0]
+        to_loc = location_utils.location_string_to_tuple(location)
+
+        # check if col/row is relative
+        col, row = to_loc[0], to_loc[1]
+
+        if not to_loc[2]:
+            col = to_loc[0] + self.offset[0]
+        if not to_loc[3]:
+            row = to_loc[1] + self.offset[1]
+        
+        to_loc = (col, row)
+
+        # check if new loc is valid
+        try:    
+            location_utils.check_location_tuple((to_loc[0], to_loc[1]))
+        except:
+            return "#REF!"
+
+        if len(values) > 1:
+            values[1] = location_utils.tuple_to_location_string(to_loc)
+        else:
+            values[0] = location_utils.tuple_to_location_string(to_loc)
+        
+        return tree
+        
 def parse_formula(formula):
     try:
         return parser.parse(formula)
@@ -218,4 +259,8 @@ def rename_sheet(old, new, tree):
     return "=" + printer.visit(tree) 
 
 def move_formula(offset: Tuple[int, int], tree):
-    pass
+    mover = FormulaMover(offset)
+    mover.transform(tree)
+    printer = FormulaPrinter()
+    return "=" + printer.visit(tree)
+    
