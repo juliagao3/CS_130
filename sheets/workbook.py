@@ -455,7 +455,11 @@ class Workbook:
 
                 to_ref = to_start_ref.moved((col, row))
                 to_sheet.set_cell_contents(self, to_ref, contents)
-                to_sheet.get_cell(to_ref).move_formula(offset)
+                cell = to_sheet.get_cell(to_ref)
+                cell.move_formula(offset)
+                updated.add(cell)
+        self.update_cells(updated)
+        self.update_ancestors(updated)
 
     def move_cells(self, sheet_name: str, start_location: str,
             end_location: str, to_location: str, to_sheet: Optional[str] = None) -> None:
