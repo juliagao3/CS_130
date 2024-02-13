@@ -1,6 +1,4 @@
-from typing import *
 import re
-from .workbook import *
 from .cell import Cell
 from .reference import Reference
 

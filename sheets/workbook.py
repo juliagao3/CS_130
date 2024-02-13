@@ -431,8 +431,7 @@ class Workbook:
         offset = (to_start_tuple[0] - start_tuple[0], to_start_tuple[1] - start_tuple[1])
         size = (end_tuple[0] - start_tuple[0], end_tuple[1] - start_tuple[1])
 
-        to_end_ref = to_start_ref.moved(size)
-        to_end_tuple = to_end_ref.tuple()
+        _to_end_ref = to_start_ref.moved(size)
 
         if offset[0] < 0:
             col_iter = range(0, size[0] + 1)

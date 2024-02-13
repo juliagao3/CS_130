@@ -1,4 +1,3 @@
-from .workbook import *
 import enum
 import decimal
 from typing import Optional
@@ -82,7 +81,7 @@ class Cell:
     def evaluate_formula(self, workbook):
         value = interp.evaluate_formula(workbook, self.sheet, self.formula_tree)
 
-        if value == None:
+        if value is None:
             value = decimal.Decimal(0)
 
         if type(value) == decimal.Decimal:
@@ -99,7 +98,7 @@ class Cell:
         self.contents = interp.move_formula(offset, self.formula_tree)
 
     def recompute_value(self, workbook):
-        if self.contents == None or self.contents[0] != "=":
+        if self.contents is None or self.contents[0] != "=":
             return
         try:
             self.check_references(workbook)
