@@ -420,16 +420,16 @@ class Workbook:
         
         start_ref = Reference.from_string(start_location)
         end_ref = Reference.from_string(end_location)
-        to_ref = Reference.from_string(to_location)
+        to_start_ref = Reference.from_string(to_location)
 
         start_tuple = start_ref.tuple()
         end_tuple = end_ref.tuple()
-        to_start_tuple = to_ref.tuple()
+        to_start_tuple = to_start_ref.tuple()
 
         offset = (to_start_tuple[0] - start_tuple[0], to_start_tuple[1] - start_tuple[1])
         size = (end_tuple[0] - start_tuple[0], end_tuple[1] - start_tuple[1])
 
-        to_end_ref = to_ref.moved(size)
+        to_end_ref = to_start_ref.moved(size)
         to_end_tuple = to_end_ref.tuple()
 
         if offset[0] < 0:
@@ -450,9 +450,9 @@ class Workbook:
                 if is_move:
                     sheet.set_cell_contents(self, from_ref, "")
 
-                cell = to_sheet.get_cell(to_ref.moved((col, row)))
-                cell.set_contents(self, contents)
-                cell.move_formula(offset)
+                to_ref = to_start_ref.moved((col, row))
+                to_sheet.set_cell_contents(self, to_ref, contents)
+                to_sheet.get_cell(to_ref).move_formula(offset)
 
     def move_cells(self, sheet_name: str, start_location: str,
             end_location: str, to_location: str, to_sheet: Optional[str] = None) -> None:
