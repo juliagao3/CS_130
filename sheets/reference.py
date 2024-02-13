@@ -63,5 +63,5 @@ class Reference:
 
     def __str__(self) -> str:
         def qm(b: bool) -> str:
-            return "?" if b else ""
+            return "$" if b else ""
         return "{}{}{}{}".format(qm(self.abs_col), to_base_26(self.col), qm(self.abs_row), self.row)
