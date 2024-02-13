@@ -205,10 +205,10 @@ class FormulaMover(lark.visitors.Transformer_InPlace):
     def cell(self, tree):
         values = tree.children
         # checks and changes the referenced cells in the formula
-        location = values[0]
+        location = values[0].lower()
 
         if len(values) > 1:
-            location = values[1]
+            location = values[1].lower()
 
         # sheet_name = values[0]
         to_loc = location_utils.location_string_to_tuple(location)
