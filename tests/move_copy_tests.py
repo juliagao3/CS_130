@@ -257,7 +257,6 @@ class TestClass(unittest.TestCase):
         b1 = wb.get_cell_value(sheet, "B1")
         self.assertIsInstance(b1, sheets.CellError)
         self.assertEqual(b1.get_type(), sheets.CellErrorType.BAD_REFERENCE)
-
       
     def test_move_absolute(self):
         wb = sheets.Workbook()
@@ -283,8 +282,8 @@ class TestClass(unittest.TestCase):
         wb.set_cell_contents(name, "A1", "a string")
 
         self.assertEqual(wb.get_cell_value(name, "B2"), decimal.Decimal(10))
-        self.assertEqual(wb.get_cell_value(name, "A2", "a string"))
-        self.assertEqual(wb.get_cell_contents(name, "B2"), "=B1")
+        self.assertEqual(wb.get_cell_value(name, "A2"), "a string")
+        self.assertEqual(wb.get_cell_contents(name, "B2"), "=b1")
 
     # test $ on only row/only column?
 
