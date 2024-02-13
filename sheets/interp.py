@@ -226,13 +226,14 @@ class FormulaMover(lark.visitors.Transformer_InPlace):
         # check if new loc is valid
         try:    
             location_utils.check_location_tuple((to_loc[0], to_loc[1]))
-        except:
-            return "#REF!"
+            new_value = location_utils.tuple_to_location_string(to_loc)
+        except ValueError:
+            new_value = "#REF!"
 
         if len(values) > 1:
-            values[1] = location_utils.tuple_to_location_string(to_loc)
+            values[1] = new_value
         else:
-            values[0] = location_utils.tuple_to_location_string(to_loc)
+            values[0] = new_value
         
         return tree
         
