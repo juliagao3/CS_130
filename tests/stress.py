@@ -1,5 +1,6 @@
 import sheets
 import decimal
+import time
 import unittest
 
 from math import comb
@@ -119,7 +120,14 @@ def test_move(self, wb: sheets.Workbook, sheet_name: str, to_sheet: str, start_t
 
 class TestClass(unittest.TestCase):    
 
-    def test_big_cycle(self):
+    def setUp(self):
+        self.startTime = time.time()
+
+    def tearDown(self):
+        t = time.time() - self.startTime
+        print('%s: %.3f' % (self.id(), t))
+
+    def test_long_chain_update(self):
         wb = sheets.Workbook()
         index, name = wb.new_sheet()
 
@@ -129,6 +137,13 @@ class TestClass(unittest.TestCase):
         wb.set_cell_contents(name, "A1", "1.0")
 
         self.assertEqual(wb.get_cell_value(name, "A999"), decimal.Decimal(1.0))
+
+    def test_long_chain_cycle(self):
+        wb = sheets.Workbook()
+        index, name = wb.new_sheet()
+
+        for i in range(2,1000):
+            wb.set_cell_contents(name, "A" + str(i), "=A" + str(i-1))
 
         wb.set_cell_contents(name, "A1", "=A999")
 
