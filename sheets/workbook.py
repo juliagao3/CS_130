@@ -209,11 +209,9 @@ class Workbook:
 
     def update_cells_referencing_sheet(self, sheet_name):
         if sheet_name.lower() in self.sheet_references.backward:
-            updated = set()
-            for cell in self.sheet_references.backward[sheet_name.lower()]:
-                cell.recompute_value(self)
-                updated.add(cell)
-            self.update_ancestors(updated)
+            cells = self.sheet_references.backward[sheet_name.lower()]
+            self.update_cells(cells)
+            self.update_ancestors(cells)
 
     def check_cycles(self):
         cycles = self.dependency_graph.get_cycles()
@@ -334,13 +332,13 @@ class Workbook:
         if new_sheet_name.lower() in self.sheet_map:
             raise ValueError
         
-        if sheet_name.lower() in self.sheet_references.backward:
-            for cell in self.sheet_references.backward[sheet_name.lower()]:
-                cell.rename_sheet(self, sheet_name, new_sheet_name)
-
         self.sheet_map[new_sheet_name.lower()] = self.sheet_map[sheet_name.lower()]
         self.sheet_map.pop(sheet_name.lower())
         self.sheet_map[new_sheet_name.lower()].sheet_name = new_sheet_name
+
+        if sheet_name.lower() in self.sheet_references.backward:
+            for cell in self.sheet_references.backward[sheet_name.lower()]:
+                cell.rename_sheet(self, sheet_name, new_sheet_name)
 
         self.update_cells_referencing_sheet(new_sheet_name)
 
