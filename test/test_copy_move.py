@@ -97,6 +97,29 @@ def test_move(self, wb: sheets.Workbook, sheet_name: str, to_sheet: str, start_t
 
 class TestClass(unittest.TestCase):
 
+    def test_multiplication_table(self):
+        wb = sheets.Workbook()
+        sheet_num, sheet_name = wb.new_sheet()
+
+        wb.set_cell_contents(sheet_name, to_sheet_location((1, 1)), "0")
+        wb.set_cell_contents(sheet_name, to_sheet_location((2, 1)), "=A1 + 1")
+        wb.set_cell_contents(sheet_name, to_sheet_location((1, 2)), "1")
+        for i in range(3, 10):
+            wb.set_cell_contents(sheet_name, to_sheet_location((1, i)), f"={to_sheet_location((1, i - 1))} + 1")
+
+        for i in range(2, 10):
+            wb.set_cell_contents(sheet_name, to_sheet_location((2, i)), f"=B$1 * $A{i}")
+
+        for c in range(3, 10):
+            wb.copy_cells(sheet_name, to_sheet_location((2, 1)), to_sheet_location((2, 10)), to_sheet_location((c, 1)))
+
+        for r in range(2, 10):
+            for c in range(2, 10):
+                self.assertEqual(wb.get_cell_value(sheet_name, to_sheet_location((c, r))), decimal.Decimal((r-1) * (c-1)))
+
+        with open("table.wb", "w") as f:
+            wb.save_workbook(f)
+
     def test_copy_many(self):
         start_location = (1, 1)
         end_location = (3, 3)
