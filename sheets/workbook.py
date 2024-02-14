@@ -336,9 +336,7 @@ class Workbook:
         
         if sheet_name.lower() in self.sheet_references.backward:
             for cell in self.sheet_references.backward[sheet_name.lower()]:
-                cell.rename_sheet(sheet_name, new_sheet_name)
-                self.sheet_references.link(cell, new_sheet_name.lower())
-        self.sheet_references.clear_backward_link(sheet_name.lower())  
+                cell.rename_sheet(self, sheet_name, new_sheet_name)
 
         self.sheet_map[new_sheet_name.lower()] = self.sheet_map[sheet_name.lower()]
         self.sheet_map.pop(sheet_name.lower())
@@ -455,7 +453,7 @@ class Workbook:
                 to_ref = to_start_ref.moved((col, row))
                 to_sheet.set_cell_contents(self, to_ref, contents)
                 cell = to_sheet.get_cell(to_ref)
-                cell.move_formula(offset)
+                cell.move_formula(self, offset)
                 updated.add(cell)
         self.update_cells(updated)
         self.update_ancestors(updated)

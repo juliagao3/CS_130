@@ -89,13 +89,15 @@ class Cell:
 
         self.set_value(value)
 
-    def rename_sheet(self, old_name, new_name):
-        self.contents = interp.rename_sheet(old_name, new_name, self.formula_tree)
-
-    def move_formula(self, offset):
+    def rename_sheet(self, workbook, old_name, new_name):
         if self.formula_tree is None:
             return
-        self.contents = interp.move_formula(offset, self.formula_tree)
+        self.set_contents(workbook, interp.rename_sheet(old_name, new_name, self.formula_tree))
+
+    def move_formula(self, workbook, offset):
+        if self.formula_tree is None:
+            return
+        self.set_contents(workbook, interp.move_formula(offset, self.formula_tree))
 
     def recompute_value(self, workbook):
         if self.contents is None or self.contents[0] != "=":
