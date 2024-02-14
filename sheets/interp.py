@@ -4,7 +4,7 @@ import lark
 from lark.visitors import visit_children_decor
 from lark.visitors import v_args
 from . import sheet as sheet_util
-from . import location as location_utils
+from .reference import Reference
 
 from typing import Tuple
 
@@ -205,28 +205,20 @@ class FormulaMover(lark.visitors.Transformer_InPlace):
     def cell(self, tree):
         values = tree.children
         # checks and changes the referenced cells in the formula
-        location = values[0].lower()
+        location = values[0]
 
         if len(values) > 1:
-            location = values[1].lower()
+            location = values[1]
 
-        # sheet_name = values[0]
-        to_loc = location_utils.location_string_to_tuple(location)
-
-        # check if col/row is relative
-        col, row = to_loc[0], to_loc[1]
-
-        if not to_loc[2]:
-            col = to_loc[0] + self.offset[0]
-        if not to_loc[3]:
-            row = to_loc[1] + self.offset[1]
-        
-        to_loc = (col, row)
+        try:
+            ref = Reference.from_string(location)
+        except ValueError:
+            return tree
+            #pass
 
         # check if new loc is valid
-        try:    
-            location_utils.check_location_tuple((to_loc[0], to_loc[1]))
-            new_value = location_utils.tuple_to_location_string(to_loc)
+        try:
+            new_value = str(ref.moved(self.offset))
         except ValueError:
             new_value = "#REF!"
 
