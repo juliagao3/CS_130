@@ -31,9 +31,6 @@ class Workbook:
         # cells point to sheet names they reference
         self.sheet_references = Graph[Any]()
 
-        # Default sheet number
-        self.sheet_num: int = 1
-
         # Graph
         self.dependency_graph = Graph[Cell]()
 
@@ -81,10 +78,11 @@ class Workbook:
                 raise ValueError
 
         elif sheet_name is None:
-            sheet_name = 'Sheet' + str(self.sheet_num)
-            while sheet_name.lower() in self.sheet_map.keys():                
-                self.sheet_num += 1
-                sheet_name = 'Sheet' + str(self.sheet_num)  
+            num = 1
+            sheet_name = 'Sheet' + str(num)
+            while sheet_name.lower() in self.sheet_map:
+                num += 1
+                sheet_name = 'Sheet' + str(num)
 
         else:
 
