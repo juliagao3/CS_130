@@ -98,6 +98,15 @@ class TestClass(unittest.TestCase):
         wb.rename_sheet(name, "Another")
         self.assertEqual(wb.get_cell_value("Another", "A1"), "hello")
         self.assertEqual(wb.get_cell_contents("Another", "A1"), "=Another!A2 & \"hello\"")
+        
+    def test_remove_quotes(self):
+        wb = sheets.Workbook()
+        sheet_num, name = wb.new_sheet()
+        sheet_num2, name2 = wb.new_sheet("sheet@bla")
+        
+        wb.set_cell_contents(name, "A1", "='sheet@bla'!A1")
+        wb.rename_sheet(name2, "sheet2")
+        self.assertEqual(wb.get_cell_value(name, "A1"), decimal.Decimal(0))
     
 if __name__ == "__main__":
         unittest.main()
