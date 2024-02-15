@@ -22,6 +22,12 @@ def notify(workbook, cells):
         try:
             func(workbook, map(lambda c: (c.sheet.sheet_name, c.location), cells))
         except: # noqa: E722
+            # We catch all exceptions here because there's no way to predict
+            # what kinds of bugs the users of this library will write in their
+            # notification function.
+            #
+            # We don't want exceptions in the user code to cause our library
+            # to fail.
             pass
 
 class FormulaError(Exception):
