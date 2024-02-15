@@ -1,0 +1,22 @@
+Theory - We think our library is spending a lot of time cycle checking because we were calling it too many times.
+Rationale - 88% of the cumulative time is checking cycles as it took up 14 out of 16 seconds.
+Outcome - After we made changes, our percentage decreased to 59% of the cumulative time of method as it only took up 
+3.55 out of 6 seconds. We were right!
+
+https://github.com/juliagao3/CS_130/commit/35b7342e78b072c3e0898abf31a05c4951595372
+https://github.com/juliagao3/CS_130/commit/e2f92de8a710c6b35ca82ed79748b86068da1c3c
+
+Theory - We think that getting the ancestors was slow, so we will try to fix it.
+Rationale - 3% of the cumulative time was in get_ancestors_of_set as it took up 0.17 out of 6 seconds.
+Outcome - After we made changes, our percentage decreased .1% of the cumulative time of method as it only took up
+0.007 out of 6 seconds to run. We were right!
+
+https://github.com/juliagao3/CS_130/commit/3912599a56b2d64e39b68609372be30d0adb919c
+
+Theory - We think that updating the extent of the spreadsheet was slow, so will will try to fix it.
+Rationale - 9% of the total time is spent on computing the sheet extent in set_cell_contents as it took 
+up 1.75 out of 20 seconds.
+Outome - After we made changes, our percentage decreased to .2% of the total time as it only took
+0.03 out of 14 seconds to run. We were right!
+
+https://github.com/juliagao3/CS_130/commit/d452803ac0fe062bb1c17aebe001c58df7591858
