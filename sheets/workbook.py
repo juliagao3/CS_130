@@ -413,9 +413,12 @@ class Workbook:
 
         sheet = self.sheet_map[sheet_name.lower()]
         to_sheet = self.sheet_map[to_sheet.lower()]
+
+        start_location_initial = Reference.from_string(start_location)
+        end_location_initial = Reference.from_string(end_location)
         
-        start_ref = Reference.from_string(start_location)
-        end_ref = Reference.from_string(end_location)
+        start_ref = Reference(min(start_location_initial.col, end_location_initial.col), min(start_location_initial.row, end_location_initial.row), False, False)
+        end_ref = Reference(max(start_location_initial.col, end_location_initial.col), max(start_location_initial.row, end_location_initial.row), False, False)
         to_start_ref = Reference.from_string(to_location)
 
         start_tuple = start_ref.tuple()
