@@ -117,6 +117,7 @@ class Cell:
     def set_contents(self, workbook, contents: str):
         workbook.sheet_references.clear_forward_links((self.sheet, self))
         workbook.dependency_graph.clear_forward_links(self)
+        self.formula_tree = None
 
         if is_empty_content_string(contents):
             self.contents = None
