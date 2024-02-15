@@ -21,7 +21,7 @@ def notify(workbook, cells):
     for func in workbook.notify_functions:
         try:
             func(workbook, map(lambda c: (c.sheet.sheet_name, c.location), cells))
-        except:
+        except: # noqa: E722
             pass
 
 class FormulaError(Exception):
