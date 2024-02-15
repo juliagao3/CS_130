@@ -281,4 +281,4 @@ class TestClass(unittest.TestCase):
         test_move(self, wb, sheet_name, sheet_name1, start_location, end_location, to_location)
 
 if __name__ == "__main__":
-    unittest.main(module="stress")
+    unittest.main(module="test_stress")
