@@ -34,7 +34,10 @@ class Reference:
         self.col = col
         self.row = row
 
-    def from_string(location_string: str):
+    def from_string(location_string: str, allow_absolute: bool = False):
+        if location_string is None:
+            raise ValueError
+
         m = location_regex.fullmatch(location_string)
 
         if m is None:
@@ -44,6 +47,10 @@ class Reference:
 
         abs_col = groups[0] == "$"
         abs_row = groups[2] == "$"
+
+        if not allow_absolute and (abs_col or abs_row):
+            raise ValueError
+
         col = from_base_26(groups[1].lower())
         row = int(groups[3])
 

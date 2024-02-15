@@ -211,10 +211,11 @@ class FormulaMover(lark.visitors.Transformer_InPlace):
             location = values[1]
 
         try:
-            ref = Reference.from_string(location)
+            ref = Reference.from_string(location, allow_absolute=True)
         except ValueError:
+            # https://piazza.com/class/lqvau3tih6k26o/post/33
+            # :>
             return tree
-            #pass
 
         # check if new loc is valid
         try:
