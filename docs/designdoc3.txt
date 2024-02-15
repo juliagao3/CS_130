@@ -20,9 +20,14 @@ L1.  [2pts] Enumerate all teammates here.
 
 
 L2.  [2pts] What did each teammate focus on during this project?
+     Jacob: Moving and copy cells function
+     Cecilia: Implementing moving formula in copy_cell and absolute/relative location
+     Sebastian: Absolute/relative location
+     Julia: Moving and copy cells function and implementing moving formula in copy_cell
 
 
 L3.  [3pts] Approximately how many hours did each teammate spend on the project?
+     Each individual spent about 15 hours.
 
 
 Spreadsheet Engine Design (9 pts)
@@ -32,17 +37,36 @@ D1.  [3pts] Moving and copying regions of a sheet are very similar operations,
      with only a few differences between them.  How did your team take advantage
      of the similarity of these two operations to reduce the amount of code
      required to provide this functionality?
+     We took advantage of this by only writing one helper function which performed
+     both operations.  We passed in a boolean to check if it was moving cells as any 
+     cells that previously had contents was set to be an empty cell. The boolean was
+     set to true for moving cells and set to false for copying cells. The rest of
+     the function was performed for both operations.
 
 
 D2.  [3pts] Similarly, moving/copying regions of a sheet, and renaming a sheet,
      both involve formula updates.  Was your team able to factor out common
      aspects of these two operations to reduce the amount of code required to
      implement these operations?  If so, what did you do?  If not, why not?
+     We were able to factor out a common aspect of these two operations by using
+     the same class to print out our formulas once we changed the formula tree in place.
+     We added an extra class called FormulaMover() that is able to move the formula
+     to the correct cell based on the offset. Then we return the formula tree
+     and print out the formula using the same class FormulaPrinter() we used to
+     print out formulas after renaming a sheet.
 
 
 D3.  [3pts] How does your implementation address the challenges of moving or
      copying a region of cells where the source and target regions overlap?
-
+     We address these challenges by iterating either forward or backward through
+     the region of the cells that are being copied or moved. If we are moving or copying
+     the cells to the right, we loop though the cells backward so that we only
+     replace values of the cells that have been copied over for both the row and column.
+     If we are moving or copying the cells to the left, we loop through the cells
+     the forward direction so that we only replace values of the cells that have been 
+     copied over for both the row and column. We check which direction we are moving
+     by using if the offset (difference between the to_location and start_location)
+     is positive or negative.
 
 Static Code Analysis / Code Linting (16pts)
 -------------------------------------------
@@ -51,19 +75,43 @@ L1.  [5pts] The Project 3 spec includes an example of a subtle implementation
      bug with the Python counts(s, totals) function as written in the spec.
      Briefly describe the cause of the buggy behavior, and what is the
      recommended approach for avoiding the buggy behavior.
+     The cause of the buggy behavior is that the value of a default argument is evaluated 
+     only once, when the function is declared. The default argument syntax totals = {} causes 
+     the Python interpreter to create an empty dictionary, but it’s the same dictionary 
+     object every time the function is called. The dictionary is not being cleared 
+     before calling the function again so the new call to this function just adds more
+     to the dictionary. One way to approach this is to create an empty dictionary 
+     (like shown below):
+
+     def counts(s: str, totals: None) -> Dict[str, int]:
+          if totals is None:
+               totals = {}
+          for ch in s:
+               totals[ch] = totals.get(ch, 0) + 1
+          return totals
 
 
 L2.  [4pts] What code-linter did your team use on your project?  Why did you
      choose it?  Was this the first CS130 project in which you used a linter?
+     We used ruff as our code-linter since it was suggested in the spec. This 
+     is the first project in which we used a linter.
 
 
 L3.  [3pts] How did you automate the execution of your code linter?  Did
      everyone in your team find it easy to run?
-
+     We automated the execution of our linter by adding it in Github actions. Whenever
+     we commit or make a pull request from Github, the linter is being run to test our code to
+     make sure there is no buggy behavior. Everyone in our team found it easy to run.
+     
 
 L4.  [4pts] Did the use of the linter improve your overall code quality and
      correctness?  Give some specific details in your answer.  Were there any
      serious issues (e.g. buggy language idioms) you were unaware of?
+     Yes. The linter improved our overall code quality and correctness. Most
+     of the issues were using '==' instead of 'is' and some syntax issues such
+     as location of 'not.' We also had issues with unused variables and needing to 
+     be specific in our imports instead of just importing with '*.' There were
+     not any serious issues that we were unaware of. 
 
 
 Performance Improvement (18 pts)
@@ -79,23 +127,59 @@ this investigation, and fix performance issues in your code.
 P1.  [7pts] Give a brief overview of 3-4 of the worst hot-spots you identified
      in your performance testing and analysis.  For each one, describe how your
      team was able to resolve it.
+     1. Calling cycle detection too many times
+     In our link method of graph class, we were previously recomputing cycles everytime the
+     link function was called regardless of whether or not the link was already
+     in the graph. We fixed this by just adding a check to see if the link was
+     in the graph. If it is, we don't need to recompute the cycles again. We
+     also updated this in clearing forward and backward links by just checking
+     if the cell had links. If it did not, then the graph does not change.
+
+     2. Computing ancestors of graph given cell
+     In our get ancestors method of graph class, we were previously popping the
+     first element of our queue but that was taking an extra O(n) time since it had to
+     go through the whole queue. We instead just did pop() instead of pop(0) which
+     optimized our runtime. That way, we just popped the last element of the queue
+     which takes less time to compute.
+
+     3. Computing the extent of the spreadsheet after updating cell contents
+     In our set cell contents in sheets, we were previously finding the new extent
+     by looping through all the cells and then finding the max between each
+     to set as our new extent. We were able to reduce the computing time by 
+     using a binary search to find the max in the list of locations instead of 
+     looping through each cell to find the max. 
 
 
 P2.  [4pts] Did your team try anything to resolve performance issues and find
      that it didn't improve things at all - perhaps even made things worse?
      If so, were you able to identify why the intended fix didn't produce the
      desired benefit?
-
+     Yes. One thing we tried was batching the notifications together in workbook
+     instead of having each cell call notify. The time improvement wasn't really
+     noticeable at least using our stress tests, since the stress tests didn't 
+     really test the changes. The fix might have been useful if the notification
+     call was more complex, so calling it once would be faster than having the
+     cell call it once each time it was updated.
+     
 
 P3.  [4pts] How do you feel that your performance updates affected your code's
      readability and maintainability?  Did it make it better? worse? unchanged?
      Elaborate on your answer.
+     The performance updates helped to make our code better with readability
+     as our code become more concise and clear of what the functions were supposed to
+     do. The updates didn't really affect maintainability as we fixed certain
+     details of functions which didn't have a big impact on how the function is 
+     structured.
 
 
 P4.  [3pts] Did your performance updates cause any regressions in functionality?
      If so, briefly describe any issues that emerged.  How were these issues
      identified (e.g. automated test failures, manual testing, etc.)?  How
      quickly were issues identified?
+     No, the performance updates didn't cause any regression in functionality.
+     This could be due to that none of the functions functionality was changed. We
+     more just optimized certain parts of the code to have a faster runtime. The
+     overall structure of our code was not affected by these optimizations.
 
 
 Section F:  CS130 Project 3 Feedback [OPTIONAL]
@@ -121,3 +205,5 @@ F3.  Were there any parts of the assignment that seemed _unnecessarily_ tedious?
 
 F4.  Do you have any feedback and/or constructive criticism about how this
      project can be made better in future iterations of CS130?
+
+
