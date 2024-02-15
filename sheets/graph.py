@@ -114,73 +114,74 @@ class Graph(Generic[T]):
         self.clear_forward_links(node)
         self.clear_backward_link(node)
 
-    def tarjan(self):
-        stack: List[T] = []
-        stack_set: Set[T] = set()
+    def strongconnect(
+                self,
+                v: T,
+                next_index: int,
+                index: Dict[T, int],
+                lowlink: Dict[T, int],
+                on_stack: [T, int],
+                stack: List[T],
+                sccs: List[List[T]],
+                topo: List[T]
+            ):
 
-        next_number: int = 0
-        number: Dict[T, int] ={}
-        lowlink: Dict[T, int] = {}
+        call_stack = [(v, list(self.forward[v]) if v in self.forward else [], 0)]
 
-        sccs: List[List[T]] = []
-        topological_order = []
+        while len(call_stack) > 0:
+            v, forward, i = call_stack.pop()
 
-        def strongconnect(root):
-            nonlocal self
-            nonlocal stack
-            nonlocal stack_set
+            if i == 0:
+                index[v] = next_index
+                lowlink[v] = next_index
+                next_index += 1
+                stack.append(v)
+                on_stack[v] = True
+            else:
+                w = forward[i-1]
+                lowlink[v] = min(lowlink[v], lowlink[w])
 
-            nonlocal next_number
-            nonlocal number
-            nonlocal lowlink
+            recurse = False
 
-            nonlocal sccs
+            while i < len(forward):
+                w = forward[i]
+                i += 1
+                if w not in index:
+                    call_stack.append((v, forward, i))
+                    call_stack.append((w, list(self.forward[w]) if w in self.forward else [], 0))
+                    recurse = True
+                    break
+                elif w in on_stack and on_stack[w]:
+                    lowlink[v] = min(lowlink[v], index[w])
 
-            dfs = [(root, None, self.get_forward_links(root).copy())]
-            while len(dfs) > 0:
-                v, w, children = dfs.pop()
-
-                if w is None:
-                    number[v] = next_number
-                    lowlink[v] = next_number
-                    next_number += 1
-                    stack.append(v)
-                    stack_set.add(v)
-                else:
-                    lowlink[v] = min(lowlink[v], lowlink[w])
-
-                recurse = False
-
-                while len(children) > 0:
-                    w = children.pop()
-                    if w not in number:
-                        dfs.append((v, w, children))
-                        dfs.append((w, None, self.get_forward_links(w).copy()))
-                        recurse = True
+            if recurse:
+                continue
+            
+            topo.append(v)
+            if lowlink[v] == index[v]:
+                scc = []
+                while True:
+                    w = stack.pop()
+                    on_stack[w] = False
+                    scc.append(w)
+                    if w == v:
                         break
-                    elif w in stack_set:
-                        lowlink[v] = min(lowlink[v], number[w])
+                sccs.append(scc)
 
-                if recurse:
-                    continue
+        return next_index
 
-                topological_order.append(v)
-                if lowlink[v] == number[v]:
-                    scc = []
-                    while True:
-                        w = stack.pop()
-                        stack_set.remove(w)
-                        scc.append(w)
-                        if w == v:
-                            break
-                    sccs.append(scc)
-
-        vertices = self.forward.keys() | self.backward.keys()
-        for v in vertices:
-            if v not in number:
-                strongconnect(v)
-
-        return sccs, topological_order
+    def tarjan(self):
+        next_index = 0
+        index = {}
+        lowlink = {}
+        on_stack = {}
+        stack = []
+        sccs = []
+        topo = []
+        for n in self.get_nodes():
+            if n not in index:
+                next_index = self.strongconnect(n, next_index, index, lowlink, on_stack, stack, sccs, topo)
+        return sccs, topo
 
     def get_ancestors_of_set(self, nodes):
         '''
