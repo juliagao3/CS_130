@@ -64,7 +64,7 @@ class Cell:
             workbook.sheet_references.link(self, sheet_name)
             
             try:
-                ref = reference.Reference.from_string(location)
+                ref = reference.Reference.from_string(location, allow_absolute=True)
                 cell = workbook.get_cell(sheet_name, ref)
                 workbook.dependency_graph.link(self, cell)
             except (KeyError, ValueError):

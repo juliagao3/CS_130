@@ -166,6 +166,11 @@ class FormulaEvaluator(lark.visitors.Interpreter):
         
         sheet_name = strip_quotes(sheet_name)
 
+        ref = Reference.from_string(cell_ref, allow_absolute=True)
+        ref.abs_col = False
+        ref.abs_row = False
+        cell_ref = str(ref)
+
         try:
             return self.workbook.get_cell_value(sheet_name, cell_ref) 
         except ValueError:
