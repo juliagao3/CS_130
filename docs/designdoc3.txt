@@ -93,8 +93,9 @@ L1.  [5pts] The Project 3 spec includes an example of a subtle implementation
 
 L2.  [4pts] What code-linter did your team use on your project?  Why did you
      choose it?  Was this the first CS130 project in which you used a linter?
-     We used ruff as our code-linter since it was suggested in the spec. This 
-     is the first project in which we used a linter.
+     We used ruff as our code-linter. We chose this linter as it was the linter
+     that was strongly suggested in the spec. This is the first project in 
+     CS 130 in which we used a linter.
 
 
 L3.  [3pts] How did you automate the execution of your code linter?  Did
@@ -133,7 +134,8 @@ P1.  [7pts] Give a brief overview of 3-4 of the worst hot-spots you identified
      in the graph. We fixed this by just adding a check to see if the link was
      in the graph. If it is, we don't need to recompute the cycles again. We
      also updated this in clearing forward and backward links by just checking
-     if the cell had links. If it did not, then the graph does not change.
+     if the cell had links. If it did not, then the graph does not change so we
+     don't recomute cycles.
 
      2. Computing ancestors of graph given cell
      In our get ancestors method of graph class, we were previously popping the
