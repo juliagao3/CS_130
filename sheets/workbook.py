@@ -454,6 +454,7 @@ class Workbook:
                 cell = to_sheet.get_cell(to_ref)
                 cell.move_formula(self, offset)
                 updated.add(cell)
+                updated.add(sheet.get_cell(from_ref))
         self.update_cells(updated)
         self.update_ancestors(updated)
 
