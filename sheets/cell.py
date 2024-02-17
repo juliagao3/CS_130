@@ -61,16 +61,18 @@ class Cell:
         self.formula_tree = interp.parse_formula(self.contents)
 
         if self.formula_tree is None:
-            raise FormulaError(CellError(CellErrorType.PARSE_ERROR, ""))
+            raise FormulaError(CellError(CellErrorType.PARSE_ERROR, self.contents))
 
     def check_references(self, workbook):
         is_error = False
 
-        for sheet_name, location in interp.find_refs(workbook, self.sheet, self.formula_tree):
-            workbook.sheet_references.link(self, sheet_name)
-            
+        for location in interp.find_refs(workbook, self.sheet, self.formula_tree):
             try:
                 ref = reference.Reference.from_string(location, allow_absolute=True)
+                sheet_name = (ref.sheet_name or self.sheet.sheet_name).lower()
+
+                workbook.sheet_references.link(self, sheet_name)
+
                 cell = workbook.get_cell(sheet_name, ref)
                 workbook.dependency_graph.link(self, cell)
             except (KeyError, ValueError):
@@ -106,7 +108,7 @@ class Cell:
         self.set_contents(workbook, interp.move_formula(offset, self.formula_tree))
 
     def recompute_value(self, workbook):
-        if self.contents is None or self.contents[0] != "=":
+        if self.contents is None or self.formula_tree is None:
             return
         try:
             self.check_references(workbook)

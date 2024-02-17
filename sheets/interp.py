@@ -8,7 +8,7 @@ from .reference import Reference
 
 from typing import Tuple
 
-parser = lark.Lark.open('formulas.lark', rel_to=__file__, start='formula')
+parser = lark.Lark.open('formulas.lark', rel_to=__file__, start='formula', parser='lalr')
 
 def remove_trailing_zeros(d: decimal.Decimal):
     num = str(d)
@@ -51,11 +51,7 @@ class CellRefFinder(lark.Visitor):
         self.sheet_name = sheet_name
         
     def cell(self, tree):
-        if len(tree.children) == 1:
-            self.refs.append((self.sheet_name, tree.children[0]))
-        else:
-            assert len(tree.children) == 2
-            self.refs.append((strip_quotes(tree.children[0]).lower(), tree.children[1]))
+        self.refs.append(tree.children[0])
 
 class SheetRenamer(lark.visitors.Transformer_InPlace):
 
@@ -65,14 +61,10 @@ class SheetRenamer(lark.visitors.Transformer_InPlace):
 
     @v_args(tree=True)
     def cell(self, tree):
-        values = tree.children
-        if len(values) > 1:
-            values[0] = strip_quotes(values[0])
-            if values[0].lower() == self.old_name.lower():
-                values[0] = self.new_name
-            
-            if sheet_util.name_needs_quotes(values[0]):
-                values[0] = "'" + values[0] + "'"
+        ref = Reference.from_string(tree.children[0])
+        if ref.sheet_name.lower() == self.old_name.lower():
+            ref.sheet_name = self.new_name
+        tree.children[0] = str(ref)
         return tree
     
 class FormulaPrinter(lark.visitors.Interpreter):
@@ -95,7 +87,7 @@ class FormulaPrinter(lark.visitors.Interpreter):
     
     @visit_children_decor
     def cell(self, values):
-        return "!".join(values)
+        return values[0]
     
     @visit_children_decor
     def number(self, values):
@@ -157,22 +149,9 @@ class FormulaEvaluator(lark.visitors.Interpreter):
         
     @visit_children_decor
     def cell(self, values):
-        sheet_name = self.sheet.sheet_name
-        cell_ref = values[0]
-
-        if len(values) > 1:
-            sheet_name = values[0]
-            cell_ref = values[1]
-        
-        sheet_name = strip_quotes(sheet_name)
-
-        ref = Reference.from_string(cell_ref, allow_absolute=True)
-        ref.abs_col = False
-        ref.abs_row = False
-        cell_ref = str(ref)
-
         try:
-            return self.workbook.get_cell_value(sheet_name, cell_ref) 
+            ref = Reference.from_string(values[0], allow_absolute=True)
+            return self.workbook.get_cell(ref.sheet_name or self.sheet.sheet_name, ref).value
         except ValueError:
             assert "Uncaught bad reference!!!"
         except KeyError:
@@ -208,15 +187,8 @@ class FormulaMover(lark.visitors.Transformer_InPlace):
 
     @v_args(tree=True)
     def cell(self, tree):
-        values = tree.children
-        # checks and changes the referenced cells in the formula
-        location = values[0]
-
-        if len(values) > 1:
-            location = values[1]
-
         try:
-            ref = Reference.from_string(location, allow_absolute=True)
+            ref = Reference.from_string(tree.children[0], allow_absolute=True)
         except ValueError:
             # https://piazza.com/class/lqvau3tih6k26o/post/33
             # :>
@@ -224,15 +196,10 @@ class FormulaMover(lark.visitors.Transformer_InPlace):
 
         # check if new loc is valid
         try:
-            new_value = str(ref.moved(self.offset))
+            tree.children[0] = str(ref.moved(self.offset))
         except ValueError:
-            new_value = "#REF!"
+            tree.children[0] = "#REF!"
 
-        if len(values) > 1:
-            values[1] = new_value
-        else:
-            values[0] = new_value
-        
         return tree
         
 def parse_formula(formula):

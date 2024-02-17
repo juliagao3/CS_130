@@ -589,11 +589,11 @@ class TestClass(unittest.TestCase):
                 wb = sheets.Workbook()
                 sheet_num, sheet_name = wb.new_sheet()
 
-                a1 = wb.get_cell_contents(sheet_name, "A1")
+                a1 = wb.get_cell_contents(sheet_name, "a1")
                 self.assertEqual(a1, None)
 
                 wb.set_cell_contents(sheet_name, "A2", "contents")
-                a2 = wb.get_cell_contents(sheet_name, "A2")
+                a2 = wb.get_cell_contents(sheet_name, "a2")
                 self.assertEqual(a2, "contents")
 
         def test_num_sheets_and_list_sheets(self):

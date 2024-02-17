@@ -9,7 +9,7 @@
 
 ?formula : "=" expression
 
-?expression : add_expr | concat_expr
+?expression : concat_expr
 
 //========================================
 // Arithmetic expressions
@@ -26,7 +26,7 @@
 //========================================
 // String concatenation
 
-?concat_expr : (concat_expr "&")? base
+?concat_expr : (concat_expr "&")? add_expr
 
 //========================================
 // Base values
@@ -37,7 +37,9 @@
       | STRING                  -> string
       | "(" expression ")"      -> parens
 
-cell : (_sheetname "!")? CELLREF
+cell : FULLREF
+     | QUOTEREF
+     | CELLREF
 
 _sheetname : SHEET_NAME | QUOTED_SHEET_NAME
 
@@ -57,6 +59,8 @@ ERROR_VALUE: ("#ERROR!"i | "#CIRCREF!"i | "#REF!"i | "#NAME?"i | "#VALUE!"i | "#
 
 // Lexer rules for different kinds of terminals
 
+FULLREF: /[A-Za-z_][A-Za-z0-9_]*!\$?[A-Za-z]+\$?[1-9][0-9]*/
+QUOTEREF: /\'[^']*\'!\$?[A-Za-z]+\$?[1-9][0-9]*/
 CELLREF: /\$?[A-Za-z]+\$?[1-9][0-9]*/
 
 // Unquoted sheet names cannot contain spaces, and are otherwise very simple.
