@@ -202,6 +202,11 @@ class Workbook:
             if cell in nodes:
                 cell.recompute_value(self)
 
+        for node in nodes:
+            if node in order:
+                continue
+            node.recompute_value(self)
+
     def update_ancestors(self, nodes):
         self.update_cells(self.dependency_graph.get_ancestors_of_set(nodes))
 
