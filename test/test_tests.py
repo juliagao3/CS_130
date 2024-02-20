@@ -702,8 +702,8 @@ class TestClass(unittest.TestCase):
                 wb = sheets.Workbook()
                 sheet_num1, sheet_name1 = wb.new_sheet()
 
-                wb.set_cell_contents(sheet_name1, "A1", "=Sheet2!A1 + 10 ")
-                wb.set_cell_contents(sheet_name1, "A2", "=A1 + 5")
+                wb.set_cell_contents(sheet_name1, "A1", "='New Sheet'!A1 + 10 ")
+                wb.set_cell_contents(sheet_name1, "A2", "='New Sheet'!A2")
 
                 sheet1_a1 = wb.get_cell_value(sheet_name1, "A1")
                 self.assertIsInstance(sheet1_a1, sheets.CellError)
@@ -713,13 +713,14 @@ class TestClass(unittest.TestCase):
                 self.assertIsInstance(sheet1_a2, sheets.CellError)
                 self.assertEqual(sheet1_a2.get_type(), sheets.CellErrorType.BAD_REFERENCE)
 
-                sheet_num2, sheet_name2 = wb.new_sheet()
+                sheet_num2, sheet_name2 = wb.new_sheet("New Sheet")
+
                 wb.set_cell_contents(sheet_name2, "A1", "15")
                 sheet1_a1 = wb.get_cell_value(sheet_name1, "A1")
                 self.assertEqual(sheet1_a1, decimal.Decimal(25))
 
                 sheet1_a2 = wb.get_cell_value(sheet_name1, "A2")
-                self.assertEqual(sheet1_a2, decimal.Decimal(30))
+                self.assertEqual(sheet1_a2, decimal.Decimal(0))
 
                 wb.del_sheet(sheet_name2)
                 sheet1_a1 = wb.get_cell_value(sheet_name1, "A1")
@@ -801,8 +802,29 @@ class TestClass(unittest.TestCase):
                 sheet_num, sheet_name = wb.new_sheet()
 
                 wb.set_cell_contents(sheet_name, "A1", '=0.000 & "hi"')
-
                 self.assertEqual(wb.get_cell_value(sheet_name, 'A1'), '0hi')
+
+                wb.set_cell_contents(sheet_name, "A2", '="hi" & 0.000')
+                self.assertEqual(wb.get_cell_value(sheet_name, 'A2'), 'hi0')
+
+                wb.set_cell_contents(sheet_name, "A3", "0.000")
+                wb.set_cell_contents(sheet_name, "A4", '=A3 & "0.020"')
+                wb.set_cell_contents(sheet_name, "A5", '=A4 + 0.0')
+                self.assertEqual(wb.get_cell_value(sheet_name, 'A4'), '0.0000.020')
+                self.assertEqual(wb.get_cell_value(sheet_name, 'A5'), decimal.Decimal("0.02"))
+
+                wb.set_cell_contents(sheet_name, "A5", "0.000")
+                wb.set_cell_contents(sheet_name, "A6", '="hi" & A3')
+                self.assertEqual(wb.get_cell_value(sheet_name, 'A6'), 'hi0')
+
+                wb.set_cell_contents(sheet_name, "A6", '="hi" & (1.0 + 2.0)')
+                self.assertEqual(wb.get_cell_value(sheet_name, 'A6'), 'hi3')
+
+                wb.set_cell_contents(sheet_name, "A7", '="0.0"')
+                self.assertEqual(wb.get_cell_value(sheet_name, 'A7'), '0.0')
+                
+                wb.set_cell_contents(sheet_name, "A8", '="hi" & (1.0 / 2.0)')
+                self.assertEqual(wb.get_cell_value(sheet_name, 'A8'), 'hi0.5')
                 
 if __name__ == "__main__":
         unittest.main()

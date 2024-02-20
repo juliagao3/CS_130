@@ -99,6 +99,59 @@ class TestClass(unittest.TestCase):
         wb.set_cell_contents(copy_name, "A1", "5")
         self.assertEqual(wb.get_cell_value(copy_name, "A1"), decimal.Decimal(5))       
         
+    def test_two_cycle(self):
+        wb = sheets.Workbook()
+        sheet_num, sheet_name = wb.new_sheet("sheet1")
+        
+        wb.set_cell_contents(sheet_name, "A1", f"={sheet_name}_1_1!A2")
+        wb.set_cell_contents(sheet_name, "A2", f"={sheet_name}_1_1!A1")
+        
+        value = wb.get_cell_value(sheet_name, "A1")
+        self.assertIsInstance(value, sheets.CellError)
+        self.assertEqual(value.get_type(), sheets.CellErrorType.BAD_REFERENCE)
+        
+        value = wb.get_cell_value(sheet_name, "A2")
+        self.assertIsInstance(value, sheets.CellError)
+        self.assertEqual(value.get_type(), sheets.CellErrorType.BAD_REFERENCE)
+        
+        copy_num, copy_name = wb.copy_sheet(sheet_name)
+
+        copy_num, copy_copy_name = wb.copy_sheet(copy_name)
+        
+        value1 = wb.get_cell_value(sheet_name, "A1")
+        self.assertIsInstance(value1, sheets.CellError)
+        self.assertEqual(value1.get_type(), sheets.CellErrorType.CIRCULAR_REFERENCE)
+        
+        value1 = wb.get_cell_value(sheet_name, "A2")
+        self.assertIsInstance(value1, sheets.CellError)
+        self.assertEqual(value1.get_type(), sheets.CellErrorType.CIRCULAR_REFERENCE)
+        
+        value1 = wb.get_cell_value(copy_name, "A1")
+        self.assertIsInstance(value1, sheets.CellError)
+        self.assertEqual(value1.get_type(), sheets.CellErrorType.CIRCULAR_REFERENCE)
+        
+        value1 = wb.get_cell_value(copy_name, "A2")
+        self.assertIsInstance(value1, sheets.CellError)
+        self.assertEqual(value1.get_type(), sheets.CellErrorType.CIRCULAR_REFERENCE)
+        
+        value1 = wb.get_cell_value(copy_copy_name, "A1")
+        self.assertIsInstance(value1, sheets.CellError)
+        self.assertEqual(value1.get_type(), sheets.CellErrorType.CIRCULAR_REFERENCE)
+        
+        value1 = wb.get_cell_value(copy_copy_name, "A2")
+        self.assertIsInstance(value1, sheets.CellError)
+        self.assertEqual(value1.get_type(), sheets.CellErrorType.CIRCULAR_REFERENCE)
+
+        wb.copy_cells(copy_copy_name, "A1", "A2", "B1")
+        value1 = wb.get_cell_value(copy_copy_name, "B1")
+        self.assertIsInstance(value1, sheets.CellError)
+        self.assertEqual(value1.get_type(), sheets.CellErrorType.CIRCULAR_REFERENCE)
+        
+        value1 = wb.get_cell_value(copy_copy_name, "B2")
+        self.assertIsInstance(value1, sheets.CellError)
+        self.assertEqual(value1.get_type(), sheets.CellErrorType.CIRCULAR_REFERENCE)
+
+           
     def test_copy_error(self):
         wb = sheets.Workbook()
         sheet_num, sheet_name = wb.new_sheet("sheet1")
