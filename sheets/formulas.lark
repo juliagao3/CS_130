@@ -35,6 +35,7 @@
       | ERROR_VALUE             -> error
       | NUMBER                  -> number
       | STRING                  -> string
+      | BOOL                    -> boolean
       | "(" expression ")"      -> parens
 
 cell : (_sheetname "!")? CELLREF
@@ -72,3 +73,5 @@ QUOTED_SHEET_NAME: /\'[^']*\'/
 NUMBER: /([0-9]+(\.[0-9]*)?)|(\.[0-9]+)/
 
 STRING: /\"[^"]*\"/
+
+BOOL: ("true"i | "false"i)

@@ -136,6 +136,10 @@ class Cell:
                 self.set_value(e.value)
         elif contents[0] == "'":
             self.set_value(contents[1:])
+        elif contents.lower() == "true":
+            self.set_value(True)
+        elif contents.lower() == "false":
+            self.set_value(False)
         elif CellErrorType.from_string(contents) is not None:
             self.set_value(CellError(CellErrorType.from_string(contents), ""))
         else:

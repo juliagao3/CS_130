@@ -117,7 +117,10 @@ class FormulaPrinter(lark.visitors.Interpreter):
     @visit_children_decor
     def parens(self, values):
         return '(' + values[0] + ')'
-    
+
+    @visit_children_decor
+    def boolean(self, values):
+        return values[0]
         
 class FormulaEvaluator(lark.visitors.Interpreter):
 
@@ -205,6 +208,10 @@ class FormulaEvaluator(lark.visitors.Interpreter):
     @visit_children_decor
     def parens(self, values):
         return values[0]
+
+    @visit_children_decor
+    def boolean(self, values):
+        return values[0].lower() == "true"
     
 class FormulaMover(lark.visitors.Transformer_InPlace):
     
