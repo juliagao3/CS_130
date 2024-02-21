@@ -134,6 +134,12 @@ class FormulaEvaluator(lark.visitors.Interpreter):
 
     @visit_children_decor
     def cmp_expr(self, values):
+        if isinstance(values[0], str):
+            values[0] = values[0].lower()
+
+        if isinstance(values[2], str):
+            values[2] = values[2].lower()
+
         if values[1] == "=" or values[1] == "==":
             return values[0] == values[2]
         elif values[1] == "<>" or values[1] == "!=":
