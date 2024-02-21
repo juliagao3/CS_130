@@ -9,7 +9,7 @@
 
 ?formula : "=" expression
 
-?expression : add_expr | concat_expr
+?expression : cmp_expr | concat_expr
 
 //========================================
 // Arithmetic expressions
@@ -17,6 +17,8 @@
 // This generates right-deep trees:  ?add_expr : mul_expr (ADD_OP add_expr)?
 // Instead we would prefer to generate left-deep trees when given a sequence
 // of operators at the same precedence level.
+?cmp_expr : (add_expr CMP_OP)? add_expr
+
 ?add_expr : (add_expr ADD_OP)? mul_expr
 
 ?mul_expr : (mul_expr MUL_OP)? unary_op
@@ -48,6 +50,7 @@ _sheetname : SHEET_NAME | QUOTED_SHEET_NAME
 // Specify the operators as separately named lexer rules so that they aren't
 // discarded from the resulting parse tree.
 
+CMP_OP: (">" | "<" | "=" | "<>" | ">=" | "<=" | "==" | "!=")
 ADD_OP: ("+" | "-")
 MUL_OP: ("*" | "/")
 

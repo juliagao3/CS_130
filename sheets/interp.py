@@ -83,6 +83,10 @@ class SheetRenamer(lark.visitors.Transformer_InPlace):
 class FormulaPrinter(lark.visitors.Interpreter):
     
     @visit_children_decor
+    def cmp_expr(self, values):
+        return " ".join(values)
+
+    @visit_children_decor
     def add_expr(self, values):
         return " ".join(values)
     
@@ -127,6 +131,25 @@ class FormulaEvaluator(lark.visitors.Interpreter):
     def __init__(self, workbook, sheet):
         self.workbook = workbook
         self.sheet = sheet
+
+    @visit_children_decor
+    @number_arg(0)
+    @number_arg(2)
+    def cmp_expr(self, values):
+        if values[1] == "=" or values[1] == "==":
+            return values[0] == values[2]
+        elif values[1] == "<>" or values[1] == "!=":
+            return values[0] != values[2]
+        elif values[1] == ">":
+            return values[0] > values[2]
+        elif values[1] == "<":
+            return values[0] < values[2]
+        elif values[1] == ">=":
+            return values[0] >= values[2]
+        elif values[1] == "<=":
+            return values[0] <= values[2]
+        else:
+            assert f"Unexpected cmp_expr operator: {values[1]}"
 
     @visit_children_decor
     @number_arg(0)
