@@ -71,5 +71,15 @@ class TestClass(unittest.TestCase):
         wb.set_cell_contents(n, "A3", "=a1 != a2")
         self.assertEqual(wb.get_cell_value(n, "A3"), True)
 
+    def test_precedence(self):
+        wb = sheets.Workbook()
+        i, n = wb.new_sheet()
+
+        wb.set_cell_contents(n, "A2", "1")
+        wb.set_cell_contents(n, "B2", "2")
+
+        wb.set_cell_contents(n, "A1", '=a2 = b2 & " type"')
+        self.assertEqual(wb.get_cell_value(n, "A1"), False)
+
 if __name__ == "__main__":
         unittest.main()
