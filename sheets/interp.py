@@ -36,7 +36,12 @@ def number_arg(index):
             if type(values[index]) != decimal.Decimal:
                     return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, f"{values[index]} failed on parsing")
 
-            return f(self, values)
+            value = f(self, values)
+
+            if isinstance(value, decimal.Decimal):
+                value = remove_trailing_zeros(value)
+
+            return value
         return new_f
     return check
 
