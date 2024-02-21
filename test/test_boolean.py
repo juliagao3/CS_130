@@ -81,5 +81,12 @@ class TestClass(unittest.TestCase):
         wb.set_cell_contents(n, "A1", '=a2 = b2 & " type"')
         self.assertEqual(wb.get_cell_value(n, "A1"), False)
 
+    def test_compare_strings(self):
+        wb = sheets.Workbook()
+        i, n = wb.new_sheet()
+
+        wb.set_cell_contents(n, "A1", '="hello" <> "Hello"')
+        self.assertEqual(wb.get_cell_value(n, "A1"), False)
+
 if __name__ == "__main__":
         unittest.main()
