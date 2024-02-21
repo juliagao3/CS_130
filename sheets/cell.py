@@ -106,7 +106,7 @@ class Cell:
         self.set_contents(workbook, interp.move_formula(offset, self.formula_tree))
 
     def recompute_value(self, workbook):
-        if self.contents is None or self.contents[0] != "=":
+        if self.contents is None or self.formula_tree is None:
             return
         try:
             self.check_references(workbook)
