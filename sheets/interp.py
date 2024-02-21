@@ -133,8 +133,6 @@ class FormulaEvaluator(lark.visitors.Interpreter):
         self.sheet = sheet
 
     @visit_children_decor
-    @number_arg(0)
-    @number_arg(2)
     def cmp_expr(self, values):
         if values[1] == "=" or values[1] == "==":
             return values[0] == values[2]
