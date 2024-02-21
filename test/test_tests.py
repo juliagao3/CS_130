@@ -810,7 +810,7 @@ class TestClass(unittest.TestCase):
                 wb.set_cell_contents(sheet_name, "A3", "0.000")
                 wb.set_cell_contents(sheet_name, "A4", '=A3 & "0.020"')
                 wb.set_cell_contents(sheet_name, "A5", '=A4 + 0.0')
-                self.assertEqual(wb.get_cell_value(sheet_name, 'A4'), '0.0000.020')
+                self.assertEqual(wb.get_cell_value(sheet_name, 'A4'), '00.020')
                 self.assertEqual(wb.get_cell_value(sheet_name, 'A5'), decimal.Decimal("0.02"))
 
                 wb.set_cell_contents(sheet_name, "A5", "0.000")
