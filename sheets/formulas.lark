@@ -9,7 +9,7 @@
 
 ?formula : "=" expression
 
-?expression : cmp_expr | concat_expr
+?expression : cmp_expr
 
 //========================================
 // Arithmetic expressions
@@ -23,7 +23,7 @@
 
 ?mul_expr : (mul_expr MUL_OP)? unary_op
 
-?unary_op : ADD_OP? base
+?unary_op : ADD_OP? concat_expr
 
 //========================================
 // String concatenation
