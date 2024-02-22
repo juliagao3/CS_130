@@ -26,7 +26,8 @@ def to_base_26(index: int) -> str:
     return "".join(reversed(result))
 
 def unquote(s: Optional[str]) -> Optional[str]:
-        if s is None: return None
+        if s is None:
+            return None
         return s[1:-1] if s[0] == "'" else s
 
 class Reference:

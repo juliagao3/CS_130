@@ -23,7 +23,7 @@ def func_version(_wb, _sheet, _args):
 
 def func_and(_wb, _sheet, args):
     if len(args) < 1:
-        return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, f"AND requires at least 1 argument")
+        return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "AND requires at least 1 argument")
 
     result = True
 
@@ -40,7 +40,7 @@ def func_and(_wb, _sheet, args):
 
 def func_or(_wb, _sheet, args):
     if len(args) < 1:
-        return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, f"OR requires at least 1 argument")
+        return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "OR requires at least 1 argument")
 
     result = False
 
@@ -57,7 +57,7 @@ def func_or(_wb, _sheet, args):
 
 def func_indirect(wb, sheet, args):
     if len(args) != 1:
-        return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, f"INDIRECT requires exactly 1 argument")
+        return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "INDIRECT requires exactly 1 argument")
 
     try:
         ref = reference.Reference.from_string(args[0], allow_absolute=True)
