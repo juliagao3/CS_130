@@ -25,6 +25,8 @@
 
 ?unary_op : ADD_OP? concat_expr
 
+func_expr : FUNCTION "(" ((expression ",")* expression)? ")"
+
 //========================================
 // String concatenation
 
@@ -34,6 +36,7 @@
 // Base values
 
 ?base : cell
+      | func_expr
       | ERROR_VALUE             -> error
       | NUMBER                  -> number
       | STRING                  -> string
@@ -78,3 +81,5 @@ NUMBER: /([0-9]+(\.[0-9]*)?)|(\.[0-9]+)/
 STRING: /\"[^"]*\"/
 
 BOOL: ("true"i | "false"i)
+
+FUNCTION: /[A-Za-z][A-Za-z0-9_]*/
