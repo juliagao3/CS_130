@@ -6,9 +6,32 @@ from lark.visitors import v_args
 from . import sheet as sheet_util
 from .reference import Reference
 
-from typing import Tuple
+from typing import Tuple, List, Any
 
 parser = lark.Lark.open('formulas.lark', rel_to=__file__, start='formula')
+
+def propagate_errors(values: List[Any]):
+    def get_error_priority(value):
+        priorities = {
+            sheets.CellErrorType.PARSE_ERROR:           6,
+            sheets.CellErrorType.CIRCULAR_REFERENCE:    5,
+            sheets.CellErrorType.BAD_REFERENCE:         4,
+            sheets.CellErrorType.BAD_NAME:              4,
+            sheets.CellErrorType.TYPE_ERROR:            4,
+            sheets.CellErrorType.DIVIDE_BY_ZERO:        4,
+        }
+
+        if isinstance(value, sheets.CellError):
+            return priorities[value.get_type()]
+        else:
+            return 0
+
+    error = max(values, default=None, key=get_error_priority)
+
+    if not isinstance(error, sheets.CellError):
+        return None
+    else:
+        return error
 
 def remove_trailing_zeros(d: decimal.Decimal):
     num = str(d)
@@ -33,7 +56,7 @@ def number_arg(index):
             if type(values[index]) == sheets.CellError:
                     return values[index]
             
-            if type(values[index]) != decimal.Decimal:
+            if type(values[index]) != decimal.Decimal and type(values[index]) != bool:
                     return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, f"{values[index]} failed on parsing")
 
             value = f(self, values)
@@ -134,26 +157,47 @@ class FormulaEvaluator(lark.visitors.Interpreter):
 
     @visit_children_decor
     def cmp_expr(self, values):
-        if isinstance(values[0], str):
-            values[0] = values[0].lower()
+        ops = { "=":  lambda a, b: a == b,
+                "==": lambda a, b: a == b,
+                "<>": lambda a, b: a != b,
+                "!=": lambda a, b: a != b,
+                ">":  lambda a, b: a > b,
+                "<":  lambda a, b: a < b,
+                ">=": lambda a, b: a >= b,
+                "<=": lambda a, b: a <= b }
 
-        if isinstance(values[2], str):
-            values[2] = values[2].lower()
+        defaults = {
+            bool: False,
+            str: "",
+            decimal.Decimal: decimal.Decimal("0"),
+            type(None): None
+        }
 
-        if values[1] == "=" or values[1] == "==":
-            return values[0] == values[2]
-        elif values[1] == "<>" or values[1] == "!=":
-            return values[0] != values[2]
-        elif values[1] == ">":
-            return values[0] > values[2]
-        elif values[1] == "<":
-            return values[0] < values[2]
-        elif values[1] == ">=":
-            return values[0] >= values[2]
-        elif values[1] == "<=":
-            return values[0] <= values[2]
+        error = propagate_errors([values[0], values[2]])
+
+        if error is not None:
+            return error
+
+        if values[0] is None:
+            values[0] = defaults[type(values[2])]
+
+        if values[2] is None:
+            values[2] = defaults[type(values[0])]
+
+        if type(values[0]) == type(values[2]):
+            if isinstance(values[0], str):
+                values[0] = values[0].lower()
+
+            if isinstance(values[2], str):
+                values[2] = values[2].lower()
+
+            if values[1] not in ops:
+                assert f"Unexpected cmp_expr operator: {values[1]}"
+
+            return ops[values[1]](values[0], values[2])
         else:
-            assert f"Unexpected cmp_expr operator: {values[1]}"
+            types = {decimal.Decimal: 0, str: 1, bool: 2}
+            return ops[values[1]](types[type(values[0])], types[type(values[2])])
 
     @visit_children_decor
     @number_arg(0)
