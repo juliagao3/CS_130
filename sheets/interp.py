@@ -6,9 +6,32 @@ from lark.visitors import v_args
 from . import sheet as sheet_util
 from .reference import Reference
 
-from typing import Tuple
+from typing import Tuple, List, Any
 
 parser = lark.Lark.open('formulas.lark', rel_to=__file__, start='formula')
+
+def propagate_errors(values: List[Any]):
+    def get_error_priority(value):
+        priorities = {
+            sheets.CellErrorType.PARSE_ERROR:           6,
+            sheets.CellErrorType.CIRCULAR_REFERENCE:    5,
+            sheets.CellErrorType.BAD_REFERENCE:         4,
+            sheets.CellErrorType.BAD_NAME:              4,
+            sheets.CellErrorType.TYPE_ERROR:            4,
+            sheets.CellErrorType.DIVIDE_BY_ZERO:        4,
+        }
+
+        if isinstance(value, sheets.CellError):
+            return priorities[value.get_type()]
+        else:
+            return 0
+
+    error = max(values, default=None, key=get_error_priority)
+
+    if not isinstance(error, sheets.CellError):
+        return None
+    else:
+        return error
 
 def remove_trailing_zeros(d: decimal.Decimal):
     num = str(d)
@@ -30,10 +53,10 @@ def number_arg(index):
                 except decimal.InvalidOperation:
                     pass
 
-            if type(values[index]) == sheets.CellError:
+            if isinstance(values[index], sheets.CellError):
                     return values[index]
-            
-            if type(values[index]) != decimal.Decimal:
+
+            if not isinstance(values[index], decimal.Decimal) and not isinstance(values[index], bool):
                     return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, f"{values[index]} failed on parsing")
 
             value = f(self, values)
@@ -83,6 +106,10 @@ class SheetRenamer(lark.visitors.Transformer_InPlace):
 class FormulaPrinter(lark.visitors.Interpreter):
     
     @visit_children_decor
+    def cmp_expr(self, values):
+        return " ".join(values)
+
+    @visit_children_decor
     def add_expr(self, values):
         return " ".join(values)
     
@@ -117,13 +144,60 @@ class FormulaPrinter(lark.visitors.Interpreter):
     @visit_children_decor
     def parens(self, values):
         return '(' + values[0] + ')'
-    
+
+    @visit_children_decor
+    def boolean(self, values):
+        return values[0]
         
 class FormulaEvaluator(lark.visitors.Interpreter):
 
     def __init__(self, workbook, sheet):
         self.workbook = workbook
         self.sheet = sheet
+
+    @visit_children_decor
+    def cmp_expr(self, values):
+        ops = { "=":  lambda a, b: a == b,
+                "==": lambda a, b: a == b,
+                "<>": lambda a, b: a != b,
+                "!=": lambda a, b: a != b,
+                ">":  lambda a, b: a > b,
+                "<":  lambda a, b: a < b,
+                ">=": lambda a, b: a >= b,
+                "<=": lambda a, b: a <= b }
+
+        defaults = {
+            bool: False,
+            str: "",
+            decimal.Decimal: decimal.Decimal("0"),
+            type(None): None
+        }
+
+        error = propagate_errors([values[0], values[2]])
+
+        if error is not None:
+            return error
+
+        if values[0] is None:
+            values[0] = defaults[type(values[2])]
+
+        if values[2] is None:
+            values[2] = defaults[type(values[0])]
+
+        if isinstance(values[0], type(values[2])):
+            if isinstance(values[0], str):
+                values[0] = values[0].lower()
+
+            if isinstance(values[2], str):
+                values[2] = values[2].lower()
+
+            if values[1] not in ops:
+                assert f"Unexpected cmp_expr operator: {values[1]}"
+
+            return ops[values[1]](values[0], values[2])
+        else:
+            types = {decimal.Decimal: 0, str: 1, bool: 2}
+            return ops[values[1]](types[type(values[0])], types[type(values[2])])
 
     @visit_children_decor
     @number_arg(0)
@@ -185,7 +259,7 @@ class FormulaEvaluator(lark.visitors.Interpreter):
 
     @visit_children_decor
     def concat_expr(self, values):
-        return "".join(["" if v is None else str(v) for v in values])
+        return "".join(["" if v is None else (str(v).upper() if isinstance(v, bool) else str(v)) for v in values])
 
     @visit_children_decor
     def number(self, values):
@@ -205,6 +279,10 @@ class FormulaEvaluator(lark.visitors.Interpreter):
     @visit_children_decor
     def parens(self, values):
         return values[0]
+
+    @visit_children_decor
+    def boolean(self, values):
+        return values[0].lower() == "true"
     
 class FormulaMover(lark.visitors.Transformer_InPlace):
     
