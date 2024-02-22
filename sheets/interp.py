@@ -259,7 +259,7 @@ class FormulaEvaluator(lark.visitors.Interpreter):
 
     @visit_children_decor
     def concat_expr(self, values):
-        return "".join(["" if v is None else str(v) for v in values])
+        return "".join(["" if v is None else (str(v).upper() if type(v) is bool else str(v)) for v in values])
 
     @visit_children_decor
     def number(self, values):
