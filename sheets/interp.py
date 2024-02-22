@@ -4,6 +4,7 @@ import lark
 from lark.visitors import visit_children_decor
 from lark.visitors import v_args
 from . import sheet as sheet_util
+from . import functions
 from .reference import Reference
 
 from typing import Tuple, List, Any
@@ -148,6 +149,10 @@ class FormulaPrinter(lark.visitors.Interpreter):
     @visit_children_decor
     def boolean(self, values):
         return values[0]
+
+    @visit_children_decor
+    def func_expr(self, values):
+        return values[0] + "(" + ",".join(values[1:-1]) + ")"
         
 class FormulaEvaluator(lark.visitors.Interpreter):
 
@@ -284,6 +289,16 @@ class FormulaEvaluator(lark.visitors.Interpreter):
     def boolean(self, values):
         return values[0].lower() == "true"
     
+    @visit_children_decor
+    def func_expr(self, values):
+        name = str(values[0])
+        args = values[1:]
+
+        if name.lower() not in functions.functions:
+            return sheets.CellError(sheets.CellErrorType.BAD_NAME, f"unrecognized function {name}")
+
+        return functions.functions[name.lower()](self.workbook, self.sheet, args)
+
 class FormulaMover(lark.visitors.Transformer_InPlace):
     
     def __init__(self, offset: Tuple[int, int]):
