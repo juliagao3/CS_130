@@ -53,10 +53,10 @@ def number_arg(index):
                 except decimal.InvalidOperation:
                     pass
 
-            if type(values[index]) == sheets.CellError:
+            if isinstance(values[index], sheets.CellError):
                     return values[index]
-            
-            if type(values[index]) != decimal.Decimal and type(values[index]) != bool:
+
+            if not isinstance(values[index], decimal.Decimal) and not isinstance(values[index], bool):
                     return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, f"{values[index]} failed on parsing")
 
             value = f(self, values)
@@ -184,7 +184,7 @@ class FormulaEvaluator(lark.visitors.Interpreter):
         if values[2] is None:
             values[2] = defaults[type(values[0])]
 
-        if type(values[0]) == type(values[2]):
+        if isinstance(values[0], type(values[2])):
             if isinstance(values[0], str):
                 values[0] = values[0].lower()
 
@@ -259,7 +259,7 @@ class FormulaEvaluator(lark.visitors.Interpreter):
 
     @visit_children_decor
     def concat_expr(self, values):
-        return "".join(["" if v is None else (str(v).upper() if type(v) is bool else str(v)) for v in values])
+        return "".join(["" if v is None else (str(v).upper() if isinstance(v, bool) else str(v)) for v in values])
 
     @visit_children_decor
     def number(self, values):
