@@ -171,5 +171,12 @@ class TestClass(unittest.TestCase):
         wb.set_cell_contents(n, "A1", '=False + 1')
         self.assertEqual(wb.get_cell_value(n, "A1"), decimal.Decimal("1"))
 
+        wb.set_cell_contents(n, "A1", '=True')
+        wb.set_cell_contents(n, "A2", '=A1 & "Hello"')
+        self.assertEqual(wb.get_cell_value(n, "A2"), "TRUEHello")
+
+        wb.set_cell_contents(n, "A1", '=FaLSe & "Hello"')
+        self.assertEqual(wb.get_cell_value(n, "A2"), "FALSEHello")        
+
 if __name__ == "__main__":
         unittest.main()
