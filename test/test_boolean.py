@@ -176,7 +176,7 @@ class TestClass(unittest.TestCase):
         self.assertEqual(wb.get_cell_value(n, "A2"), "TRUEHello")
 
         wb.set_cell_contents(n, "A1", '=FaLSe & "Hello"')
-        self.assertEqual(wb.get_cell_value(n, "A2"), "FALSEHello")        
+        self.assertEqual(wb.get_cell_value(n, "A1"), "FALSEHello")
 
 if __name__ == "__main__":
         unittest.main()
