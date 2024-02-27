@@ -289,13 +289,20 @@ class FormulaEvaluator(lark.visitors.Interpreter):
     def boolean(self, values):
         return values[0].lower() == "true"
     
-    @visit_children_decor
-    def func_expr(self, values):
+    def func_expr(self, tree):
+        values = self.visit_children(tree)
         name = str(values[0])
         args = values[1:]
+        # need to account for referencing across sheets
 
         if name.lower() not in functions.functions:
             return sheets.CellError(sheets.CellErrorType.BAD_NAME, f"unrecognized function {name}")
+        
+        if name.lower() == "if":
+            return functions.functions[name.lower()](self.workbook, self.sheet, args[:3])
+        
+        if name.lower() == "iferror":
+            return functions.functions[name.lower()](self.workbook, self.sheet, args[:2])
 
         return functions.functions[name.lower()](self.workbook, self.sheet, args)
 
