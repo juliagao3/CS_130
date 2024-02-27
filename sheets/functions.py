@@ -106,7 +106,7 @@ def func_xor(_evaluator, args):
 
 def func_exact(_evaluator, args):
     if len(args) != 2:
-        return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "EXACT requires exactly 1 argument")
+        return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "EXACT requires exactly 2 argument")
     
     if isinstance(args[0], sheets.CellError):
         return args[0]
