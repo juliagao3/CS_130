@@ -162,6 +162,10 @@ class TestClass(unittest.TestCase):
 
         wb.set_cell_contents(name, "A5", '=IF(4 < 2, "4 > 2", "4 is greater than 2")')
         self.assertEqual(wb.get_cell_value(name, "A5"), "4 is greater than 2")
+
+        wb.set_cell_contents(name, "A5", '=IF(4 < 2, "4 > 2", 1+1)')
+        self.assertEqual(wb.get_cell_value(name, "A5"), decimal.Decimal("2"))
+    
     
     def test_function_iferror(self):
         wb = sheets.Workbook()
