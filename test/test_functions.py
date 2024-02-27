@@ -74,7 +74,7 @@ class TestClass(unittest.TestCase):
 
         wb.set_cell_contents(n, "A2", "A3")
         self.assertIsInstance(wb.get_cell_value(n, "A3"), sheets.CellError)
-        self.assertEqual(wb.get_cell_value(n, "A3").get_type(), sheets.CellErrorType.BAD_REFERENCE)
+        self.assertEqual(wb.get_cell_value(n, "A3").get_type(), sheets.CellErrorType.CIRCULAR_REFERENCE)
 
         wb.set_cell_contents(n, "B1", "1")
         wb.set_cell_contents(n, "B2", "2")
@@ -330,7 +330,7 @@ class TestClass(unittest.TestCase):
         self.assertEqual(wb.get_cell_value(name, "B1").get_type(), sheets.CellErrorType.CIRCULAR_REFERENCE)
         
         wb.set_cell_contents(name, "A2", "=B2")
-        wb.set_cell_contents(name, "B2", '=INDIRECT(A1)')
+        wb.set_cell_contents(name, "B2", '=INDIRECT(A2)')
         
         self.assertIsInstance(wb.get_cell_value(name, "A2"), sheets.CellError)
         self.assertEqual(wb.get_cell_value(name, "A2").get_type(), sheets.CellErrorType.CIRCULAR_REFERENCE)
