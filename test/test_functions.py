@@ -137,6 +137,13 @@ class TestClass(unittest.TestCase):
         wb.set_cell_contents(name, "B3", "=EXACT(A1, A4)")
         wb.set_cell_contents(name, "B4", "=EXACT(A1, A5)")
 
+        wb.set_cell_contents(name, "C2", '=exact(C1, "")')
+        self.assertEqual(wb.get_cell_value(name, "C2"), True)
+        
+        wb.set_cell_contents(name, "C1", "true")
+        wb.set_cell_contents(name, "C2", '=exact(C1, "TRUE")')
+        self.assertEqual(wb.get_cell_value(name, "C2"), True)
+
         str1 = "string"
         str2 = "string"
         wb.set_cell_contents(name, "B5", "=EXACT({str1}, {str2})")
