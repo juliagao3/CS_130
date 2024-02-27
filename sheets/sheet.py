@@ -46,7 +46,7 @@ class Sheet:
             if self.cells[location].contents is None:
                 continue
             cell = self.cells[location]
-            cell_contents[cell.location] = str(cell)
+            cell_contents[str(cell.location)] = str(cell)
         json_obj["cell-contents"] = cell_contents
         return json_obj
 
@@ -65,7 +65,7 @@ class Sheet:
         location = ref.tuple()
 
         if location not in self.cells:
-            self.cells[location] = Cell(self, str(ref))
+            self.cells[location] = Cell(self, ref)
 
         old_contents = self.cells[location].contents
         self.cells[location].set_contents(workbook, content)
