@@ -3,6 +3,7 @@ import sheets
 from . import reference
 
 import decimal
+import enum
 
 def bool_arg(value):
     if isinstance(value, bool):
@@ -18,10 +19,14 @@ def bool_arg(value):
             return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, f"invalid bool string {value}")
     return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, f"cant make bool from {type(value)}")
 
-def func_version(_wb, _sheet, _args):
+class ArgEvaluation(enum.Enum):
+    EAGER = 0
+    LAZY = 1
+
+def func_version(_evaluator, _args):
     return sheets.version
 
-def func_and(_wb, _sheet, args):
+def func_and(_evaluator, args):
     if len(args) < 1:
         return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "AND requires at least 1 argument")
 
@@ -38,7 +43,7 @@ def func_and(_wb, _sheet, args):
 
     return result
 
-def func_or(_wb, _sheet, args):
+def func_or(_evaluator, args):
     if len(args) < 1:
         return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "OR requires at least 1 argument")
 
@@ -55,13 +60,13 @@ def func_or(_wb, _sheet, args):
 
     return result
 
-def func_not(wb, _sheet, args):
+def func_not(_evaluator, args):
     if len(args) != 1:
         return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "NOT requires exactly 1 argument")
     
     return not bool_arg(args[0])
 
-def func_xor(_wb, _sheet, args):
+def func_xor(_evaluator, args):
     if len(args) < 1:
         return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "OR requires at least 1 argument")
      
@@ -80,7 +85,7 @@ def func_xor(_wb, _sheet, args):
     
     return True
 
-def func_exact(_wb, _sheet, args):
+def func_exact(_evaluator, args):
     if len(args) != 2:
         return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "EXACT requires exactly 1 argument")
     
@@ -92,49 +97,47 @@ def func_exact(_wb, _sheet, args):
     
     return (str(args[0]) == str(args[1]))
 
-def func_if(_wb, _sheet, args):
+def func_if(evaluator, args):
+    # lazy!!!
     if len(args) < 2 or len(args) > 3:
         return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "IF requires exactly 2 or 3 arguments")
     
-    if isinstance(args[1], sheets.CellError):
-        return args[1]
-
-
-    if len(args) > 2 and isinstance(args[2], sheets.CellError):
-        return args[2]
-    
-    b = bool_arg(args[0])
+    b = bool_arg(evaluator.visit(args[0]))
     if b:
-        return str(args[1])
-    elif not b and len(args) == 2:
+        return evaluator.visit(args[1])
+    elif len(args) == 2:
         return False
-    elif not b and len(args) == 3:
-        return str(args[2])
+    elif len(args) == 3:
+        return evaluator.visit(args[2])
 
-def func_iferror(wb, sheet, args):
+def func_iferror(evaluator, args):
+    # lazy!!!
     if len(args) < 1 or len(args) > 2:
         return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "IFERROR requires exactly 1 or 2 arguments")
-    
-    if not isinstance(args[0], sheets.CellError):
-        return args[0]
+
+    first = evaluator.visit(args[0])
+
+    if not isinstance(first, sheets.CellError):
+        return first
     elif len(args) == 2:
-        return args[1]
+        return evaluator.visit(args[1])
     else:
         return ""
 
-def func_choose(_wb, _sheet, args):
+def func_choose(evaluator, args):
+    # lazy!!!
     if len(args) < 2:
         return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "CHOOSE requires at least 2 arguments")
     
     try:
-        index = int(args[0])
+        index = int(evaluator.visit(args[0]))
         if index < 0 or index >= len(args):
             return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "index is out of bounds")
-        return args[index]
+        return evaluator.visit(args[index])
     except TypeError:
         return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "index is not an integer")
         
-def func_isblank(_wb, _sheet, args):
+def func_isblank(_evaluator, args):
     if len(args) != 1:
         return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "ISBLANK requires exactly 1 argument")
     
@@ -143,13 +146,13 @@ def func_isblank(_wb, _sheet, args):
     
     return (args[0] is None)
 
-def func_iserror(_wb, _sheet, args):
+def func_iserror(_evaluator, args):
     if len(args) != 1:
         return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "ISERROR requires exactly 1 argument")
     
     return (isinstance(args[0], sheets.CellError))
 
-def func_indirect(wb, sheet, args):
+def func_indirect(evaluator, args):
     if len(args) != 1:
         return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "INDIRECT requires exactly 1 argument")
 
@@ -160,23 +163,23 @@ def func_indirect(wb, sheet, args):
     try:
         ref = reference.Reference.from_string(args[0], allow_absolute=True)
 
-        return wb.get_cell(ref.sheet_name or sheet.sheet_name, ref).value
+        return evaluator.workbook.get_cell(ref.sheet_name or evaluator.sheet.sheet_name, ref).value
     except KeyError:
         return sheets.CellError(sheets.CellErrorType.BAD_REFERENCE, args[0])
     except ValueError:
         return sheets.CellError(sheets.CellErrorType.BAD_REFERENCE, args[0])
 
 functions = {
-    "version":  func_version,
-    "and":      func_and,
-    "or":       func_or,
-    "not":      func_not,
-    "xor":      func_xor,
-    "exact":    func_exact,
-    "if":       func_if,
-    "iferror":  func_iferror,
-    "choose":   func_choose,
-    "isblank":  func_isblank,
-    "iserror":  func_iserror,
-    "indirect": func_indirect,
+    "version":  (ArgEvaluation.EAGER, func_version  ),
+    "and":      (ArgEvaluation.EAGER, func_and      ),
+    "or":       (ArgEvaluation.EAGER, func_or       ),
+    "not":      (ArgEvaluation.EAGER, func_not      ),
+    "xor":      (ArgEvaluation.EAGER, func_xor      ),
+    "exact":    (ArgEvaluation.EAGER, func_exact    ),
+    "if":       (ArgEvaluation.LAZY,  func_if       ),
+    "iferror":  (ArgEvaluation.LAZY,  func_iferror  ),
+    "choose":   (ArgEvaluation.LAZY,  func_choose   ),
+    "isblank":  (ArgEvaluation.EAGER, func_isblank  ),
+    "iserror":  (ArgEvaluation.EAGER, func_iserror  ),
+    "indirect": (ArgEvaluation.EAGER, func_indirect ),
 }
