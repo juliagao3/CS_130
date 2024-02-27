@@ -7,7 +7,7 @@ import decimal
 import enum
 
 def bool_arg(value):
-    if value == None:
+    if value is None:
         return False
     if isinstance(value, bool):
         return value
