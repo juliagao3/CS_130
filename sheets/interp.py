@@ -69,6 +69,9 @@ def number_arg(index):
         return new_f
     return check
 
+def string_arg(v):
+    return "" if v is None else (str(v).upper() if isinstance(v, bool) else str(v))
+
 def strip_quotes(s: str):
     if s[0] != "'":
         return s
@@ -264,7 +267,7 @@ class FormulaEvaluator(lark.visitors.Interpreter):
 
     @visit_children_decor
     def concat_expr(self, values):
-        return "".join(["" if v is None else (str(v).upper() if isinstance(v, bool) else str(v)) for v in values])
+        return "".join(map(string_arg, values))
 
     @visit_children_decor
     def number(self, values):

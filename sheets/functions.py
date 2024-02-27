@@ -6,6 +6,8 @@ import decimal
 import enum
 
 def bool_arg(value):
+    if value == None:
+        return False
     if isinstance(value, bool):
         return value
     if isinstance(value, decimal.Decimal):
@@ -18,6 +20,9 @@ def bool_arg(value):
         else:
             return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, f"invalid bool string {value}")
     return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, f"cant make bool from {type(value)}")
+
+def string_arg(v):
+    return "" if v is None else (str(v).upper() if isinstance(v, bool) else str(v))
 
 class ArgEvaluation(enum.Enum):
     EAGER = 0
@@ -95,7 +100,7 @@ def func_exact(_evaluator, args):
     if isinstance(args[1], sheets.CellError):
         return args[1]
     
-    return (str(args[0]) == str(args[1]))
+    return (string_arg(args[0]) == string_arg(args[1]))
 
 def func_if(evaluator, args):
     # lazy!!!
