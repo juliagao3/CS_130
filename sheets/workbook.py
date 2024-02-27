@@ -33,6 +33,7 @@ class Workbook:
 
         # Graph
         self.dependency_graph = Graph[Cell]()
+        self.run_time_dependency_graph = Graph[Cell]()
 
         # function to call when cells update
         self.notify_functions = []
@@ -212,7 +213,7 @@ class Workbook:
 
     def update_cells_referencing_sheet(self, sheet_name):
         if sheet_name.lower() in self.sheet_references.backward:
-            cells = self.sheet_references.backward[sheet_name.lower()]
+            cells = self.sheet_references.get_backward_links(sheet_name.lower())
             self.update_cells(cells)
             self.update_ancestors(cells)
 
@@ -340,7 +341,7 @@ class Workbook:
         self.sheet_map[new_sheet_name.lower()].sheet_name = new_sheet_name
 
         if sheet_name.lower() in self.sheet_references.backward:
-            for cell in self.sheet_references.backward[sheet_name.lower()]:
+            for cell in self.sheet_references.get_backward_links(sheet_name.lower()):
                 cell.rename_sheet(self, sheet_name, new_sheet_name)
 
         self.update_cells_referencing_sheet(new_sheet_name)

@@ -85,7 +85,7 @@ class Cell:
             raise FormulaError(CellError(CellErrorType.BAD_REFERENCE, ""))
 
     def evaluate_formula(self, workbook):
-        value = interp.evaluate_formula(workbook, self.sheet, self.formula_tree)
+        value = interp.evaluate_formula(workbook, self.sheet, self, self.formula_tree)
 
         if value is None:
             value = decimal.Decimal(0)
@@ -109,6 +109,9 @@ class Cell:
         if self.contents is None or self.formula_tree is None:
             return
         try:
+            workbook.sheet_references.clear_forward_runtime_links((self.sheet, self))
+            workbook.dependency_graph.clear_forward_runtime_links(self)
+
             self.check_references(workbook)
             self.evaluate_formula(workbook)
         except FormulaError as e:

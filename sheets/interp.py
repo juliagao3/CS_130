@@ -77,11 +77,19 @@ def strip_quotes(s: str):
         return s
     return s[1: -1]
 
-class CellRefFinder(lark.Visitor):
+class CellRefFinder(lark.visitors.Interpreter):
     def __init__(self, sheet_name):
         self.refs = []
         self.sheet_name = sheet_name
-        
+
+    def func_expr(self, tree):
+        name = str(tree.children[0]).lower()
+
+        if functions.functions[name][0] == functions.ArgEvaluation.LAZY:
+            self.visit(tree.children[1])
+        else:
+            self.visit_children(tree)
+
     def cell(self, tree):
         if len(tree.children) == 1:
             self.refs.append((self.sheet_name, tree.children[0]))
@@ -159,9 +167,10 @@ class FormulaPrinter(lark.visitors.Interpreter):
         
 class FormulaEvaluator(lark.visitors.Interpreter):
 
-    def __init__(self, workbook, sheet):
+    def __init__(self, workbook, sheet, cell):
         self.workbook = workbook
         self.sheet = sheet
+        self.c = cell
 
     @visit_children_decor
     def cmp_expr(self, values):
@@ -351,8 +360,8 @@ def parse_formula(formula):
     except lark.exceptions.UnexpectedCharacters:
         return None
 
-def evaluate_formula(workbook, sheet, tree):
-    evaluator = FormulaEvaluator(workbook, sheet)
+def evaluate_formula(workbook, sheet, cell, tree):
+    evaluator = FormulaEvaluator(workbook, sheet, cell)
     return evaluator.visit(tree)
 
 def find_refs(workbook, sheet, tree):

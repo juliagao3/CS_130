@@ -1,4 +1,4 @@
-from typing import TypeVar, Generic, Dict, List, Set
+from typing import TypeVar, Generic, Dict, List, Set, Tuple
 
 T = TypeVar("T")
 
@@ -14,31 +14,33 @@ class Graph(Generic[T]):
     '''
 
     def __init__(self):
-        self.forward: Dict[T, T] = {}
-        self.backward: Dict[T, T] = {}
+        self.forward: Dict[T, Tuple[Set[T], Set[T]]] = {}
+        self.backward: Dict[T, Tuple[Set[T], Set[T]]] = {}
         self.topological_order: List[T] = []
         self.cycles: List[Set[T]] = []
         self.cycles_dirty: bool = False
 
     def get_forward_links(self, node):
         if node not in self.forward:
-            return []
+            return {}
         else:
-            return self.forward[node]
+            t = self.forward[node]
+            return t[0] | t[1]
         
     def get_backward_links(self, node):
         if node not in self.backward:
-            return []
+            return {}
         else:
-            return self.backward[node]
-        
+            t = self.backward[node]
+            return t[0] | t[1]
+
     def get_nodes(self):
         return self.forward.keys() | self.backward.keys()
 
     def is_cycle(self, scc):
         if len(scc) > 1:
             return True
-        return (scc[0] in self.forward) and (scc[0] in self.forward[scc[0]])
+        return (scc[0] in self.forward) and (scc[0] in self.get_forward_links(scc[0]))
 
     def get_cycles(self):
         if self.cycles_dirty:
@@ -62,16 +64,16 @@ class Graph(Generic[T]):
         the from_node and to_node.
         '''
         if from_node not in self.forward:
-            self.forward[from_node] = set()
-        elif to_node in self.forward[from_node]:
-            assert from_node in self.backward[to_node]
+            self.forward[from_node] = (set(), set())
+        elif to_node in self.forward[from_node][0]:
+            assert from_node in self.backward[to_node][0]
             return
 
         if to_node not in self.backward:
-            self.backward[to_node] = set()
+            self.backward[to_node] = (set(), set())
 
-        self.forward[from_node].add(to_node)
-        self.backward[to_node].add(from_node)
+        self.forward[from_node][0].add(to_node)
+        self.backward[to_node][0].add(from_node)
 
         self.cycles_dirty = True
 
@@ -82,15 +84,22 @@ class Graph(Generic[T]):
         if node not in self.forward:
             return
 
-        links = self.forward[node]
+        links = self.get_forward_links(node)
         self.forward.pop(node)
 
         if len(links) == 0:
             return
 
         for to in links:
-            self.backward[to].remove(node)
-            if len(self.backward[to]) == 0:
+            static, runtime = self.backward[to]
+
+            if node in static:
+                static.remove(node)
+
+            if node in runtime:
+                runtime.remove(node)
+
+            if len(self.get_backward_links(to)) == 0:
                 self.backward.pop(to)
         self.cycles_dirty = True
 
@@ -98,18 +107,83 @@ class Graph(Generic[T]):
         if node not in self.backward:
             return
 
-        links = self.backward[node]
+        links = self.get_backward_links(node)
         self.backward.pop(node)
 
         if len(links) == 0:
             return
 
         for from_node in links:
-            self.forward[from_node].remove(node)
-            if len(self.forward[from_node]) == 0:
+            static, runtime = self.forward[from_node]
+
+            if node in static:
+                static.remove(node)
+
+            if node in runtime:
+                runtime.remove(node)
+
+            if len(self.get_forward_links(node)) == 0:
                 self.forward.pop(from_node)
         self.cycles_dirty = True
 
+    def link_runtime(self, from_node: T, to_node: T):
+        '''
+        Add entries to the forward and backward maps to create a link between
+        the from_node and to_node.
+        '''
+        if from_node not in self.forward:
+            self.forward[from_node] = (set(), set())
+        elif to_node in self.forward[from_node][1]:
+            assert from_node in self.backward[to_node][1]
+            return
+
+        if to_node not in self.backward:
+            self.backward[to_node] = (set(), set())
+
+        self.forward[from_node][1].add(to_node)
+        self.backward[to_node][1].add(from_node)
+
+        self.cycles_dirty = True
+        
+    def clear_forward_runtime_links(self, node: T):
+        '''
+        Remove all forward links coming from the given node.
+        '''
+        if node not in self.forward:
+            return
+
+        links = self.forward[node][1]
+
+        if len(links) == 0:
+            return
+
+        for to in links:
+            self.backward[to][1].remove(node)
+            if len(self.get_backward_links(to)) == 0:
+                self.backward.pop(to)
+
+        links.clear()
+
+        self.cycles_dirty = True
+
+    def clear_backward_runtime_link(self, node: T):
+        if node not in self.backward:
+            return
+
+        links = self.backward[node][1]
+
+        if len(links) == 0:
+            return
+
+        for from_node in links:
+            self.forward[from_node][1].remove(node)
+            if len(self.get_forward_links(node)) == 0:
+                self.forward.pop(from_node)
+        
+        links.clear()
+
+        self.cycles_dirty = True
+        
     def remove_node(self, node: T):
         self.clear_forward_links(node)
         self.clear_backward_link(node)
@@ -120,13 +194,13 @@ class Graph(Generic[T]):
                 next_index: int,
                 index: Dict[T, int],
                 lowlink: Dict[T, int],
-                on_stack: [T, int],
+                on_stack: Dict[T, bool],
                 stack: List[T],
                 sccs: List[List[T]],
                 topo: List[T]
             ):
 
-        call_stack = [(v, list(self.forward[v]) if v in self.forward else [], 0)]
+        call_stack = [(v, list(self.get_forward_links(v)) if v in self.forward else [], 0)]
 
         while len(call_stack) > 0:
             v, forward, i = call_stack.pop()
@@ -148,7 +222,7 @@ class Graph(Generic[T]):
                 i += 1
                 if w not in index:
                     call_stack.append((v, forward, i))
-                    call_stack.append((w, list(self.forward[w]) if w in self.forward else [], 0))
+                    call_stack.append((w, list(self.get_forward_links(w)) if w in self.forward else [], 0))
                     recurse = True
                     break
                 elif w in on_stack and on_stack[w]:
