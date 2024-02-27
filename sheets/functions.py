@@ -1,11 +1,14 @@
 import sheets
 
 from . import reference
+from . import interp
 
 import decimal
 import enum
 
 def bool_arg(value):
+    if value is None:
+        return False
     if isinstance(value, bool):
         return value
     if isinstance(value, decimal.Decimal):
@@ -18,6 +21,22 @@ def bool_arg(value):
         else:
             return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, f"invalid bool string {value}")
     return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, f"cant make bool from {type(value)}")
+
+def string_arg(v):
+    return "" if v is None else (str(v).upper() if isinstance(v, bool) else str(v))
+
+def link_subtree(evaluator, subtree):
+    finder = interp.CellRefFinder(evaluator.sheet.sheet_name)
+    finder.visit(subtree)
+
+    for sheet_name, location in finder.refs:
+        ref = reference.Reference.from_string(location, allow_absolute=True)
+
+        cell = evaluator.workbook.get_cell(sheet_name, ref)
+
+        evaluator.workbook.dependency_graph.link_runtime(evaluator.c, cell)
+        evaluator.workbook.sheet_references.link_runtime(evaluator.c, ref.sheet_name or evaluator.sheet.sheet_name)
+        evaluator.c.check_references(evaluator.workbook)
 
 class ArgEvaluation(enum.Enum):
     EAGER = 0
@@ -87,7 +106,7 @@ def func_xor(_evaluator, args):
 
 def func_exact(_evaluator, args):
     if len(args) != 2:
-        return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "EXACT requires exactly 1 argument")
+        return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "EXACT requires exactly 2 argument")
     
     if isinstance(args[0], sheets.CellError):
         return args[0]
@@ -95,7 +114,7 @@ def func_exact(_evaluator, args):
     if isinstance(args[1], sheets.CellError):
         return args[1]
     
-    return (str(args[0]) == str(args[1]))
+    return (string_arg(args[0]) == string_arg(args[1]))
 
 def func_if(evaluator, args):
     # lazy!!!
@@ -104,11 +123,15 @@ def func_if(evaluator, args):
     
     b = bool_arg(evaluator.visit(args[0]))
     if b:
-        return evaluator.visit(args[1])
+        branch = args[1]
+    elif len(args) == 3:
+        branch = args[2]
     elif len(args) == 2:
         return False
-    elif len(args) == 3:
-        return evaluator.visit(args[2])
+
+    link_subtree(evaluator, branch)
+
+    return evaluator.visit(branch)
 
 def func_iferror(evaluator, args):
     # lazy!!!
@@ -120,6 +143,7 @@ def func_iferror(evaluator, args):
     if not isinstance(first, sheets.CellError):
         return first
     elif len(args) == 2:
+        link_subtree(evaluator, args[1])
         return evaluator.visit(args[1])
     else:
         return ""
@@ -133,7 +157,11 @@ def func_choose(evaluator, args):
         index = int(evaluator.visit(args[0]))
         if index < 0 or index >= len(args):
             return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "index is out of bounds")
+
+        link_subtree(evaluator, args[index])
+
         return evaluator.visit(args[index])
+    
     except TypeError:
         return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "index is not an integer")
         
@@ -163,7 +191,13 @@ def func_indirect(evaluator, args):
     try:
         ref = reference.Reference.from_string(args[0], allow_absolute=True)
 
-        return evaluator.workbook.get_cell(ref.sheet_name or evaluator.sheet.sheet_name, ref).value
+        cell = evaluator.workbook.get_cell(ref.sheet_name or evaluator.sheet.sheet_name, ref)
+
+        evaluator.workbook.dependency_graph.link_runtime(evaluator.c, cell)
+        evaluator.workbook.sheet_references.link_runtime(evaluator.c, ref.sheet_name or evaluator.sheet.sheet_name)
+        evaluator.c.check_references(evaluator.workbook)
+
+        return cell.value
     except KeyError:
         return sheets.CellError(sheets.CellErrorType.BAD_REFERENCE, args[0])
     except ValueError:

@@ -2,6 +2,7 @@ import sheets
 import decimal
 import time
 import unittest
+import json
 
 from math import comb
 
@@ -279,6 +280,76 @@ class TestClass(unittest.TestCase):
         sheet_num, sheet_name = wb.new_sheet()
         sheet_num, sheet_name1 = wb.new_sheet()
         test_move(self, wb, sheet_name, sheet_name1, start_location, end_location, to_location)
+
+    def test_loading_workbook(self):
+        wb = sheets.Workbook()
+            
+        for sheet_num in range(1, 100):
+            _, sheet_name = wb.new_sheet()
+            for i in range(1, 5000):
+                wb.set_cell_contents(sheet_name, "A" + str(i), str(i * sheet_num))
+
+        with open("test_file.txt", "w") as f:
+            wb.save_workbook(f)
+
+        with open("test_file.txt", "r") as fp:
+            loaded = sheets.Workbook.load_workbook(fp)
+            
+    def test_copy(self):
+        wb = sheets.Workbook()
+        _, n = wb.new_sheet()
+        _, m = wb.new_sheet()
+        
+        for i in range(1, 1000):
+            wb.set_cell_contents(n, "A" + str(i), str(i))
+            
+        for i in range(1, 1000):
+            wb.set_cell_contents(m, "A" + str(i), f"={n}_1!A{str(i)}")
+
+        wb.copy_sheet(n)
+
+        for i in range(1, 1000):
+            self.assertEqual(wb.get_cell_value(m, "A" + str(i)), decimal.Decimal(str(i)))
+                                   
+    def test_rename(self):
+        wb = sheets.Workbook()
+        _, n = wb.new_sheet()
+        _, m = wb.new_sheet()
+        
+        for i in range(1, 1000):
+            wb.set_cell_contents(n, "A" + str(i), str(i))
+
+        for i in range(1, 1000):
+            wb.set_cell_contents(m, "A" + str(i), f"={n}!A{str(i)}")
+
+        o = "sheet bla"
+        wb.rename_sheet(n, o)
+
+    def test_lazy(self):
+        massive_formula = "A2+" * 100 + "A2"
+
+        wb = sheets.Workbook()
+        _, n = wb.new_sheet()
+        
+        wb.set_cell_contents(n, "A2", "1")
+
+        start = time.time()
+        for _ in range(100):
+            wb.set_cell_contents(n, "A1", f'=IF(true, {massive_formula}, "ok")')
+        end = time.time()
+
+        slow_time = end - start
+
+        start = time.time()
+        for _ in range(100):
+            wb.set_cell_contents(n, "A1", f'=IF(false, {massive_formula}, "ok")')
+        end = time.time()
+
+        fast_time = end - start
+
+        print("slow time: ", slow_time)
+        print("fast time: ", fast_time)
+        self.assertGreater(slow_time, fast_time)
 
 if __name__ == "__main__":
     unittest.main(module="test_stress")

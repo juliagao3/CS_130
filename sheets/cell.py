@@ -20,7 +20,7 @@ def remove_trailing_zeros(d: decimal.Decimal):
 def notify(workbook, cells):
     for func in workbook.notify_functions:
         try:
-            func(workbook, map(lambda c: (c.sheet.sheet_name, c.location), cells))
+            func(workbook, map(lambda c: (c.sheet.sheet_name, str(c.location)), cells))
         except: # noqa: E722
             # We catch all exceptions here because there's no way to predict
             # what kinds of bugs the users of this library will write in their
@@ -85,7 +85,7 @@ class Cell:
             raise FormulaError(CellError(CellErrorType.BAD_REFERENCE, ""))
 
     def evaluate_formula(self, workbook):
-        value = interp.evaluate_formula(workbook, self.sheet, self.formula_tree)
+        value = interp.evaluate_formula(workbook, self.sheet, self, self.formula_tree)
 
         if value is None:
             value = decimal.Decimal(0)
@@ -109,6 +109,9 @@ class Cell:
         if self.contents is None or self.formula_tree is None:
             return
         try:
+            workbook.sheet_references.clear_forward_runtime_links((self.sheet, self))
+            workbook.dependency_graph.clear_forward_runtime_links(self)
+
             self.check_references(workbook)
             self.evaluate_formula(workbook)
         except FormulaError as e:
