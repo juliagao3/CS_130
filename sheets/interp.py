@@ -85,6 +85,9 @@ class CellRefFinder(lark.visitors.Interpreter):
     def func_expr(self, tree):
         name = str(tree.children[0]).lower()
 
+        if name not in functions.functions:
+            return sheets.CellError(sheets.CellErrorType.BAD_NAME, f"unrecognized function {name}")
+
         if functions.functions[name][0] == functions.ArgEvaluation.LAZY:
             self.visit(tree.children[1])
         else:
