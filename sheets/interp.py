@@ -142,6 +142,10 @@ class FormulaPrinter(lark.visitors.Interpreter):
         return "!".join(values)
     
     @visit_children_decor
+    def cell_range(self, values):
+        return ":".join(values)
+    
+    @visit_children_decor
     def number(self, values):
         return str(values[0])
     
