@@ -1,0 +1,226 @@
+CS130 Project 4 - Design Document
+=================================
+
+Please answer all questions in this design document.  Note that the final
+feedback section is optional, and you are not required to answer it if you
+don't want to.
+
+Unanswered or incompletely answered questions, or answers that don't actually
+match the code/repository, will result in deductions.
+
+Answers don't have to be deeply detailed!  We are mainly looking for an
+overview or summary description of how your project works, and your team's
+experiences working on this project.
+
+Logistics (7 pts)
+-----------------
+
+L1.  [2pts] Enumerate all teammates here.
+     Sebastian Lamas, Jacob Acosta, Cecilia Noble, Julia Gao
+
+
+L2.  [2pts] What did each teammate focus on during this project?
+     Sebastian - Boolean literals and comparisons
+     Cecilia - Implement all functions
+     Jacob - Boolean literals and comparisons and functing calling
+     Julia - Function calling and implementing all functions
+
+
+L3.  [3pts] Approximately how many hours did each teammate spend on the project?
+     We each spent about 18 hours.
+
+
+Spreadsheet Engine Design (31 pts)
+----------------------------------
+
+D1.  [3pts] Briefly describe the changes you made to the Lark parser grammar
+     to support Boolean literals.
+     In formulas.lark, we added an arithmetic expression cmp_expr for comparison
+     operators. We added a lexer rule for bools as terminals. We also added
+     in base values a case for boolean case. Finally, we modified the priority
+     of comparison operators.
+     
+
+D2.  [4pts] Briefly describe the changes you made to the Lark parser grammar
+     to support conditional expressions.  How did you ensure that conditional
+     operations are lower precedence than arithmetic and string concatenation
+     operations?
+     We made sure that conditional operations are lower precedence than 
+     arithmetic and string concatenation operations by setting expression in 
+     formulas.lark to equal our cmp_expr instead of the arithmetic and string
+     concatenation operations.
+
+
+D3.  [6pts] Briefly describe how function invocation works in your spreadsheet
+     engine.  How easy or hard would it be for you to add new functions to your
+     engine?  What about a third-party developer?  How well does your code
+     follow the Open/Closed Principle?
+     We made changes formulas.lark, interp.py, and created a new file for
+     function definitions. When a functon is invoked, first the function is parsed by
+     Lark (taking into account a couple of updates that we made there, such as
+     adding func_expr function) and then, if it is a valid function, we call its
+     definition from the function.py file and then evaluate it. While we do this 
+     evaluation, we consider if it is lazy or not. We return the result after
+     evaluation. It would be easy for us to add new functions since we keep a 
+     dictionary that maps function name to the function definition and whether or
+     not we need to perform lazy evaluation. In terms of having a third-party developer 
+     using it, it would be pretty easy since it is only writing the function definition 
+     and adding it to the dictionary. Our code somewhat followed the Open/Closed Principle 
+     in a sense that we only need to modify the functions.py to add a new function. The 
+     rest of the code would not be modified for this.
+
+
+D4.  [4pts] Is your implementation able to lazily evaluate the arguments to
+     functions like IF(), CHOOSE() and IFERROR()?  (Recall from the Project 4
+     spec that your spreadsheet engine should not report cycles in cases where
+     an argument to these functions does not need to be evaluated.)  If so,
+     what changes to your design were required to achieve this?  If not, what
+     prevented your team from implementing this?
+     Yes. Our code is able to do lazy evaluation. We implemented changes in both
+     interp.py and functions.py. In interp.py, we implemented func_expr and in
+     FormulaEvaluator class, we perform lazy evaluation by checking from our dictionary
+     whether the function definition requires it or not. If the function does, then
+     we just pass in the specific arguments straight into the function and evaluate
+     only if necessary in the functions.py. If the function does not, then we call 
+     visit_children on the tree and then pass the arguments into the function.
+
+     (PLEASE CHECK: what does the method func_expr in CellRefFinder do?)
+
+
+D5.  [4pts] Is your implementation able to evaluate the ISERROR() function
+     correctly, with respect to circular-reference errors?  (Recall from the
+     Project 4 spec that ISERROR() behaves differently when part of a cycle,
+     vs. being outside the cycle and referencing some cell in the cycle.)
+     If so, what changes to your design were required to achieve this?  If
+     not, what prevented your team from implementing this?
+     Yes. Our implementation is able to evaluate the ISERROR() function 
+     correctly, with respect to circular-reference errors. The changes
+     were made in our graph algorithm in which we use Tarjan's alogrithm 
+     to find the strongly connected components. With this, we are able to know
+     which cell are involved in the cycle. So, assume that A1 is set to ISERROR(B1) and
+     B1 is set to ISERROR(A1). We are able to identify that this is a circular reference
+     by running the Tarjan's alogrithm and set the values of these cells to be 
+     Circular Reference error. Because of this, when we set C1 to be ISERROR(B1), 
+     it would be set to True since B1 would be a Circular Reference error.
+
+
+D6.  [4pts] Is your implementation able to successfully identify cycles that
+     are not evident from static analysis of formulas containing INDIRECT()?
+     If so, what changes to your design were required, if any, to achieve this?
+     If not, what prevented your team from implementing this?
+     Yes. Our team is able to identify cycles that are not evident from static
+     analysis of formulas containing INDIRECT(). We made changes to our graph
+     class by changing our dictionary of links by having each node map to 
+     a tuple of sets which store static links and runtime links. In the INDIRECT()
+     function definition, we create a link between the cell we are evaluating and the
+     reference cell as a runtime link since we only want to evaluate the reference
+     cell if it is in quotes as we can't just look at the cell value. We also
+     create a runtime link between the sheet and the cell we are in. Once we check
+     the references of the reference cell to check for cycles, then we return the
+     value of the cell. 
+
+D7.  [6pts] Project 4 has a number of small but important operations to
+     implement.  Comparison operations include a number of comparison and type
+     conversion rules.  Different functions may require specific numbers and
+     types of arguments.  How did your team structure the implementation of
+     these operations?  How did your approach affect the reusability and
+     testability of these operations?
+     For comparison operations, we had a dictionary inside the cmp_expr method that
+     mapped comparison operation to what the real operation should do. We also created
+     a dictionary that mapped empty cell to the corresponding type when we have to compare
+     an empty cell with another thing. If the two cells were of the same type,
+     we just compared the two cells. If the two cells were of different types, we had 
+     another dictionary that mapped the type to the expected order, and performed the
+     comparison using these values. Overall, we put all of these changes in the function
+     cmp_expr in interp. In terms of the different functions, at the beginning of each
+     function definition, we made sure that we had the correct number of arguments. And then
+     as for the type of arguments, we did conversion to the specific type of argument needed
+     by the function definition. We also have a method inside function.py that converts the
+     given argument into a boolean, taking into account the considerations mentioned in the spec. 
+     Our approach made reusability and testability easier since the one conversion
+     method was able to be used on any argument that needed to be converted to a boolean in our
+     higher order functions and any issue with conversion would be concentrated in that one method
+     which made debugging more simple.
+
+Performance Analysis (12 pts)
+-----------------------------
+
+In this project you must measure and analyze the performance of features that
+generate large bulk changes to a workbook:  loading a workbook, copying or
+renaming a sheet, and moving or copying an area of cells.  Construct some
+performance tests to exercise these aspects of your engine, and use a profiler
+to identify where your program is spending the bulk of its time.
+
+A1.  [4pts] Briefly enumerate the performance tests you created to exercise
+     your implementation.
+     We created performance tests for all three of these features mentioned above.
+     We created a loading/saving workbook file with 100 sheets and 5000 cells. We
+     first saved the workbook and then loaded the workbook. For the renaming 
+     sheet test, we set a 1000 cells in sheet 1 to reference another 1000 cells in sheet 2. 
+     We changed sheet 2 to be sheet bla. For the copying sheet test, we have 1000 
+     cells in sheet 1 that refer to 1000 cells of the copy of sheet 1 (note that they
+     are initially bad reference). Then, we copy sheet 1 and make sure that all the references
+     are updated. For moving and copying an area of cells, we copy a range of cells between
+     (1, 1) and (300, 300) from sheet 1 to sheet 2 (to test copying) and then move the 
+     cells (of the same area) from sheet 1 to sheet 2 (to test moving).  
+     
+
+
+A2.  [2pts] What profiler did you choose to run your performance tests with?
+     Why?  Give an example of how to invoke one of your tests with the profiler.
+     We chose to run our performance test with the cProfile and then viewing our
+     results in snakeviz profile. Donnie mentioned in lecture and it was written in
+     the spec so we thought it would be a good profiler to try and run. The command 
+     line to run the cProfile is python3 -m cProfile -o profile.unittest test/test_stress.py.
+     And then we can run snakeviz profile.unittest to get the actual performance
+     tests.
+
+
+A3.  [6pts] What are ~3 of the most significant hot-spots you identified in your
+     performance testing?  Did you expect these hot-spots, or were they
+     surprising to you?
+     1. Spreadsheet Extent - Our spreadsheet extent update especially with moving cells
+     was very slow since we were looping through every cell to find the max and min 
+     of our new spreadsheet extent. Then, we set the new sheet extent. We were not expecting
+     our code to be this slow but we realized then that we were trying to compute the extent
+     too slowly. We also never really used this function until copying/moving cell so
+     we didn't realize how slow it was.
+
+     2. Graph Algorithm - Our graph algorithm of finding SCCs takes up 17% of our runtime. It
+     is a bit slower than the previous algorithm we had for finding cycles but the algorithm
+     is able to find cycles within one pass. It is slow because we invalidate the cycles in 
+     recompute value so we need to recompute the cycles once again. We expected this hot-spot
+     as it has been been one for a while.
+
+     3. Loading a workbook - It is slow in comparison to saving since in loading a workbook, we 
+     need to call set_cell_contents many times for creation of the workbook. We know that 
+     set_cell_contents is slow due to having to perform many checks such as cycle checking. However,
+     when we save a workbook, as we don't call this function, the time is way faster at 0.0003
+     in comparison to 0.5. We expected this hot-spot since we already realized that setting 
+     the contents of the cell would take time.
+     
+
+
+Section F:  CS130 Project 3 Feedback [OPTIONAL]
+-----------------------------------------------
+
+These questions are OPTIONAL, and you do not need to answer them.  Your grade
+will not be affected by answering or not answering them.  Also, your grade will
+not be affected by negative feedback - we want to know what went poorly so that
+we can improve future versions of the course.
+
+F1.  What parts of the assignment did you find highly enjoyable?  Conversely,
+     what parts of the assignment did you find unenjoyable?
+
+
+F2.  What parts of the assignment helped you learn more about software
+     engineering best-practices, or other useful development skills?
+     What parts were not helpful in learning these skills?
+
+
+F3.  Were there any parts of the assignment that seemed _unnecessarily_ tedious?
+     (Some parts of software development are always tedious, of course.)
+
+
+F4.  Do you have any feedback and/or constructive criticism about how this
+     project can be made better in future iterations of CS130?
