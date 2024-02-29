@@ -68,7 +68,7 @@ class Graph(Generic[T]):
 
     def get_cycles(self, edge_types: Set[EdgeType] = None):
         if edge_types is None:
-            edge_types = {EdgeType.REFERENCE, EdgeType.EVALUATED_REFERENCE}
+            edge_types = {EdgeType.EVALUATED_REFERENCE}
 
         if self.cycles_dirty:
             sccs, topo = self.tarjan(edge_types)
@@ -79,7 +79,7 @@ class Graph(Generic[T]):
 
     def get_topological_order(self, edge_types: Set[EdgeType] = None):
         if edge_types is None:
-            edge_types = {EdgeType.REFERENCE, EdgeType.EVALUATED_REFERENCE}
+            edge_types = {EdgeType.EVALUATED_REFERENCE}
 
         if self.cycles_dirty:
             sccs, topo = self.tarjan(edge_types)
