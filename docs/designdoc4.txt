@@ -48,7 +48,9 @@ D2.  [4pts] Briefly describe the changes you made to the Lark parser grammar
      We made sure that conditional operations are lower precedence than 
      arithmetic and string concatenation operations by setting expression in 
      formulas.lark to equal our cmp_expr instead of the arithmetic and string
-     concatenation operations.
+     concatenation operations. Inserting the cmp_expr this way ensures that all
+     other node types must be children of any cmp_exprs and so must be
+     evaluated before any cmp_exprs.
 
 
 D3.  [6pts] Briefly describe how function invocation works in your spreadsheet
