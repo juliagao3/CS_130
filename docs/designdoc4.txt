@@ -86,7 +86,15 @@ D4.  [4pts] Is your implementation able to lazily evaluate the arguments to
      only if necessary in the functions.py. If the function does not, then we call 
      visit_children on the tree and then pass the arguments into the function.
 
-     (PLEASE CHECK: what does the method func_expr in CellRefFinder do?)
+     This feature required us to change our previous reference checking code
+     to be able to distinguish between static dependencies and evaluation-time
+     dependencies. In our initial search for references in newly parsed formulas,
+     we previously added all references to our dependency graph. To correctly
+     implement lazy argument evaluation, our reference finder class now checks
+     whether whether the function nodes it encounters correspond to functions
+     with lazily evaluated arguments, and skips adding them to the graph if so.
+     We then add these references to the graph and check for cycles during
+     evaluation, when we know exactly what references are being used.
 
 
 D5.  [4pts] Is your implementation able to evaluate the ISERROR() function
