@@ -79,8 +79,10 @@ def strip_quotes(s: str):
 
 class CellRefFinder(lark.visitors.Interpreter):
     def __init__(self, sheet_name):
-        self.refs = []
+        self.refs = set()
+        self.lazy_refs = set()
         self.sheet_name = sheet_name
+        self.in_static_context = True
 
     def func_expr(self, tree):
         name = str(tree.children[0]).lower()
@@ -90,15 +92,25 @@ class CellRefFinder(lark.visitors.Interpreter):
 
         if functions.functions[name][0] == functions.ArgEvaluation.LAZY:
             self.visit(tree.children[1])
+
+            old = self.in_static_context
+            self.in_static_context = False
+            for child in tree.children[2:]:
+                self.visit(child)
+            self.in_static_context = old
         else:
             self.visit_children(tree)
 
     def cell(self, tree):
         if len(tree.children) == 1:
-            self.refs.append((self.sheet_name, tree.children[0]))
+            pair = (self.sheet_name, tree.children[0])
         else:
             assert len(tree.children) == 2
-            self.refs.append((strip_quotes(tree.children[0]).lower(), tree.children[1]))
+            pair = (strip_quotes(tree.children[0]).lower(), tree.children[1])
+
+        self.refs.add(pair)
+        if not self.in_static_context:
+            self.lazy_refs.add(pair)
 
 class SheetRenamer(lark.visitors.Transformer_InPlace):
 
@@ -378,7 +390,7 @@ def evaluate_formula(workbook, sheet, cell, tree):
 def find_refs(workbook, sheet, tree):
     finder = CellRefFinder(sheet.sheet_name.lower())
     finder.visit(tree)
-    return finder.refs
+    return (finder.refs, finder.lazy_refs)
 
 def rename_sheet(old, new, tree):
     renamer = SheetRenamer(old, new)
