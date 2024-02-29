@@ -208,6 +208,10 @@ class FormulaEvaluator(lark.visitors.Interpreter):
         if values[2] is None:
             values[2] = defaults[type(values[0])]
 
+        if values[0] is None and values[2] is None:
+            values[0] = "None"
+            values[2] = "None"
+
         if isinstance(values[0], type(values[2])):
             if isinstance(values[0], str):
                 values[0] = values[0].lower()
