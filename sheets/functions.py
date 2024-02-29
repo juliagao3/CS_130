@@ -20,6 +20,8 @@ def bool_arg(value):
             return False
         else:
             return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, f"invalid bool string {value}")
+    if isinstance(value, sheets.CellError):
+        return value
     return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, f"cant make bool from {type(value)}")
 
 def string_arg(v):
@@ -51,16 +53,20 @@ def func_and(_evaluator, args):
 
     result = True
 
+    errors = []
     for a in args:
         b = bool_arg(a)
 
-        if isinstance(b, sheets.CellError):
-            return b
+        if isinstance(b, sheets.CellError) and b not in errors:
+            errors.append(b)
 
         if not b:
             result = False
-
-    return result
+            
+    if len(errors) > 0:
+        return interp.propagate_errors(errors)
+    else:
+        return result
 
 def func_or(_evaluator, args):
     if len(args) < 1:
@@ -68,17 +74,21 @@ def func_or(_evaluator, args):
 
     result = False
 
+    errors = []
     for a in args:
         b = bool_arg(a)
 
-        if isinstance(b, sheets.CellError):
-            return b
+        if isinstance(b, sheets.CellError) and b not in errors:
+            errors.append(b)
 
         if b:
             result = True
-
-    return result
-
+            
+    if len(errors) > 0:
+        return interp.propagate_errors(errors)
+    else:
+        return result
+    
 def func_not(_evaluator, args):
     if len(args) != 1:
         return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "NOT requires exactly 1 argument")
@@ -90,29 +100,28 @@ def func_xor(_evaluator, args):
         return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "OR requires at least 1 argument")
      
     count_true = 0
+    errors = []
     for a in args:
         b = bool_arg(a)
         
-        if isinstance(b, sheets.CellError):
-            return b
+        if isinstance(b, sheets.CellError) and b not in errors:
+            errors.append(b)
         
         if b:
             count_true += 1
-        
-    if (count_true % 2 == 0):
-        return False
     
-    return True
+    if len(errors) > 0:
+        return interp.propagate_errors(errors) 
+    else:
+        return (not count_true % 2 == 0)
 
 def func_exact(_evaluator, args):
     if len(args) != 2:
         return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "EXACT requires exactly 2 argument")
     
-    if isinstance(args[0], sheets.CellError):
-        return args[0]
-    
-    if isinstance(args[1], sheets.CellError):
-        return args[1]
+    if isinstance(args[0], sheets.CellError) or isinstance(args[1], sheets.CellError):
+        errors = [args[0], args[1]]
+        return interp.propagate_errors(errors) 
     
     return (string_arg(args[0]) == string_arg(args[1]))
 
@@ -122,6 +131,10 @@ def func_if(evaluator, args):
         return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "IF requires exactly 2 or 3 arguments")
     
     b = bool_arg(evaluator.visit(args[0]))
+
+    if isinstance(b, sheets.CellError):
+        return b
+        
     if b:
         branch = args[1]
     elif len(args) == 3:
