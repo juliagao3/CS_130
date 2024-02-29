@@ -1,6 +1,20 @@
+import enum
+
 from typing import TypeVar, Generic, Dict, List, Set, Tuple
 
 T = TypeVar("T")
+
+class EdgeType(enum.Enum):
+
+    ''' An edge of this type exists from each cell to each cell it references
+        regardless of whether the reference gets used in evaluation. '''
+    REFERENCE = 0
+
+    ''' An edge of this type exists from each cell to each cell it references
+        only when the cell actually used the reference in evaluation. '''
+    EVALUATED_REFERENCE = 1
+
+    All = { REFERENCE, EVALUATED_REFERENCE }
 
 class Graph(Generic[T]):
     '''
@@ -14,8 +28,8 @@ class Graph(Generic[T]):
     '''
 
     def __init__(self):
-        self.forward: Dict[T, Tuple[Set[T], Set[T]]] = {}
-        self.backward: Dict[T, Tuple[Set[T], Set[T]]] = {}
+        self.forward: Dict[T, Dict[T, Set[EdgeType]]] = {}
+        self.backward: Dict[T, Dict[T, Set[EdgeType]]] = {}
         self.topological_order: List[T] = []
         self.cycles: List[Set[T]] = []
         self.cycles_dirty: bool = False
@@ -24,15 +38,25 @@ class Graph(Generic[T]):
         if node not in self.forward:
             return {}
         else:
-            t = self.forward[node]
-            return t[0] | t[1]
+            return self.forward[node].keys()
         
     def get_backward_links(self, node):
         if node not in self.backward:
             return {}
         else:
-            t = self.backward[node]
-            return t[0] | t[1]
+            return self.backward[node].keys()
+
+    def get_forward_links_of_type(self, node, types: Set[EdgeType]):
+        if node not in self.forward:
+            return {}
+        else:
+            return {t[0] for t in self.forward[node].items() if len(types.intersection(t[1])) > 0}
+
+    def get_backward_links_of_type(self, node, types: Set[EdgeType]):
+        if node not in self.backward:
+            return {}
+        else:
+            return {t[0] for t in self.backward[node].items() if len(types.intersection(t[1])) > 0}
 
     def get_nodes(self):
         return self.forward.keys() | self.backward.keys()
@@ -42,151 +66,120 @@ class Graph(Generic[T]):
             return True
         return (scc[0] in self.forward) and (scc[0] in self.get_forward_links(scc[0]))
 
-    def get_cycles(self):
+    def get_cycles(self, edge_types: Set[EdgeType] = None):
+        if edge_types is None:
+            edge_types = {EdgeType.REFERENCE, EdgeType.EVALUATED_REFERENCE}
+
         if self.cycles_dirty:
-            sccs, topo = self.tarjan()
+            sccs, topo = self.tarjan(edge_types)
             self.cycles = list(filter(lambda s: self.is_cycle(s), sccs))
             self.topological_order = topo
             self.cycles_dirty = False
         return self.cycles
 
-    def get_topological_order(self):
+    def get_topological_order(self, edge_types: Set[EdgeType] = None):
+        if edge_types is None:
+            edge_types = {EdgeType.REFERENCE, EdgeType.EVALUATED_REFERENCE}
+
         if self.cycles_dirty:
-            sccs, topo = self.tarjan()
+            sccs, topo = self.tarjan(edge_types)
             self.cycles = list(filter(lambda s: self.is_cycle(s), sccs))
             self.topological_order = topo
             self.cycles_dirty = False
         return self.topological_order
 
-    def link(self, from_node: T, to_node: T):
+    def link(self, from_node: T, to_node: T, edge_types: Set[EdgeType]):
         '''
         Add entries to the forward and backward maps to create a link between
         the from_node and to_node.
         '''
         if from_node not in self.forward:
-            self.forward[from_node] = (set(), set())
-        elif to_node in self.forward[from_node][0]:
-            assert from_node in self.backward[to_node][0]
+            self.forward[from_node] = dict()
+        elif to_node in self.forward[from_node]:
+            assert from_node in self.backward[to_node]
             return
 
         if to_node not in self.backward:
-            self.backward[to_node] = (set(), set())
+            self.backward[to_node] = dict()
 
-        self.forward[from_node][0].add(to_node)
-        self.backward[to_node][0].add(from_node)
+        if to_node not in self.forward[from_node]:
+            self.forward[from_node][to_node] = set()
+
+        if from_node not in self.backward[to_node]:
+            self.backward[to_node][from_node] = set()
+
+        self.forward[from_node][to_node] |= edge_types
+        self.backward[to_node][from_node] |= edge_types
 
         self.cycles_dirty = True
 
-    def clear_forward_links(self, node: T):
+    def clear_forward_links(self, node: T, edge_types: Set[EdgeType] = None):
         '''
         Remove all forward links coming from the given node.
         '''
+        if edge_types is None:
+            edge_types = {EdgeType.REFERENCE, EdgeType.EVALUATED_REFERENCE}
+
         if node not in self.forward:
             return
 
-        links = self.get_forward_links(node)
-        self.forward.pop(node)
+        links = self.get_forward_links_of_type(node, edge_types)
 
         if len(links) == 0:
             return
 
         for to in links:
-            static, runtime = self.backward[to]
+            # LINE A:
+            self.forward[node][to] -= edge_types
 
-            if node in static:
-                static.remove(node)
+            if len(self.forward[node][to]) == 0:
+                self.forward[node].pop(to)
 
-            if node in runtime:
-                runtime.remove(node)
+            # LINE B:
+            self.backward[to][node] -= edge_types
 
-            if len(self.get_backward_links(to)) == 0:
-                self.backward.pop(to)
+            if len(self.backward[to][node]) == 0:
+                self.backward[to].pop(node)
+
+        # This will invalidate in the case where LINE A and LINE B above
+        # don't actually change the graph. Not ideal but I'll fix later.
         self.cycles_dirty = True
 
-    def clear_backward_link(self, node: T):
+    def clear_backward_link(self, node: T, edge_types: Set[EdgeType] = None):
+        '''
+        Remove all backward links coming from the given node.
+        '''
+        if edge_types is None:
+            edge_types = {EdgeType.REFERENCE, EdgeType.EVALUATED_REFERENCE}
+
         if node not in self.backward:
             return
 
-        links = self.get_backward_links(node)
-        self.backward.pop(node)
+        links = self.get_backward_links_of_type(node, edge_types)
 
         if len(links) == 0:
             return
 
         for from_node in links:
-            static, runtime = self.forward[from_node]
+            # LINE A:
+            self.forward[from_node][node] -= edge_types
 
-            if node in static:
-                static.remove(node)
+            if len(self.forward[from_node][node]) == 0:
+                self.forward[from_node].pop(node)
 
-            if node in runtime:
-                runtime.remove(node)
+            # LINE B:
+            self.backward[node][from_node] -= edge_types
 
-            if len(self.get_forward_links(node)) == 0:
-                self.forward.pop(from_node)
+            if len(self.backward[node][from_node]) == 0:
+                self.backward[node].pop(from_node)
+
+        # This will invalidate in the case where LINE A and LINE B above
+        # don't actually change the graph. Not ideal but I'll fix later.
         self.cycles_dirty = True
 
-    def link_runtime(self, from_node: T, to_node: T):
-        '''
-        Add entries to the forward and backward maps to create a link between
-        the from_node and to_node.
-        '''
-        if from_node not in self.forward:
-            self.forward[from_node] = (set(), set())
-        elif to_node in self.forward[from_node][1]:
-            assert from_node in self.backward[to_node][1]
-            return
-
-        if to_node not in self.backward:
-            self.backward[to_node] = (set(), set())
-
-        self.forward[from_node][1].add(to_node)
-        self.backward[to_node][1].add(from_node)
-
-        self.cycles_dirty = True
-        
-    def clear_forward_runtime_links(self, node: T):
-        '''
-        Remove all forward links coming from the given node.
-        '''
-        if node not in self.forward:
-            return
-
-        links = self.forward[node][1]
-
-        if len(links) == 0:
-            return
-
-        for to in links:
-            self.backward[to][1].remove(node)
-            if len(self.get_backward_links(to)) == 0:
-                self.backward.pop(to)
-
-        links.clear()
-
-        self.cycles_dirty = True
-
-    def clear_backward_runtime_link(self, node: T):
-        if node not in self.backward:
-            return
-
-        links = self.backward[node][1]
-
-        if len(links) == 0:
-            return
-
-        for from_node in links:
-            self.forward[from_node][1].remove(node)
-            if len(self.get_forward_links(node)) == 0:
-                self.forward.pop(from_node)
-        
-        links.clear()
-
-        self.cycles_dirty = True
-        
     def remove_node(self, node: T):
-        self.clear_forward_links(node)
-        self.clear_backward_link(node)
+        self.clear_forward_links(node, EdgeType.All)
+        self.clear_backward_link(node, EdgeType.All)
 
     def strongconnect(
                 self,
@@ -197,10 +190,11 @@ class Graph(Generic[T]):
                 on_stack: Dict[T, bool],
                 stack: List[T],
                 sccs: List[List[T]],
-                topo: List[T]
+                topo: List[T],
+                edge_types: Set[EdgeType]
             ):
 
-        call_stack = [(v, list(self.get_forward_links(v)) if v in self.forward else [], 0)]
+        call_stack = [(v, list(self.get_forward_links_of_type(v, edge_types)), 0)]
 
         while len(call_stack) > 0:
             v, forward, i = call_stack.pop()
@@ -222,7 +216,7 @@ class Graph(Generic[T]):
                 i += 1
                 if w not in index:
                     call_stack.append((v, forward, i))
-                    call_stack.append((w, list(self.get_forward_links(w)) if w in self.forward else [], 0))
+                    call_stack.append((w, list(self.get_forward_links_of_type(w, edge_types)), 0))
                     recurse = True
                     break
                 elif w in on_stack and on_stack[w]:
@@ -244,7 +238,7 @@ class Graph(Generic[T]):
 
         return next_index
 
-    def tarjan(self):
+    def tarjan(self, edge_types: Set[EdgeType]):
         next_index = 0
         index = {}
         lowlink = {}
@@ -254,7 +248,7 @@ class Graph(Generic[T]):
         topo = []
         for n in self.get_nodes():
             if n not in index:
-                next_index = self.strongconnect(n, next_index, index, lowlink, on_stack, stack, sccs, topo)
+                next_index = self.strongconnect(n, next_index, index, lowlink, on_stack, stack, sccs, topo, edge_types)
         return sccs, topo
 
     def get_ancestors_of_set(self, nodes):

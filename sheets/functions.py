@@ -2,6 +2,7 @@ import sheets
 
 from . import reference
 from . import interp
+from . import graph
 
 import decimal
 import enum
@@ -36,8 +37,9 @@ def link_subtree(evaluator, subtree):
 
         cell = evaluator.workbook.get_cell(sheet_name, ref)
 
-        evaluator.workbook.dependency_graph.link_runtime(evaluator.c, cell)
-        evaluator.workbook.sheet_references.link_runtime(evaluator.c, ref.sheet_name or evaluator.sheet.sheet_name)
+        evaluator.workbook.dependency_graph.link(evaluator.c, cell, {graph.EdgeType.EVALUATED_REFERENCE})
+        evaluator.workbook.sheet_references.link(evaluator.c, ref.sheet_name or evaluator.sheet.sheet_name,
+                                                 {graph.EdgeType.EVALUATED_REFERENCE})
         evaluator.c.check_references(evaluator.workbook)
 
 class ArgEvaluation(enum.Enum):
@@ -202,8 +204,9 @@ def func_indirect(evaluator, args):
 
         cell = evaluator.workbook.get_cell(ref.sheet_name or evaluator.sheet.sheet_name, ref)
 
-        evaluator.workbook.dependency_graph.link_runtime(evaluator.c, cell)
-        evaluator.workbook.sheet_references.link_runtime(evaluator.c, ref.sheet_name or evaluator.sheet.sheet_name)
+        evaluator.workbook.dependency_graph.link(evaluator.c, cell, {graph.EdgeType.EVALUATED_REFERENCE})
+        evaluator.workbook.sheet_references.link(evaluator.c, ref.sheet_name or evaluator.sheet.sheet_name,
+                                                 {graph.EdgeType.EVALUATED_REFERENCE})
         evaluator.c.check_references(evaluator.workbook)
 
         return cell.value

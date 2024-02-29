@@ -4,6 +4,7 @@ from typing import Optional
 
 from . import interp
 from . import reference
+from . import graph
 
 def is_empty_content_string(contents):
     return contents is None or contents == "" or contents.isspace()
@@ -67,12 +68,12 @@ class Cell:
         is_error = False
 
         for sheet_name, location in interp.find_refs(workbook, self.sheet, self.formula_tree):
-            workbook.sheet_references.link(self, sheet_name)
+            workbook.sheet_references.link(self, sheet_name, {graph.EdgeType.REFERENCE})
             
             try:
                 ref = reference.Reference.from_string(location, allow_absolute=True)
                 cell = workbook.get_cell(sheet_name, ref)
-                workbook.dependency_graph.link(self, cell)
+                workbook.dependency_graph.link(self, cell, {graph.EdgeType.REFERENCE})
             except (KeyError, ValueError):
                 is_error = True
                 pass
@@ -109,8 +110,8 @@ class Cell:
         if self.contents is None or self.formula_tree is None:
             return
         try:
-            workbook.sheet_references.clear_forward_runtime_links((self.sheet, self))
-            workbook.dependency_graph.clear_forward_runtime_links(self)
+            workbook.sheet_references.clear_forward_links((self.sheet, self), {graph.EdgeType.EVALUATED_REFERENCE})
+            workbook.dependency_graph.clear_forward_links(self, {graph.EdgeType.EVALUATED_REFERENCE})
 
             self.check_references(workbook)
             self.evaluate_formula(workbook)
