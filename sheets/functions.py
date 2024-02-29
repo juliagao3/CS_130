@@ -197,12 +197,8 @@ def func_indirect(evaluator, args):
     if len(args) != 1:
         return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "INDIRECT requires exactly 1 argument")
 
-    # todo probably convert to string...
-    if not isinstance(args[0], str):
-        return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "argument to INDIRECT should be a cell reference")
-
     try:
-        ref = reference.Reference.from_string(args[0], allow_absolute=True)
+        ref = reference.Reference.from_string(str(args[0]), allow_absolute=True)
 
         cell = evaluator.workbook.get_cell(ref.sheet_name or evaluator.sheet.sheet_name, ref)
 
