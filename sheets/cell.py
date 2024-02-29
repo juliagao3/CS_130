@@ -67,13 +67,20 @@ class Cell:
     def check_references(self, workbook):
         is_error = False
 
-        for sheet_name, location in interp.find_refs(workbook, self.sheet, self.formula_tree):
-            workbook.sheet_references.link(self, sheet_name, {graph.EdgeType.REFERENCE})
+        refs, lazy_refs = interp.find_refs(workbook, self.sheet, self.formula_tree)
+
+        for sheet_name, location in refs:
+            if (sheet_name, location) in lazy_refs:
+                edge_types = {graph.EdgeType.REFERENCE}
+            else:
+                edge_types = {graph.EdgeType.EVALUATED_REFERENCE, graph.EdgeType.REFERENCE}
+
+            workbook.sheet_references.link(self, sheet_name, edge_types)
             
             try:
                 ref = reference.Reference.from_string(location, allow_absolute=True)
                 cell = workbook.get_cell(sheet_name, ref)
-                workbook.dependency_graph.link(self, cell, {graph.EdgeType.REFERENCE})
+                workbook.dependency_graph.link(self, cell, edge_types)
             except (KeyError, ValueError):
                 is_error = True
                 pass
