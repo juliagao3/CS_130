@@ -88,10 +88,15 @@ class CellRefFinder(lark.visitors.Interpreter):
         if name not in functions.functions:
             return sheets.CellError(sheets.CellErrorType.BAD_NAME, f"unrecognized function {name}")
 
-        if functions.functions[name][0] == functions.ArgEvaluation.LAZY:
-            self.visit(tree.children[1])
-        else:
-            self.visit_children(tree)
+        try:
+
+            if functions.functions[name][0] == functions.ArgEvaluation.LAZY:
+                self.visit(tree.children[1])
+            else:
+                self.visit_children(tree)
+
+        except IndexError:
+            return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "function requires at least one argument")
 
     def cell(self, tree):
         if len(tree.children) == 1:
