@@ -232,10 +232,11 @@ def func_indirect(evaluator, args):
     try:
         ref = reference.Reference.from_string(str(args[0]), allow_absolute=True)
 
+        evaluator.workbook.sheet_references.link_runtime(evaluator.c, ref.sheet_name or evaluator.sheet.sheet_name)
+
         cell = evaluator.workbook.get_cell(ref.sheet_name or evaluator.sheet.sheet_name, ref)
 
         evaluator.workbook.dependency_graph.link_runtime(evaluator.c, cell)
-        evaluator.workbook.sheet_references.link_runtime(evaluator.c, ref.sheet_name or evaluator.sheet.sheet_name)
         evaluator.c.check_references(evaluator.workbook)
 
         # If the argument can be parsed as a cell reference, but is invalid due to an error
