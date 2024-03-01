@@ -437,5 +437,15 @@ class TestClass(unittest.TestCase):
         wb.move_cells(name, 'A1', 'A1', 'B1')
         self.assertEqual(wb.get_cell_contents(name, 'B1'), "=ISERROR(Sheet2!b2:Sheet2!b4)")
 
+    def test_lazy_rename(self):
+        wb = sheets.Workbook()
+        _, n = wb.new_sheet()
+        m = "test"
+
+        wb.set_cell_contents(n, "A1", f"=IF(TRUE, A2, {n}!A2)")
+        wb.rename_sheet(n, m)
+
+        self.assertIn(m, wb.get_cell_contents(m, "A1"))
+
 if __name__ == "__main__":
         unittest.main()
