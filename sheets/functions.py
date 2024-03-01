@@ -1,10 +1,10 @@
 import sheets
 
-from . import reference
-from . import interp
-
 import decimal
 import enum
+
+from . import interp
+from . import reference
 
 def bool_arg(value):
     if value is None:

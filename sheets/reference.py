@@ -1,8 +1,7 @@
 import re
+from typing import Tuple, Optional
 
 from . import sheet
-
-from typing import Tuple, Optional
 
 location_regex = re.compile("(([A-Za-z_][A-Za-z0-9_]*|'[^']*')!)?(\$?)([A-Za-z]+)(\$?)([0-9]+)")
 

@@ -1,8 +1,8 @@
+import bisect
 import re
+
 from .cell import Cell
 from .reference import Reference
-
-import bisect
 
 def name_is_valid(name: str):
     if name is None or name == "" or name.isspace():

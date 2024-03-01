@@ -1,13 +1,16 @@
-from typing import List, Dict, Any, Optional, Tuple, Callable, Iterable
-import re
-from .sheet import Sheet, name_is_valid
-from .graph import Graph
-from .cell import Cell, CellError, CellErrorType, notify
-from .reference import Reference
 import copy
-
-from typing import TextIO
 import json
+import re
+from typing import List, Dict, Any, Optional, Tuple, Callable, Iterable, TextIO
+
+from . import cell
+from . import graph
+from . import reference
+from . import sheet
+
+from .graph     import Graph
+from .reference import Reference
+from .sheet     import Sheet
 
 class Workbook:
     # A workbook containing zero or more named spreadsheets.
@@ -23,17 +26,17 @@ class Workbook:
             self.workbook_name: str = "wb"
 
         # List of sheets in order of creation
-        self.sheets: List[Sheet] = []
+        self.sheets: List[sheet.Sheet] = []
 
         # map from lowercase sheet name to sheet
-        self.sheet_map: Dict[str, Sheet] = {}
+        self.sheet_map: Dict[str, sheet.Sheet] = {}
         
         # cells point to sheet names they reference
         self.sheet_references = Graph[Any]()
 
         # Graph
-        self.dependency_graph = Graph[Cell]()
-        self.run_time_dependency_graph = Graph[Cell]()
+        self.dependency_graph = Graph[cell.Cell]()
+        self.run_time_dependency_graph = Graph[cell.Cell]()
 
         # function to call when cells update
         self.notify_functions = []
@@ -54,7 +57,7 @@ class Workbook:
         #
         # A user should be able to mutate the return-value without affecting the
         # workbook's internal state.
-        return [sheet.get_quoted_name() for sheet in self.sheets]
+        return [s.get_quoted_name() for s in self.sheets]
 
     def new_sheet(self, sheet_name: Optional[str] = None) -> Tuple[int, str]:
         # Add a new sheet to the workbook.  If the sheet name is specified, it
@@ -89,9 +92,9 @@ class Workbook:
 
             raise ValueError
 
-        sheet = Sheet(self, sheet_name)
-        self.sheet_map[sheet_name.lower()] = sheet
-        self.sheets.append(sheet)
+        new_sheet = Sheet(self, sheet_name)
+        self.sheet_map[sheet_name.lower()] = new_sheet
+        self.sheets.append(new_sheet)
 
         self.update_cells_referencing_sheet(sheet_name)
 
@@ -330,7 +333,7 @@ class Workbook:
         #
         # If the new_sheet_name is an empty string or is otherwise invalid, a
         # ValueError is raised.
-        if not name_is_valid(new_sheet_name):
+        if not sheet.name_is_valid(new_sheet_name):
             raise ValueError
 
         if new_sheet_name.lower() in self.sheet_map:

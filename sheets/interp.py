@@ -1,13 +1,17 @@
 import sheets
+
 import decimal
+
 import lark
 from lark.visitors import visit_children_decor
 from lark.visitors import v_args
-from . import sheet as sheet_util
-from . import functions
-from .reference import Reference
 
 from typing import Tuple, List, Any
+
+from . import functions
+from . import sheet
+
+from .reference import Reference
 
 parser = lark.Lark.open('formulas.lark', rel_to=__file__, start='formula')
 
