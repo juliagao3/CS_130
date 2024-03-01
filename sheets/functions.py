@@ -238,10 +238,14 @@ def func_indirect(evaluator, args):
         evaluator.workbook.sheet_references.link_runtime(evaluator.c, ref.sheet_name or evaluator.sheet.sheet_name)
         evaluator.c.check_references(evaluator.workbook)
 
-        return cell.value
-    except KeyError:
-        return sheets.CellError(sheets.CellErrorType.BAD_REFERENCE, args[0])
-    except ValueError:
+        # If the argument can be parsed as a cell reference, but is invalid due to an error
+        # returns BAD_REFERENCE
+        if isinstance(cell.value, sheets.CellError):
+            return sheets.CellError(sheets.CellErrorType.BAD_REFERENCE, args[0])
+        else:
+            return cell.value
+
+    except (KeyError, ValueError):
         return sheets.CellError(sheets.CellErrorType.BAD_REFERENCE, args[0])
 
 functions = {
