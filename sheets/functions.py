@@ -175,15 +175,34 @@ def func_choose(evaluator, args):
         return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "CHOOSE requires at least 2 arguments")
     
     try:
-        index = int(evaluator.visit(args[0]))
-        if index < 0 or index >= len(args):
+
+        index_org = evaluator.visit(args[0])
+
+        # Check if error
+        if isinstance(index_org, sheets.CellError):
+            return index_org
+
+        # Check if bool in string format
+        if isinstance(index_org, str):
+            if index_org.lower() == "true":
+                index_org = 1
+            elif index_org.lower() == "false":
+                index_org = 0
+
+        # Check if number is integer
+        index = int(index_org)          
+        index_aux = float(index_org)             
+        if abs(index_aux - index) > 0:
+            raise TypeError
+        
+        if index <= 0 or index >= len(args):
             return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "index is out of bounds")
 
         link_subtree(evaluator, args[index])
 
         return evaluator.visit(args[index])
     
-    except TypeError:
+    except (TypeError, ValueError):
         return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "index is not an integer")
         
 def func_isblank(_evaluator, args):
