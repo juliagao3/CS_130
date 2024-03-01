@@ -230,7 +230,7 @@ def func_indirect(evaluator, args):
         return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "INDIRECT requires exactly 1 argument")
 
     try:
-        ref = reference.Reference.from_string(str(args[0]), allow_absolute=True)
+        ref = reference.Reference.from_string(str(args[0]).lower(), allow_absolute=True)
 
         evaluator.workbook.sheet_references.link_runtime(evaluator.c, ref.sheet_name or evaluator.sheet.sheet_name)
 
