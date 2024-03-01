@@ -95,9 +95,6 @@ class Graph(Generic[T]):
         '''
         if from_node not in self.forward:
             self.forward[from_node] = dict()
-        elif to_node in self.forward[from_node]:
-            assert from_node in self.backward[to_node]
-            return
 
         if to_node not in self.backward:
             self.backward[to_node] = dict()
@@ -119,9 +116,6 @@ class Graph(Generic[T]):
         '''
         if edge_types is None:
             edge_types = {EdgeType.REFERENCE, EdgeType.EVALUATED_REFERENCE}
-
-        if node not in self.forward:
-            return
 
         links = self.get_forward_links_of_type(node, edge_types)
 
@@ -151,9 +145,6 @@ class Graph(Generic[T]):
         '''
         if edge_types is None:
             edge_types = {EdgeType.REFERENCE, EdgeType.EVALUATED_REFERENCE}
-
-        if node not in self.backward:
-            return
 
         links = self.get_backward_links_of_type(node, edge_types)
 
