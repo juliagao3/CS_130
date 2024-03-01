@@ -447,5 +447,19 @@ class TestClass(unittest.TestCase):
 
         self.assertIn(m, wb.get_cell_contents(m, "A1"))
 
+    def test_indirect_bad_sheet(self):
+        wb = sheets.Workbook()
+        _, n = wb.new_sheet()
+        m = "test"
+
+        wb.set_cell_contents(n, "A1", f'=INDIRECT("{m}!A1")')
+
+        self.assertIsInstance(wb.get_cell_value(n, "A1"), sheets.CellError)
+        self.assertEqual(wb.get_cell_value(n, "A1").get_type(), sheets.CellErrorType.BAD_REFERENCE)
+
+        wb.new_sheet(m)
+
+        self.assertEqual(wb.get_cell_value(n, "A1"), decimal.Decimal("0"))
+
 if __name__ == "__main__":
         unittest.main()
