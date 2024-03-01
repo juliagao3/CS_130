@@ -115,7 +115,12 @@ class Cell:
             self.check_references(workbook)
             self.evaluate_formula(workbook)
         except FormulaError as e:
-            self.set_value(e.value)
+            # If we get a BAD_REFERENCE error when checking references, it will raise
+            # before checking the formula. In that case, the value should be False
+            if self.contents[1:8] == "ISBLANK" and e.value.get_type() == CellErrorType.BAD_REFERENCE:
+                self.set_value(False)
+            else:
+                self.set_value(e.value)
 
     def set_contents(self, workbook, contents: str):
         workbook.sheet_references.clear_forward_links((self.sheet, self))
@@ -136,7 +141,16 @@ class Cell:
                 self.check_references(workbook)
                 self.evaluate_formula(workbook)
             except FormulaError as e:
-                self.set_value(e.value)
+                # If we get a BAD_REFERENCE error when checking references, it will raise
+                # before checking the formula. In that case, the value should be False
+                if contents[1:8] == "ISBLANK" and e.value.get_type() == CellErrorType.BAD_REFERENCE:
+                    self.set_value(False)
+                # If we get a PARSE_ERROR error when parsing the formula, it will raise 
+                # before checking it. In that case, the value should be BAD_REFERENCE
+                elif contents[1:9] == "INDIRECT" and e.value.get_type() == CellErrorType.PARSE_ERROR:
+                    self.set_value(CellError(CellErrorType.BAD_REFERENCE, ""))
+                else:
+                    self.set_value(e.value)
         elif contents[0] == "'":
             self.set_value(contents[1:])
         elif contents.lower() == "true":
