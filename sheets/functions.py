@@ -44,7 +44,10 @@ class ArgEvaluation(enum.Enum):
     EAGER = 0
     LAZY = 1
 
-def func_version(_evaluator, _args):
+def func_version(_evaluator, args):
+    if len(args) > 0:
+        return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "VERSION takes no arguments")
+
     return sheets.version
 
 def func_and(_evaluator, args):
