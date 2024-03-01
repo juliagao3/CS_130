@@ -170,7 +170,7 @@ class FormulaPrinter(lark.visitors.Interpreter):
 
     @visit_children_decor
     def func_expr(self, values):
-        return values[0] + "(" + ",".join(values[1:]) + ")"
+        return values[0] + "(" + ", ".join(values[1:]) + ")"
         
 class FormulaEvaluator(lark.visitors.Interpreter):
 
