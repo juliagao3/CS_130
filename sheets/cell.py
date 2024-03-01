@@ -66,9 +66,15 @@ class Cell:
     def check_references(self, workbook):
         is_error = False
 
-        for sheet_name, location in interp.find_refs(workbook, self.sheet, self.formula_tree):
+        static_refs, all_refs = interp.find_refs(workbook, self.sheet, self.formula_tree)
+
+        # link to all referenced sheet names - even if they're not used
+        for sheet_name, _location in all_refs:
             workbook.sheet_references.link(self, sheet_name)
-            
+
+        # only link to the cells that are used in evaluation every time
+        # (the static references)
+        for sheet_name, location in static_refs:
             try:
                 ref = reference.Reference.from_string(location, allow_absolute=True)
                 cell = workbook.get_cell(sheet_name, ref)

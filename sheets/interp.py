@@ -80,7 +80,9 @@ def strip_quotes(s: str):
 class CellRefFinder(lark.visitors.Interpreter):
     def __init__(self, sheet_name):
         self.refs = []
+        self.static_refs = []
         self.sheet_name = sheet_name
+        self.static_context = True
 
     def func_expr(self, tree):
         name = str(tree.children[0]).lower()
@@ -91,7 +93,17 @@ class CellRefFinder(lark.visitors.Interpreter):
         try:
 
             if functions.functions[name][0] == functions.ArgEvaluation.LAZY:
+                # first child could be a static reference (meaning it must be
+                # evaluated every time)
                 self.visit(tree.children[1])
+
+                # further arguments are not static, but we need to know about
+                # them for sheet renaming...
+                old = self.static_context
+                self.static_context = False
+                for child in tree.children[2:]:
+                    self.visit(child)
+                self.static_context = old
             else:
                 self.visit_children(tree)
 
@@ -100,10 +112,15 @@ class CellRefFinder(lark.visitors.Interpreter):
 
     def cell(self, tree):
         if len(tree.children) == 1:
-            self.refs.append((self.sheet_name, tree.children[0]))
+            ref = (self.sheet_name, tree.children[0])
         else:
             assert len(tree.children) == 2
-            self.refs.append((strip_quotes(tree.children[0]).lower(), tree.children[1]))
+            ref = (strip_quotes(tree.children[0]).lower(), tree.children[1])
+
+        self.refs.append(ref)
+
+        if self.static_context:
+            self.static_refs.append(ref)
 
 class SheetRenamer(lark.visitors.Transformer_InPlace):
 
@@ -383,7 +400,7 @@ def evaluate_formula(workbook, sheet, cell, tree):
 def find_refs(workbook, sheet, tree):
     finder = CellRefFinder(sheet.sheet_name.lower())
     finder.visit(tree)
-    return finder.refs
+    return (finder.static_refs, finder.refs)
 
 def rename_sheet(old, new, tree):
     renamer = SheetRenamer(old, new)
