@@ -96,11 +96,16 @@ def func_not(_evaluator, args):
     if len(args) != 1:
         return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "NOT requires exactly 1 argument")
     
-    return not bool_arg(args[0])
+    b = bool_arg(args[0])
+
+    if isinstance(b, sheets.CellError):
+        return b
+    else:
+        return not bool_arg(args[0])
 
 def func_xor(_evaluator, args):
     if len(args) < 1:
-        return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "OR requires at least 1 argument")
+        return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "XOR requires at least 1 argument")
      
     count_true = 0
     errors = []
