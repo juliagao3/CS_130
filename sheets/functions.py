@@ -209,8 +209,13 @@ def func_isblank(_evaluator, args):
     if len(args) != 1:
         return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "ISBLANK requires exactly 1 argument")
     
+    # Follow Piazza post regarding how to deal with errors
+    # https://piazza.com/class/lqvau3tih6k26o/post/43
     if isinstance(args[0], sheets.CellError):
-        return args[0]
+        if args[0].get_type() in [sheets.CellErrorType.PARSE_ERROR, sheets.CellErrorType.CIRCULAR_REFERENCE]:
+            return args[0]
+        else:
+            return False
     
     return (args[0] is None)
 
