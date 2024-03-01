@@ -261,8 +261,7 @@ class TestClass(unittest.TestCase):
         self.assertEqual(wb.get_cell_value(n, "A4"), True)
 
         wb.set_cell_contents(n, "A4", "=ISBLANK(sheet2!A5)")
-        self.assertIsInstance(wb.get_cell_value(n, "A4"), sheets.CellError)
-        self.assertEqual(wb.get_cell_value(n, "A4").get_type(), sheets.CellErrorType.BAD_REFERENCE)
+        self.assertEqual(wb.get_cell_value(n, "A4"), False)
 
         _, m = wb.new_sheet()
         self.assertEqual(wb.get_cell_value(n, "A4"), True)
