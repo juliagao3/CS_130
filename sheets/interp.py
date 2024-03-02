@@ -80,22 +80,47 @@ def strip_quotes(s: str):
 class CellRefFinder(lark.visitors.Interpreter):
     def __init__(self, sheet_name):
         self.refs = []
+        self.static_refs = []
         self.sheet_name = sheet_name
+        self.static_context = True
 
     def func_expr(self, tree):
         name = str(tree.children[0]).lower()
 
-        if functions.functions[name][0] == functions.ArgEvaluation.LAZY:
-            self.visit(tree.children[1])
-        else:
-            self.visit_children(tree)
+        if name not in functions.functions:
+            return sheets.CellError(sheets.CellErrorType.BAD_NAME, f"unrecognized function {name}")
+
+        try:
+
+            if functions.functions[name][0] == functions.ArgEvaluation.LAZY:
+                # first child could be a static reference (meaning it must be
+                # evaluated every time)
+                self.visit(tree.children[1])
+
+                # further arguments are not static, but we need to know about
+                # them for sheet renaming...
+                old = self.static_context
+                self.static_context = False
+                for child in tree.children[2:]:
+                    self.visit(child)
+                self.static_context = old
+            else:
+                self.visit_children(tree)
+
+        except IndexError:
+            return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "function requires at least one argument")
 
     def cell(self, tree):
         if len(tree.children) == 1:
-            self.refs.append((self.sheet_name, tree.children[0]))
+            ref = (self.sheet_name, tree.children[0])
         else:
             assert len(tree.children) == 2
-            self.refs.append((strip_quotes(tree.children[0]).lower(), tree.children[1]))
+            ref = (strip_quotes(tree.children[0]).lower(), tree.children[1])
+
+        self.refs.append(ref)
+
+        if self.static_context:
+            self.static_refs.append(ref)
 
 class SheetRenamer(lark.visitors.Transformer_InPlace):
 
@@ -142,6 +167,10 @@ class FormulaPrinter(lark.visitors.Interpreter):
         return "!".join(values)
     
     @visit_children_decor
+    def cell_range(self, values):
+        return ":".join(values)
+    
+    @visit_children_decor
     def number(self, values):
         return str(values[0])
     
@@ -163,7 +192,7 @@ class FormulaPrinter(lark.visitors.Interpreter):
 
     @visit_children_decor
     def func_expr(self, values):
-        return values[0] + "(" + ",".join(values[1:-1]) + ")"
+        return values[0] + "(" + ", ".join(values[1:]) + ")"
         
 class FormulaEvaluator(lark.visitors.Interpreter):
 
@@ -200,6 +229,10 @@ class FormulaEvaluator(lark.visitors.Interpreter):
 
         if values[2] is None:
             values[2] = defaults[type(values[0])]
+
+        if values[0] is None and values[2] is None:
+            values[0] = "None"
+            values[2] = "None"
 
         if isinstance(values[0], type(values[2])):
             if isinstance(values[0], str):
@@ -367,7 +400,7 @@ def evaluate_formula(workbook, sheet, cell, tree):
 def find_refs(workbook, sheet, tree):
     finder = CellRefFinder(sheet.sheet_name.lower())
     finder.visit(tree)
-    return finder.refs
+    return (finder.static_refs, finder.refs)
 
 def rename_sheet(old, new, tree):
     renamer = SheetRenamer(old, new)

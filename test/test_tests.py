@@ -536,9 +536,10 @@ class TestClass(unittest.TestCase):
                 self.assertEqual(b3.get_type(), sheets.CellErrorType.PARSE_ERROR)
                 
                 wb.set_cell_contents(sheet_name, "A5", "=#error!")
-                wb.set_cell_contents(sheet_name, "B5", "=A5+#Ref!")
+                wb.set_cell_contents(sheet_name, "B5", "=#Ref!+A5")
                 b5 = wb.get_cell_value(sheet_name, "B5")
                 self.assertIsInstance(b5, sheets.CellError)
+                self.assertEqual(b5.get_type(), sheets.CellErrorType.BAD_REFERENCE)
 
         def test_parentheses_in_formulas(self):
                 wb = sheets.Workbook()
@@ -649,7 +650,7 @@ class TestClass(unittest.TestCase):
                 self.assertEqual(wb.get_cell_value(name, "A3"), decimal.Decimal(2.0))
 
         def test_spec(self):
-                self.assertEqual(sheets.version, "1.2")
+                self.assertEqual(sheets.version, "1.3")
                 wb = sheets.Workbook()
                 (index, name) = wb.new_sheet()
                 self.assertEqual(index, 0)

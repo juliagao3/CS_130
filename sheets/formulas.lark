@@ -36,6 +36,7 @@ func_expr : FUNCTION "(" ((expression ",")* expression)? ")"
 // Base values
 
 ?base : cell
+      | cell_range
       | func_expr
       | ERROR_VALUE             -> error
       | NUMBER                  -> number
@@ -44,6 +45,7 @@ func_expr : FUNCTION "(" ((expression ",")* expression)? ")"
       | "(" expression ")"      -> parens
 
 cell : (_sheetname "!")? CELLREF
+cell_range : cell ":" cell
 
 _sheetname : SHEET_NAME | QUOTED_SHEET_NAME
 

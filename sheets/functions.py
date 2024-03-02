@@ -20,6 +20,8 @@ def bool_arg(value):
             return False
         else:
             return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, f"invalid bool string {value}")
+    if isinstance(value, sheets.CellError):
+        return value
     return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, f"cant make bool from {type(value)}")
 
 def string_arg(v):
@@ -42,7 +44,10 @@ class ArgEvaluation(enum.Enum):
     EAGER = 0
     LAZY = 1
 
-def func_version(_evaluator, _args):
+def func_version(_evaluator, args):
+    if len(args) > 0:
+        return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "VERSION takes no arguments")
+
     return sheets.version
 
 def func_and(_evaluator, args):
@@ -51,16 +56,20 @@ def func_and(_evaluator, args):
 
     result = True
 
+    errors = []
     for a in args:
         b = bool_arg(a)
 
-        if isinstance(b, sheets.CellError):
-            return b
+        if isinstance(b, sheets.CellError) and b not in errors:
+            errors.append(b)
 
         if not b:
             result = False
-
-    return result
+            
+    if len(errors) > 0:
+        return interp.propagate_errors(errors)
+    else:
+        return result
 
 def func_or(_evaluator, args):
     if len(args) < 1:
@@ -68,51 +77,59 @@ def func_or(_evaluator, args):
 
     result = False
 
+    errors = []
     for a in args:
         b = bool_arg(a)
 
-        if isinstance(b, sheets.CellError):
-            return b
+        if isinstance(b, sheets.CellError) and b not in errors:
+            errors.append(b)
 
         if b:
             result = True
-
-    return result
-
+            
+    if len(errors) > 0:
+        return interp.propagate_errors(errors)
+    else:
+        return result
+    
 def func_not(_evaluator, args):
     if len(args) != 1:
         return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "NOT requires exactly 1 argument")
     
-    return not bool_arg(args[0])
+    b = bool_arg(args[0])
+
+    if isinstance(b, sheets.CellError):
+        return b
+    else:
+        return not bool_arg(args[0])
 
 def func_xor(_evaluator, args):
     if len(args) < 1:
-        return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "OR requires at least 1 argument")
+        return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "XOR requires at least 1 argument")
      
     count_true = 0
+    errors = []
     for a in args:
         b = bool_arg(a)
         
-        if isinstance(b, sheets.CellError):
-            return b
+        if isinstance(b, sheets.CellError) and b not in errors:
+            errors.append(b)
         
         if b:
             count_true += 1
-        
-    if (count_true % 2 == 0):
-        return False
     
-    return True
+    if len(errors) > 0:
+        return interp.propagate_errors(errors) 
+    else:
+        return (not count_true % 2 == 0)
 
 def func_exact(_evaluator, args):
     if len(args) != 2:
         return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "EXACT requires exactly 2 argument")
     
-    if isinstance(args[0], sheets.CellError):
-        return args[0]
-    
-    if isinstance(args[1], sheets.CellError):
-        return args[1]
+    if isinstance(args[0], sheets.CellError) or isinstance(args[1], sheets.CellError):
+        errors = [args[0], args[1]]
+        return interp.propagate_errors(errors) 
     
     return (string_arg(args[0]) == string_arg(args[1]))
 
@@ -122,6 +139,10 @@ def func_if(evaluator, args):
         return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "IF requires exactly 2 or 3 arguments")
     
     b = bool_arg(evaluator.visit(args[0]))
+
+    if isinstance(b, sheets.CellError):
+        return b
+        
     if b:
         branch = args[1]
     elif len(args) == 3:
@@ -154,23 +175,47 @@ def func_choose(evaluator, args):
         return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "CHOOSE requires at least 2 arguments")
     
     try:
-        index = int(evaluator.visit(args[0]))
-        if index < 0 or index >= len(args):
+
+        index_org = evaluator.visit(args[0])
+
+        # Check if error
+        if isinstance(index_org, sheets.CellError):
+            return index_org
+
+        # Check if bool in string format
+        if isinstance(index_org, str):
+            if index_org.lower() == "true":
+                index_org = 1
+            elif index_org.lower() == "false":
+                index_org = 0
+
+        # Check if number is integer
+        index = int(index_org)          
+        index_aux = float(index_org)             
+        if abs(index_aux - index) > 0:
+            raise TypeError
+        
+        if index <= 0 or index >= len(args):
             return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "index is out of bounds")
 
         link_subtree(evaluator, args[index])
 
         return evaluator.visit(args[index])
     
-    except TypeError:
+    except (TypeError, ValueError):
         return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "index is not an integer")
         
 def func_isblank(_evaluator, args):
     if len(args) != 1:
         return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "ISBLANK requires exactly 1 argument")
     
+    # Follow Piazza post regarding how to deal with errors
+    # https://piazza.com/class/lqvau3tih6k26o/post/43
     if isinstance(args[0], sheets.CellError):
-        return args[0]
+        if args[0].get_type() in [sheets.CellErrorType.PARSE_ERROR, sheets.CellErrorType.CIRCULAR_REFERENCE]:
+            return args[0]
+        else:
+            return False
     
     return (args[0] is None)
 
@@ -184,23 +229,24 @@ def func_indirect(evaluator, args):
     if len(args) != 1:
         return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "INDIRECT requires exactly 1 argument")
 
-    # todo probably convert to string...
-    if not isinstance(args[0], str):
-        return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "argument to INDIRECT should be a cell reference")
-
     try:
-        ref = reference.Reference.from_string(args[0], allow_absolute=True)
+        ref = reference.Reference.from_string(str(args[0]).lower(), allow_absolute=True)
+
+        evaluator.workbook.sheet_references.link_runtime(evaluator.c, ref.sheet_name or evaluator.sheet.sheet_name)
 
         cell = evaluator.workbook.get_cell(ref.sheet_name or evaluator.sheet.sheet_name, ref)
 
         evaluator.workbook.dependency_graph.link_runtime(evaluator.c, cell)
-        evaluator.workbook.sheet_references.link_runtime(evaluator.c, ref.sheet_name or evaluator.sheet.sheet_name)
         evaluator.c.check_references(evaluator.workbook)
 
-        return cell.value
-    except KeyError:
-        return sheets.CellError(sheets.CellErrorType.BAD_REFERENCE, args[0])
-    except ValueError:
+        # If the argument can be parsed as a cell reference, but is invalid due to an error
+        # returns BAD_REFERENCE
+        if isinstance(cell.value, sheets.CellError):
+            return sheets.CellError(sheets.CellErrorType.BAD_REFERENCE, args[0])
+        else:
+            return cell.value
+
+    except (KeyError, ValueError):
         return sheets.CellError(sheets.CellErrorType.BAD_REFERENCE, args[0])
 
 functions = {

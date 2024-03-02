@@ -59,9 +59,18 @@ class TestClass(unittest.TestCase):
         _, n = wb.new_sheet()
         _, m = wb.new_sheet()
 
+        wb.set_cell_contents(n, "B2", "=7/0")
+        wb.set_cell_contents(n, "B1", "=INDIRECT(B2)")
+        self.assertIsInstance(wb.get_cell_value(n, "B1"), sheets.CellError)
+        self.assertEqual(wb.get_cell_value(n, "B1").get_type(), sheets.CellErrorType.BAD_REFERENCE)
+
+        wb.set_cell_contents(n, "B1", "=INDIRECT(2)")
+        self.assertIsInstance(wb.get_cell_value(n, "B1"), sheets.CellError)
+        self.assertEqual(wb.get_cell_value(n, "B1").get_type(), sheets.CellErrorType.BAD_REFERENCE)
+
         wb.set_cell_contents(n, "A1", "'hello")
-        wb.set_cell_contents(n, "A2", f"A1")
-        wb.set_cell_contents(n, "A3", f"=INDIRECT(A2)")
+        wb.set_cell_contents(n, "A2", "A1")
+        wb.set_cell_contents(n, "A3", "=INDIRECT(A2)")
         self.assertEqual(wb.get_cell_value(n, "A3"), "hello")
 
         wb.set_cell_contents(m, "A1", "'world")
@@ -76,8 +85,15 @@ class TestClass(unittest.TestCase):
         self.assertIsInstance(wb.get_cell_value(n, "A3"), sheets.CellError)
         self.assertEqual(wb.get_cell_value(n, "A3").get_type(), sheets.CellErrorType.CIRCULAR_REFERENCE)
 
-        wb.set_cell_contents(n, "B1", "1")
-        wb.set_cell_contents(n, "B2", "2")
+        wb.set_cell_contents(n, "B1", "=INDIRECT(#CIRCREF!)")
+        self.assertIsInstance(wb.get_cell_value(n, "B1"), sheets.CellError)
+        self.assertEqual(wb.get_cell_value(n, "B1").get_type(), sheets.CellErrorType.BAD_REFERENCE)
+        
+        wb.set_cell_contents(n, "B2", "=INDIRECT(true)")
+        self.assertIsInstance(wb.get_cell_value(n, "B2"), sheets.CellError)
+        self.assertEqual(wb.get_cell_value(n, "B1").get_type(), sheets.CellErrorType.BAD_REFERENCE)
+
+        
 
     # not, xor, exact, if, iferror, choose, isblank, iserror, version
     def test_function_not(self):
@@ -154,7 +170,38 @@ class TestClass(unittest.TestCase):
         self.assertEqual(wb.get_cell_value(name, "B3"), False)
         self.assertIsInstance(wb.get_cell_value(name, "B4"), sheets.CellError)
         self.assertEqual(wb.get_cell_value(name, "B4").get_type(), sheets.CellErrorType.BAD_REFERENCE)
-                
+
+        wb.set_cell_contents(name, "D1", '=EXACT(#REF!, "house")')        
+        self.assertIsInstance(wb.get_cell_value(name, "D1"), sheets.CellError)
+        self.assertEqual(wb.get_cell_value(name, "D1").get_type(), sheets.CellErrorType.BAD_REFERENCE)
+        
+        wb.set_cell_contents(name, "D2", '=EXACT("house", #ERROR!)')
+        self.assertIsInstance(wb.get_cell_value(name, "D2"), sheets.CellError)
+        self.assertEqual(wb.get_cell_value(name, "D2").get_type(), sheets.CellErrorType.PARSE_ERROR)
+        
+        wb.set_cell_contents(name, "D3", '=EXACT(#CIRCREF!, #ERROR!)')
+        self.assertIsInstance(wb.get_cell_value(name, "D3"), sheets.CellError)
+        self.assertEqual(wb.get_cell_value(name, "D3").get_type(), sheets.CellErrorType.PARSE_ERROR)
+        
+        wb.set_cell_contents(name, "F4", '=EXACT()')
+        self.assertIsInstance(wb.get_cell_value(name, "F4"), sheets.CellError)
+        self.assertEqual(wb.get_cell_value(name, "F4").get_type(), sheets.CellErrorType.TYPE_ERROR)
+        
+        wb.set_cell_contents(name, "F5", '=EXACT("ABC")')
+        self.assertIsInstance(wb.get_cell_value(name, "F5"), sheets.CellError)
+        self.assertEqual(wb.get_cell_value(name, "F5").get_type(), sheets.CellErrorType.TYPE_ERROR)
+        
+        wb.set_cell_contents(name, "F6", '=EXACT(#VALUE!, #VALUE!)')
+        self.assertIsInstance(wb.get_cell_value(name, "F6"), sheets.CellError)
+        self.assertEqual(wb.get_cell_value(name, "F6").get_type(), sheets.CellErrorType.TYPE_ERROR)
+        
+        wb.set_cell_contents(name, "F7", '=EXACT("a", "b", "c")')
+        self.assertIsInstance(wb.get_cell_value(name, "F6"), sheets.CellError)
+        self.assertEqual(wb.get_cell_value(name, "F6").get_type(), sheets.CellErrorType.TYPE_ERROR)
+        
+        wb.set_cell_contents(name, "F8", '=EXACT(123.000, "123")')
+        self.assertEqual(wb.get_cell_value(name, "F8"), True)
+        
     def test_if(self):
         wb = sheets.Workbook()
         _, name = wb.new_sheet()
@@ -172,7 +219,17 @@ class TestClass(unittest.TestCase):
 
         wb.set_cell_contents(name, "A5", '=IF(4 < 2, "4 > 2", 1+1)')
         self.assertEqual(wb.get_cell_value(name, "A5"), decimal.Decimal("2"))
-    
+
+        wb.set_cell_contents(name, "A6", '=IF("string", 0, 1)')
+        self.assertIsInstance(wb.get_cell_value(name, "A6"), sheets.CellError)
+        self.assertEqual(wb.get_cell_value(name, "A6").get_type(), sheets.CellErrorType.TYPE_ERROR)
+        
+        wb.set_cell_contents(name, "A7", '=IF(#CIRCREF!, 1, 0)')        
+        self.assertIsInstance(wb.get_cell_value(name, "A7"), sheets.CellError)
+        self.assertEqual(wb.get_cell_value(name, "A7").get_type(), sheets.CellErrorType.CIRCULAR_REFERENCE)
+        
+        wb.set_cell_contents(name, "A8", '=IF(TRUE, "")')
+        self.assertEqual(wb.get_cell_value(name, "A8"), "")
     
     def test_function_iferror(self):
         wb = sheets.Workbook()
@@ -229,11 +286,23 @@ class TestClass(unittest.TestCase):
         self.assertEqual(wb.get_cell_value(n, "A4"), True)
 
         wb.set_cell_contents(n, "A4", "=ISBLANK(sheet2!A5)")
-        self.assertIsInstance(wb.get_cell_value(n, "A4"), sheets.CellError)
-        self.assertEqual(wb.get_cell_value(n, "A4").get_type(), sheets.CellErrorType.BAD_REFERENCE)
+        self.assertEqual(wb.get_cell_value(n, "A4"), False)
 
         _, m = wb.new_sheet()
         self.assertEqual(wb.get_cell_value(n, "A4"), True)
+        
+        wb.set_cell_contents(n, "B1", '=ISBLANK(C1)')
+        wb.set_cell_contents(n, "C1", '#REF!')
+        self.assertEqual(wb.get_cell_value(n, "B1"), False)
+        self.assertIsInstance(wb.get_cell_value(n, "C1"), sheets.CellError)
+        self.assertEqual(wb.get_cell_value(n, "C1").get_type(), sheets.CellErrorType.BAD_REFERENCE)
+        
+        wb.set_cell_contents(n, "C2", '=ISBLANK(Nonexistent!A1)')
+        self.assertEqual(wb.get_cell_value(n, "C2"), False)
+        
+        wb.set_cell_contents(n, "C3", "'")
+        wb.set_cell_contents(n, "D4", '=ISBLANK(C3)')
+        self.assertEqual(wb.get_cell_value(n, "D4"), False)
         
     def test_choose(self):
         wb = sheets.Workbook()
@@ -350,6 +419,85 @@ class TestClass(unittest.TestCase):
         self.assertEqual(wb.get_cell_value(name, "A1"), decimal.Decimal(5))
         self.assertEqual(wb.get_cell_value(name, "B1"), decimal.Decimal(5))
         self.assertEqual(wb.get_cell_value(name, "C1"), decimal.Decimal(5))
+
+    def test_bad_name(self):
+        wb = sheets.Workbook()
+        _, name = wb.new_sheet()
+
+        wb.set_cell_contents(name, "A1", "=BAD(1,2,3)")   
+        self.assertIsInstance(wb.get_cell_value(name, "A1"), sheets.CellError)
+        self.assertEqual(wb.get_cell_value(name, "A1").get_type(), sheets.CellErrorType.BAD_NAME)
+
+    def test_error_priorities(self):
+        wb = sheets.Workbook()
+        _, name = wb.new_sheet()
+
+        wb.set_cell_contents(name, "A1", "=AND(#CIRCREF!, #ERROR!)")   
+        self.assertIsInstance(wb.get_cell_value(name, "A1"), sheets.CellError)
+        self.assertEqual(wb.get_cell_value(name, "A1").get_type(), sheets.CellErrorType.PARSE_ERROR)
+
+        wb.set_cell_contents(name, "A1", "=OR(#NAME?, #CIRCREF!, #ERROR!)")   
+        self.assertIsInstance(wb.get_cell_value(name, "A1"), sheets.CellError)
+        self.assertEqual(wb.get_cell_value(name, "A1").get_type(), sheets.CellErrorType.PARSE_ERROR)
+
+        wb.set_cell_contents(name, "A1", "=XOR(#REF!, #NAME?, #CIRCREF!)")   
+        self.assertIsInstance(wb.get_cell_value(name, "A1"), sheets.CellError)
+        self.assertEqual(wb.get_cell_value(name, "A1").get_type(), sheets.CellErrorType.CIRCULAR_REFERENCE)
+
+    def test_cell_ranges(self):
+        wb = sheets.Workbook()
+        _, name = wb.new_sheet()
+        _, name2 = wb.new_sheet()
+
+        wb.set_cell_contents(name, "A1", "=ISERROR(A2:A4)")   
+
+        wb.set_cell_contents(name, "A2", "hello")
+        wb.set_cell_contents(name, "A3", "8")
+        wb.set_cell_contents(name, "A4", "True")
+
+        self.assertEqual(wb.get_cell_value(name, "A1"), False)
+
+        wb.set_cell_contents(name, "A4", "#REF!")
+        self.assertEqual(wb.get_cell_value(name, "A1"), False)
+
+        wb.move_cells(name, 'A1', 'A1', 'B1')
+        self.assertEqual(wb.get_cell_contents(name, 'B1'), "=ISERROR(b2:b4)")
+
+        wb.set_cell_contents(name, "A1", "=ISERROR(Sheet2!A2:A4)")   
+        wb.move_cells(name, 'A1', 'A1', 'B1')
+        self.assertEqual(wb.get_cell_contents(name, 'B1'), "=ISERROR(Sheet2!b2:b4)")
+
+        wb.set_cell_contents(name, "A1", "=ISERROR(A2:Sheet2!A4)")   
+        wb.move_cells(name, 'A1', 'A1', 'B1')
+        self.assertEqual(wb.get_cell_contents(name, 'B1'), "=ISERROR(b2:Sheet2!b4)")
+
+        wb.set_cell_contents(name, "A1", "=ISERROR(Sheet2!A2:Sheet2!A4)")   
+        wb.move_cells(name, 'A1', 'A1', 'B1')
+        self.assertEqual(wb.get_cell_contents(name, 'B1'), "=ISERROR(Sheet2!b2:Sheet2!b4)")
+
+    def test_lazy_rename(self):
+        wb = sheets.Workbook()
+        _, n = wb.new_sheet()
+        m = "test"
+
+        wb.set_cell_contents(n, "A1", f"=IF(TRUE, A2, {n}!A2)")
+        wb.rename_sheet(n, m)
+
+        self.assertIn(m, wb.get_cell_contents(m, "A1"))
+
+    def test_indirect_bad_sheet(self):
+        wb = sheets.Workbook()
+        _, n = wb.new_sheet()
+        m = "TEST"
+
+        wb.set_cell_contents(n, "A1", f'=INDIRECT("{m}!A1")')
+
+        self.assertIsInstance(wb.get_cell_value(n, "A1"), sheets.CellError)
+        self.assertEqual(wb.get_cell_value(n, "A1").get_type(), sheets.CellErrorType.BAD_REFERENCE)
+
+        wb.new_sheet(m)
+
+        self.assertEqual(wb.get_cell_value(n, "A1"), decimal.Decimal("0"))
 
 if __name__ == "__main__":
         unittest.main()
