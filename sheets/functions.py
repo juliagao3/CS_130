@@ -3,6 +3,7 @@ import sheets
 import decimal
 import enum
 
+from . import error
 from . import interp
 from . import reference
 
@@ -67,7 +68,7 @@ def func_and(_evaluator, args):
             result = False
             
     if len(errors) > 0:
-        return interp.propagate_errors(errors)
+        return error.propagate_errors(errors)
     else:
         return result
 
@@ -88,7 +89,7 @@ def func_or(_evaluator, args):
             result = True
             
     if len(errors) > 0:
-        return interp.propagate_errors(errors)
+        return error.propagate_errors(errors)
     else:
         return result
     
@@ -119,7 +120,7 @@ def func_xor(_evaluator, args):
             count_true += 1
     
     if len(errors) > 0:
-        return interp.propagate_errors(errors) 
+        return error.propagate_errors(errors) 
     else:
         return (not count_true % 2 == 0)
 
@@ -129,7 +130,7 @@ def func_exact(_evaluator, args):
     
     if isinstance(args[0], sheets.CellError) or isinstance(args[1], sheets.CellError):
         errors = [args[0], args[1]]
-        return interp.propagate_errors(errors) 
+        return error.propagate_errors(errors) 
     
     return (string_arg(args[0]) == string_arg(args[1]))
 

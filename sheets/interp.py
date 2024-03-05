@@ -1,5 +1,3 @@
-import sheets
-
 import decimal
 
 import lark
@@ -8,35 +6,14 @@ from lark.visitors import v_args
 
 from typing import Tuple, List, Any
 
+from . import base_types
+from . import error
 from . import functions
-from . import sheet
 
+from .error     import CellError, CellErrorType
 from .reference import Reference
 
 parser = lark.Lark.open('formulas.lark', rel_to=__file__, start='formula')
-
-def propagate_errors(values: List[Any]):
-    def get_error_priority(value):
-        priorities = {
-            sheets.CellErrorType.PARSE_ERROR:           6,
-            sheets.CellErrorType.CIRCULAR_REFERENCE:    5,
-            sheets.CellErrorType.BAD_REFERENCE:         4,
-            sheets.CellErrorType.BAD_NAME:              4,
-            sheets.CellErrorType.TYPE_ERROR:            4,
-            sheets.CellErrorType.DIVIDE_BY_ZERO:        4,
-        }
-
-        if isinstance(value, sheets.CellError):
-            return priorities[value.get_type()]
-        else:
-            return 0
-
-    error = max(values, default=None, key=get_error_priority)
-
-    if not isinstance(error, sheets.CellError):
-        return None
-    else:
-        return error
 
 def remove_trailing_zeros(d: decimal.Decimal):
     num = str(d)
@@ -58,11 +35,11 @@ def number_arg(index):
                 except decimal.InvalidOperation:
                     pass
 
-            if isinstance(values[index], sheets.CellError):
+            if isinstance(values[index], CellError):
                     return values[index]
 
             if not isinstance(values[index], decimal.Decimal) and not isinstance(values[index], bool):
-                    return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, f"{values[index]} failed on parsing")
+                    return CellError(CellErrorType.TYPE_ERROR, f"{values[index]} failed on parsing")
 
             value = f(self, values)
 
@@ -92,7 +69,7 @@ class CellRefFinder(lark.visitors.Interpreter):
         name = str(tree.children[0]).lower()
 
         if name not in functions.functions:
-            return sheets.CellError(sheets.CellErrorType.BAD_NAME, f"unrecognized function {name}")
+            return CellError(CellErrorType.BAD_NAME, f"unrecognized function {name}")
 
         try:
 
@@ -112,7 +89,7 @@ class CellRefFinder(lark.visitors.Interpreter):
                 self.visit_children(tree)
 
         except IndexError:
-            return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "function requires at least one argument")
+            return CellError(CellErrorType.TYPE_ERROR, "function requires at least one argument")
 
     def cell(self, tree):
         if len(tree.children) == 1:
@@ -140,7 +117,7 @@ class SheetRenamer(lark.visitors.Transformer_InPlace):
             if values[0].lower() == self.old_name.lower():
                 values[0] = self.new_name
             
-            if sheet_util.name_needs_quotes(values[0]):
+            if base_types.sheet_name_needs_quotes(values[0]):
                 values[0] = "'" + values[0] + "'"
         return tree
     
@@ -223,10 +200,10 @@ class FormulaEvaluator(lark.visitors.Interpreter):
             type(None): None
         }
 
-        error = propagate_errors([values[0], values[2]])
+        e = error.propagate_errors([values[0], values[2]])
 
-        if error is not None:
-            return error
+        if e is not None:
+            return e
 
         if values[0] is None:
             values[0] = defaults[type(values[2])]
@@ -272,7 +249,7 @@ class FormulaEvaluator(lark.visitors.Interpreter):
             return values[0] * values[2]
         elif values[1] == '/':
             if values[2] == decimal.Decimal(0):
-                return sheets.CellError(sheets.CellErrorType.DIVIDE_BY_ZERO, "")
+                return CellError(CellErrorType.DIVIDE_BY_ZERO, "")
             else:
                 return values[0] / values[2]
         else:
@@ -328,7 +305,7 @@ class FormulaEvaluator(lark.visitors.Interpreter):
     
     @visit_children_decor
     def error(self, values):
-        return sheets.CellError(sheets.CellErrorType.from_string(values[0]), "")
+        return CellError(CellErrorType.from_string(values[0]), "")
     
     @visit_children_decor
     def parens(self, values):
@@ -342,7 +319,7 @@ class FormulaEvaluator(lark.visitors.Interpreter):
         name = str(tree.children[0])
 
         if name.lower() not in functions.functions:
-            return sheets.CellError(sheets.CellErrorType.BAD_NAME, f"unrecognized function {name}")
+            return CellError(CellErrorType.BAD_NAME, f"unrecognized function {name}")
         
         arg_evaluation, f = functions.functions[name.lower()]
 

@@ -3,6 +3,7 @@ import json
 import re
 from typing import List, Dict, Any, Optional, Tuple, Callable, Iterable, TextIO
 
+from . import base_types
 from . import cell
 from . import graph
 from . import reference
@@ -72,24 +73,22 @@ class Workbook:
         # If the spreadsheet name is an empty string (not None), or it is
         # otherwise invalid, a ValueError is raised.
 
-        pattern = r'[^A-Za-z0-9.?!,:;@#$%^&*()-_\s+]'
-
-        if (sheet_name is not None) and re.search(pattern, sheet_name) is None and (sheet_name != "") and (not sheet_name.isspace()):
-
-            sheet_name = sheet_name.strip()
-
-            if sheet_name.lower() in self.sheet_map.keys():
-                raise ValueError
-
-        elif sheet_name is None:
+        if sheet_name is None:
             num = 1
             sheet_name = 'Sheet' + str(num)
             while sheet_name.lower() in self.sheet_map:
                 num += 1
                 sheet_name = 'Sheet' + str(num)
 
-        else:
+        if not isinstance(sheet_name, str):
+            raise TypeError
 
+        sheet_name = sheet_name.strip()
+
+        if not base_types.sheet_name_is_valid(sheet_name):
+            raise ValueError
+
+        if sheet_name.lower() in self.sheet_map:
             raise ValueError
 
         new_sheet = Sheet(self, sheet_name)
@@ -292,6 +291,19 @@ class Workbook:
               
         json.dump(workbook_dict, fp, indent=4)
 
+    def notify(self, cells):
+        for func in self.notify_functions:
+            try:
+                func(self, map(lambda c: (c.sheet.sheet_name, str(c.location)), cells))
+            except: # noqa: E722
+                # We catch all exceptions here because there's no way to predict
+                # what kinds of bugs the users of this library will write in their
+                # notification function.
+                #
+                # We don't want exceptions in the user code to cause our library
+                # to fail.
+                pass
+
     def notify_cells_changed(self,
             notify_function: Callable[[Any, Iterable[Tuple[str, str]]], None]) -> None:
         # notify_function (Workbook, Iterable...) -> None
@@ -333,7 +345,7 @@ class Workbook:
         #
         # If the new_sheet_name is an empty string or is otherwise invalid, a
         # ValueError is raised.
-        if not sheet.name_is_valid(new_sheet_name):
+        if not base_types.sheet_name_is_valid(new_sheet_name):
             raise ValueError
 
         if new_sheet_name.lower() in self.sheet_map:
@@ -408,7 +420,7 @@ class Workbook:
         for cell in new_sheet.cells.values():
             cell.sheet = new_sheet
             cell.recompute_value(self)
-            notify(self, {cell})
+            self.notify({cell})
 
         self.update_cells_referencing_sheet(new_name)
 
