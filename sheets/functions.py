@@ -6,27 +6,7 @@ import enum
 from . import error
 from . import interp
 from . import reference
-
-def bool_arg(value):
-    if value is None:
-        return False
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, decimal.Decimal):
-        return value != 0
-    if isinstance(value, str):
-        if value.lower() == "true":
-            return True
-        elif value.lower() == "false":
-            return False
-        else:
-            return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, f"invalid bool string {value}")
-    if isinstance(value, sheets.CellError):
-        return value
-    return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, f"cant make bool from {type(value)}")
-
-def string_arg(v):
-    return "" if v is None else (str(v).upper() if isinstance(v, bool) else str(v))
+from . import base_types
 
 def link_subtree(evaluator, subtree):
     finder = interp.CellRefFinder(evaluator.sheet.sheet_name)
@@ -59,7 +39,7 @@ def func_and(_evaluator, args):
 
     errors = []
     for a in args:
-        b = bool_arg(a)
+        b = base_types.to_bool(a)
 
         if isinstance(b, sheets.CellError) and b not in errors:
             errors.append(b)
@@ -80,7 +60,7 @@ def func_or(_evaluator, args):
 
     errors = []
     for a in args:
-        b = bool_arg(a)
+        b = base_types.to_bool(a)
 
         if isinstance(b, sheets.CellError) and b not in errors:
             errors.append(b)
@@ -97,12 +77,12 @@ def func_not(_evaluator, args):
     if len(args) != 1:
         return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "NOT requires exactly 1 argument")
     
-    b = bool_arg(args[0])
+    b = base_types.to_bool(args[0])
 
     if isinstance(b, sheets.CellError):
         return b
     else:
-        return not bool_arg(args[0])
+        return not b
 
 def func_xor(_evaluator, args):
     if len(args) < 1:
@@ -111,7 +91,7 @@ def func_xor(_evaluator, args):
     count_true = 0
     errors = []
     for a in args:
-        b = bool_arg(a)
+        b = base_types.to_bool(a)
         
         if isinstance(b, sheets.CellError) and b not in errors:
             errors.append(b)
@@ -132,14 +112,14 @@ def func_exact(_evaluator, args):
         errors = [args[0], args[1]]
         return error.propagate_errors(errors) 
     
-    return (string_arg(args[0]) == string_arg(args[1]))
+    return (base_types.to_string(args[0]) == base_types.to_string(args[1]))
 
 def func_if(evaluator, args):
     # lazy!!!
     if len(args) < 2 or len(args) > 3:
         return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "IF requires exactly 2 or 3 arguments")
     
-    b = bool_arg(evaluator.visit(args[0]))
+    b = base_types.to_bool(evaluator.visit(args[0]))
 
     if isinstance(b, sheets.CellError):
         return b

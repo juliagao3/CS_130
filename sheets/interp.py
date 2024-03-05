@@ -24,35 +24,6 @@ def remove_trailing_zeros(d: decimal.Decimal):
         num = num[:-1]
     return decimal.Decimal(num)
 
-def number_arg(index):
-    def check(f):
-        def new_f(self, values):
-            if values[index] is None:
-                values[index] = decimal.Decimal(0)
-            elif isinstance(values[index], str):
-                try:
-                    values[index] = decimal.Decimal(values[index])
-                except decimal.InvalidOperation:
-                    pass
-
-            if isinstance(values[index], CellError):
-                    return values[index]
-
-            if not isinstance(values[index], decimal.Decimal) and not isinstance(values[index], bool):
-                    return CellError(CellErrorType.TYPE_ERROR, f"{values[index]} failed on parsing")
-
-            value = f(self, values)
-
-            if isinstance(value, decimal.Decimal):
-                value = remove_trailing_zeros(value)
-
-            return value
-        return new_f
-    return check
-
-def string_arg(v):
-    return "" if v is None else (str(v).upper() if isinstance(v, bool) else str(v))
-
 def strip_quotes(s: str):
     if s[0] != "'":
         return s
@@ -231,39 +202,58 @@ class FormulaEvaluator(lark.visitors.Interpreter):
             return ops[values[1]](types[type(values[0])], types[type(values[2])])
 
     @visit_children_decor
-    @number_arg(0)
-    @number_arg(2)
     def add_expr(self, values):
-        if values[1] == "+":
-            return values[0] + values[2]
-        elif values[1] == "-":
-            return values[0] - values[2]
+        left = base_types.to_number(values[0])
+        op = values[1]
+        right = base_types.to_number(values[2])
+
+        e = error.propagate_errors([left, right])
+
+        if e is not None:
+            return e
+
+        if op == "+":
+            return left + right
+        elif op == "-":
+            return left - right
         else:
             assert f"Unexpected add_expr operator: {values[1]}"
             
     @visit_children_decor
-    @number_arg(0)
-    @number_arg(2)
     def mul_expr(self, values):
-        if values[1] == "*":
-            return values[0] * values[2]
-        elif values[1] == '/':
-            if values[2] == decimal.Decimal(0):
+        left = base_types.to_number(values[0])
+        op = values[1]
+        right = base_types.to_number(values[2])
+
+        e = error.propagate_errors([left, right])
+
+        if e is not None:
+            return e
+
+        if op == "*":
+            return left * right
+        elif op == '/':
+            if right == decimal.Decimal(0):
                 return CellError(CellErrorType.DIVIDE_BY_ZERO, "")
             else:
-                return values[0] / values[2]
+                return left / right
         else:
             assert f"Unexpected mul_expr operator: {values[1]}"
 
     @visit_children_decor
-    @number_arg(1)
     def unary_op(self, values):
-        if values[0] == '+':
-            return values[1]
-        elif values[0] == '-':
-            return -1 * values[1]
+        op = values[0]
+        value = base_types.to_number(values[1])
+
+        if isinstance(value, CellError):
+            return value
+
+        if op == '+':
+            return value
+        elif op == '-':
+            return -1 * value
         else:
-            assert f"Unexpected unary operator: {values[0]}"
+            assert f"Unexpected unary operator: {op}"
         
     @visit_children_decor
     def cell(self, values):
@@ -290,7 +280,7 @@ class FormulaEvaluator(lark.visitors.Interpreter):
 
     @visit_children_decor
     def concat_expr(self, values):
-        return "".join(map(string_arg, values))
+        return "".join(map(base_types.to_string, values))
 
     @visit_children_decor
     def number(self, values):
