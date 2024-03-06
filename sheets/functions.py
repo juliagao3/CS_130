@@ -1,6 +1,5 @@
 import sheets
 
-import decimal
 import enum
 
 from . import error

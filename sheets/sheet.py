@@ -1,5 +1,4 @@
 import bisect
-import re
 
 from . import base_types
 

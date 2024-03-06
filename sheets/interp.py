@@ -4,7 +4,7 @@ import lark
 from lark.visitors import visit_children_decor
 from lark.visitors import v_args
 
-from typing import Tuple, List, Any
+from typing import Tuple
 
 from . import base_types
 from . import error
@@ -207,6 +207,7 @@ class FormulaEvaluator(lark.visitors.Interpreter):
         op = values[1]
         right = base_types.to_number(values[2])
 
+        print(left, right, op)
         e = error.propagate_errors([left, right])
 
         if e is not None:

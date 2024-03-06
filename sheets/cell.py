@@ -1,8 +1,5 @@
-import enum
 import decimal
-from typing import Optional
 
-from . import error
 from . import interp
 from . import reference
 
