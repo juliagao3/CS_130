@@ -1,13 +1,15 @@
-from typing import List, Dict, Any, Optional, Tuple, Callable, Iterable
-import re
-from .sheet import Sheet, name_is_valid
-from .graph import Graph
-from .cell import Cell, CellError, CellErrorType, notify
-from .reference import Reference
 import copy
-
-from typing import TextIO
 import json
+from typing import List, Dict, Any, Optional, Tuple, Callable, Iterable, TextIO
+
+from . import base_types
+from . import cell
+from . import sheet
+
+from .error     import CellError, CellErrorType
+from .graph     import Graph
+from .reference import Reference
+from .sheet     import Sheet
 
 class Workbook:
     # A workbook containing zero or more named spreadsheets.
@@ -23,17 +25,17 @@ class Workbook:
             self.workbook_name: str = "wb"
 
         # List of sheets in order of creation
-        self.sheets: List[Sheet] = []
+        self.sheets: List[sheet.Sheet] = []
 
         # map from lowercase sheet name to sheet
-        self.sheet_map: Dict[str, Sheet] = {}
+        self.sheet_map: Dict[str, sheet.Sheet] = {}
         
         # cells point to sheet names they reference
         self.sheet_references = Graph[Any]()
 
         # Graph
-        self.dependency_graph = Graph[Cell]()
-        self.run_time_dependency_graph = Graph[Cell]()
+        self.dependency_graph = Graph[cell.Cell]()
+        self.run_time_dependency_graph = Graph[cell.Cell]()
 
         # function to call when cells update
         self.notify_functions = []
@@ -54,7 +56,7 @@ class Workbook:
         #
         # A user should be able to mutate the return-value without affecting the
         # workbook's internal state.
-        return [sheet.get_quoted_name() for sheet in self.sheets]
+        return [s.get_quoted_name() for s in self.sheets]
 
     def new_sheet(self, sheet_name: Optional[str] = None) -> Tuple[int, str]:
         # Add a new sheet to the workbook.  If the sheet name is specified, it
@@ -69,29 +71,27 @@ class Workbook:
         # If the spreadsheet name is an empty string (not None), or it is
         # otherwise invalid, a ValueError is raised.
 
-        pattern = r'[^A-Za-z0-9.?!,:;@#$%^&*()-_\s+]'
-
-        if (sheet_name is not None) and re.search(pattern, sheet_name) is None and (sheet_name != "") and (not sheet_name.isspace()):
-
-            sheet_name = sheet_name.strip()
-
-            if sheet_name.lower() in self.sheet_map.keys():
-                raise ValueError
-
-        elif sheet_name is None:
+        if sheet_name is None:
             num = 1
             sheet_name = 'Sheet' + str(num)
             while sheet_name.lower() in self.sheet_map:
                 num += 1
                 sheet_name = 'Sheet' + str(num)
 
-        else:
+        if not isinstance(sheet_name, str):
+            raise TypeError
 
+        sheet_name = sheet_name.strip()
+
+        if not base_types.sheet_name_is_valid(sheet_name):
             raise ValueError
 
-        sheet = Sheet(self, sheet_name)
-        self.sheet_map[sheet_name.lower()] = sheet
-        self.sheets.append(sheet)
+        if sheet_name.lower() in self.sheet_map:
+            raise ValueError
+
+        new_sheet = Sheet(self, sheet_name)
+        self.sheet_map[sheet_name.lower()] = new_sheet
+        self.sheets.append(new_sheet)
 
         self.update_cells_referencing_sheet(sheet_name)
 
@@ -199,9 +199,9 @@ class Workbook:
 
     def update_cells(self, nodes):
         order = self.dependency_graph.get_topological_order()
-        for cell in order:
-            if cell in nodes:
-                cell.recompute_value(self)
+        for c in order:
+            if c in nodes:
+                c.recompute_value(self)
 
         for node in nodes:
             if node in order:
@@ -221,9 +221,9 @@ class Workbook:
         cycles = self.dependency_graph.get_cycles()
         circular = set()
         for cycle in cycles:
-            for cell in cycle:
-                cell.set_value(CellError(CellErrorType.CIRCULAR_REFERENCE, ""))
-                circular.add(cell)
+            for c in cycle:
+                c.set_value(CellError(CellErrorType.CIRCULAR_REFERENCE, ""))
+                circular.add(c)
         self.update_ancestors(circular)
 
     @staticmethod
@@ -284,10 +284,23 @@ class Workbook:
         workbook_dict = dict()
         workbook_dict["sheets"] = list()
 
-        for sheet in self.sheets:
-            workbook_dict["sheets"].append(sheet.to_json())
+        for s in self.sheets:
+            workbook_dict["sheets"].append(s.to_json())
               
         json.dump(workbook_dict, fp, indent=4)
+
+    def notify(self, cells):
+        for func in self.notify_functions:
+            try:
+                func(self, map(lambda c: (c.sheet.sheet_name, str(c.location)), cells))
+            except: # noqa: E722
+                # We catch all exceptions here because there's no way to predict
+                # what kinds of bugs the users of this library will write in their
+                # notification function.
+                #
+                # We don't want exceptions in the user code to cause our library
+                # to fail.
+                pass
 
     def notify_cells_changed(self,
             notify_function: Callable[[Any, Iterable[Tuple[str, str]]], None]) -> None:
@@ -330,7 +343,7 @@ class Workbook:
         #
         # If the new_sheet_name is an empty string or is otherwise invalid, a
         # ValueError is raised.
-        if not name_is_valid(new_sheet_name):
+        if not base_types.sheet_name_is_valid(new_sheet_name):
             raise ValueError
 
         if new_sheet_name.lower() in self.sheet_map:
@@ -402,10 +415,10 @@ class Workbook:
         self.sheets.append(new_sheet)
         self.sheet_map[new_name.lower()] = new_sheet
 
-        for cell in new_sheet.cells.values():
-            cell.sheet = new_sheet
-            cell.recompute_value(self)
-            notify(self, {cell})
+        for c in new_sheet.cells.values():
+            c.sheet = new_sheet
+            c.recompute_value(self)
+            self.notify({c})
 
         self.update_cells_referencing_sheet(new_name)
 

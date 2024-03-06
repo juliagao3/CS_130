@@ -1,8 +1,7 @@
 import re
-
-from . import sheet
-
 from typing import Tuple, Optional
+
+from . import base_types
 
 location_regex = re.compile("(([A-Za-z_][A-Za-z0-9_]*|'[^']*')!)?(\$?)([A-Za-z]+)(\$?)([0-9]+)")
 
@@ -87,7 +86,7 @@ class Reference:
         def f(s: Optional[str]) -> str:
             if s is None:
                 return ""
-            elif sheet.name_needs_quotes(s):
+            elif base_types.sheet_name_needs_quotes(s):
                 return "'" + s + "'!"
             else:
                 return s + "!"

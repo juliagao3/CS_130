@@ -539,7 +539,7 @@ class TestClass(unittest.TestCase):
                 wb.set_cell_contents(sheet_name, "B5", "=#Ref!+A5")
                 b5 = wb.get_cell_value(sheet_name, "B5")
                 self.assertIsInstance(b5, sheets.CellError)
-                self.assertEqual(b5.get_type(), sheets.CellErrorType.BAD_REFERENCE)
+                self.assertEqual(b5.get_type(), sheets.CellErrorType.PARSE_ERROR)
 
         def test_parentheses_in_formulas(self):
                 wb = sheets.Workbook()

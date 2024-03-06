@@ -1,38 +1,19 @@
-import sheets
 import decimal
+
 import lark
 from lark.visitors import visit_children_decor
 from lark.visitors import v_args
-from . import sheet as sheet_util
+
+from typing import Tuple
+
+from . import base_types
+from . import error
 from . import functions
+
+from .error     import CellError, CellErrorType
 from .reference import Reference
 
-from typing import Tuple, List, Any
-
 parser = lark.Lark.open('formulas.lark', rel_to=__file__, start='formula')
-
-def propagate_errors(values: List[Any]):
-    def get_error_priority(value):
-        priorities = {
-            sheets.CellErrorType.PARSE_ERROR:           6,
-            sheets.CellErrorType.CIRCULAR_REFERENCE:    5,
-            sheets.CellErrorType.BAD_REFERENCE:         4,
-            sheets.CellErrorType.BAD_NAME:              4,
-            sheets.CellErrorType.TYPE_ERROR:            4,
-            sheets.CellErrorType.DIVIDE_BY_ZERO:        4,
-        }
-
-        if isinstance(value, sheets.CellError):
-            return priorities[value.get_type()]
-        else:
-            return 0
-
-    error = max(values, default=None, key=get_error_priority)
-
-    if not isinstance(error, sheets.CellError):
-        return None
-    else:
-        return error
 
 def remove_trailing_zeros(d: decimal.Decimal):
     num = str(d)
@@ -42,35 +23,6 @@ def remove_trailing_zeros(d: decimal.Decimal):
     if num[-1] == ".":
         num = num[:-1]
     return decimal.Decimal(num)
-
-def number_arg(index):
-    def check(f):
-        def new_f(self, values):
-            if values[index] is None:
-                values[index] = decimal.Decimal(0)
-            elif isinstance(values[index], str):
-                try:
-                    values[index] = decimal.Decimal(values[index])
-                except decimal.InvalidOperation:
-                    pass
-
-            if isinstance(values[index], sheets.CellError):
-                    return values[index]
-
-            if not isinstance(values[index], decimal.Decimal) and not isinstance(values[index], bool):
-                    return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, f"{values[index]} failed on parsing")
-
-            value = f(self, values)
-
-            if isinstance(value, decimal.Decimal):
-                value = remove_trailing_zeros(value)
-
-            return value
-        return new_f
-    return check
-
-def string_arg(v):
-    return "" if v is None else (str(v).upper() if isinstance(v, bool) else str(v))
 
 def strip_quotes(s: str):
     if s[0] != "'":
@@ -88,7 +40,7 @@ class CellRefFinder(lark.visitors.Interpreter):
         name = str(tree.children[0]).lower()
 
         if name not in functions.functions:
-            return sheets.CellError(sheets.CellErrorType.BAD_NAME, f"unrecognized function {name}")
+            return CellError(CellErrorType.BAD_NAME, f"unrecognized function {name}")
 
         try:
 
@@ -108,7 +60,7 @@ class CellRefFinder(lark.visitors.Interpreter):
                 self.visit_children(tree)
 
         except IndexError:
-            return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "function requires at least one argument")
+            return CellError(CellErrorType.TYPE_ERROR, "function requires at least one argument")
 
     def cell(self, tree):
         if len(tree.children) == 1:
@@ -136,7 +88,7 @@ class SheetRenamer(lark.visitors.Transformer_InPlace):
             if values[0].lower() == self.old_name.lower():
                 values[0] = self.new_name
             
-            if sheet_util.name_needs_quotes(values[0]):
+            if base_types.sheet_name_needs_quotes(values[0]):
                 values[0] = "'" + values[0] + "'"
         return tree
     
@@ -219,10 +171,10 @@ class FormulaEvaluator(lark.visitors.Interpreter):
             type(None): None
         }
 
-        error = propagate_errors([values[0], values[2]])
+        e = error.propagate_errors([values[0], values[2]])
 
-        if error is not None:
-            return error
+        if e is not None:
+            return e
 
         if values[0] is None:
             values[0] = defaults[type(values[2])]
@@ -250,39 +202,58 @@ class FormulaEvaluator(lark.visitors.Interpreter):
             return ops[values[1]](types[type(values[0])], types[type(values[2])])
 
     @visit_children_decor
-    @number_arg(0)
-    @number_arg(2)
     def add_expr(self, values):
-        if values[1] == "+":
-            return values[0] + values[2]
-        elif values[1] == "-":
-            return values[0] - values[2]
+        left = base_types.to_number(values[0])
+        op = values[1]
+        right = base_types.to_number(values[2])
+
+        e = error.propagate_errors([left, right])
+
+        if e is not None:
+            return e
+
+        if op == "+":
+            return left + right
+        elif op == "-":
+            return left - right
         else:
             assert f"Unexpected add_expr operator: {values[1]}"
             
     @visit_children_decor
-    @number_arg(0)
-    @number_arg(2)
     def mul_expr(self, values):
-        if values[1] == "*":
-            return values[0] * values[2]
-        elif values[1] == '/':
-            if values[2] == decimal.Decimal(0):
-                return sheets.CellError(sheets.CellErrorType.DIVIDE_BY_ZERO, "")
+        left = base_types.to_number(values[0])
+        op = values[1]
+        right = base_types.to_number(values[2])
+
+        e = error.propagate_errors([left, right])
+
+        if e is not None:
+            return e
+
+        if op == "*":
+            return left * right
+        elif op == '/':
+            if right == decimal.Decimal(0):
+                return CellError(CellErrorType.DIVIDE_BY_ZERO, "")
             else:
-                return values[0] / values[2]
+                return left / right
         else:
             assert f"Unexpected mul_expr operator: {values[1]}"
 
     @visit_children_decor
-    @number_arg(1)
     def unary_op(self, values):
-        if values[0] == '+':
-            return values[1]
-        elif values[0] == '-':
-            return -1 * values[1]
+        op = values[0]
+        value = base_types.to_number(values[1])
+
+        if isinstance(value, CellError):
+            return value
+
+        if op == '+':
+            return value
+        elif op == '-':
+            return -1 * value
         else:
-            assert f"Unexpected unary operator: {values[0]}"
+            assert f"Unexpected unary operator: {op}"
         
     @visit_children_decor
     def cell(self, values):
@@ -309,7 +280,7 @@ class FormulaEvaluator(lark.visitors.Interpreter):
 
     @visit_children_decor
     def concat_expr(self, values):
-        return "".join(map(string_arg, values))
+        return "".join(map(base_types.to_string, values))
 
     @visit_children_decor
     def number(self, values):
@@ -324,7 +295,7 @@ class FormulaEvaluator(lark.visitors.Interpreter):
     
     @visit_children_decor
     def error(self, values):
-        return sheets.CellError(sheets.CellErrorType.from_string(values[0]), "")
+        return CellError(CellErrorType.from_string(values[0]), "")
     
     @visit_children_decor
     def parens(self, values):
@@ -338,7 +309,7 @@ class FormulaEvaluator(lark.visitors.Interpreter):
         name = str(tree.children[0])
 
         if name.lower() not in functions.functions:
-            return sheets.CellError(sheets.CellErrorType.BAD_NAME, f"unrecognized function {name}")
+            return CellError(CellErrorType.BAD_NAME, f"unrecognized function {name}")
         
         arg_evaluation, f = functions.functions[name.lower()]
 
