@@ -499,5 +499,13 @@ class TestClass(unittest.TestCase):
 
         self.assertEqual(wb.get_cell_value(n, "A1"), decimal.Decimal("0"))
 
+    def test_isblank_bad_reference(self):
+        wb = sheets.Workbook()
+        _, n = wb.new_sheet()
+
+        wb.set_cell_contents(n, "A1", '=ISBLANK(Sheet2!A1)')
+
+        self.assertEqual(wb.get_cell_value(n, "A1"), False)
+
 if __name__ == "__main__":
         unittest.main()
