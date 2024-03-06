@@ -463,17 +463,17 @@ class Workbook:
         for col in col_iter:
             for row in row_iter:
                 from_ref = start_ref.moved((col, row))
-                contents = copy.copy(sheet.get_cell_contents(from_ref))
-
-                if is_move:
-                    sheet.set_cell_contents(self, from_ref, "")
+                from_cell = self.get_cell(sheet.sheet_name, from_ref)
 
                 to_ref = to_start_ref.moved((col, row))
-                to_sheet.set_cell_contents(self, to_ref, contents)
-                cell = to_sheet.get_cell(to_ref)
-                cell.move_formula(self, offset)
-                updated.add(cell)
-                updated.add(sheet.get_cell(from_ref))
+                to_cell = self.get_cell(to_sheet.sheet_name, to_ref)
+                to_cell.copy_cell(from_cell, self, offset)
+
+                if is_move and to_cell is not from_cell:
+                    from_cell.set_contents(self, "")
+
+                updated.add(to_cell)
+                updated.add(from_cell)
         self.update_cells(updated)
         self.update_ancestors(updated)
 

@@ -1,4 +1,7 @@
+import copy
 import decimal
+
+from typing import Tuple
 
 from . import interp
 from . import reference
@@ -64,11 +67,14 @@ class Cell:
             except (KeyError, ValueError):
                 pass
                 
+    def check_cycles(self, workbook):
         for cycle in workbook.dependency_graph.get_cycles():
             if self in cycle:
                 raise FormulaError(CellError(CellErrorType.CIRCULAR_REFERENCE, ""))
 
     def evaluate_formula(self, workbook):
+        self.check_cycles(workbook)
+
         value = interp.evaluate_formula(workbook, self.sheet, self, self.formula_tree)
 
         if value is None:
@@ -100,6 +106,18 @@ class Cell:
             self.evaluate_formula(workbook)
         except FormulaError as e:
             self.set_value(e.value)
+
+    def copy_cell(self, other_cell, workbook, offset: Tuple[int, int]):
+        workbook.sheet_references.clear_forward_links((self.sheet, self))
+        workbook.dependency_graph.clear_forward_links(self)
+
+        self.contents = other_cell.contents
+        self.formula_tree = copy.deepcopy(other_cell.formula_tree)
+        self.value = other_cell.value
+
+        if self.formula_tree is not None:
+            self.contents = interp.move_formula(offset, self.formula_tree)
+            self.check_references(workbook)
 
     def set_contents(self, workbook, contents: str):
         workbook.sheet_references.clear_forward_links((self.sheet, self))

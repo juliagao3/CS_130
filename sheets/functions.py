@@ -217,7 +217,7 @@ def func_indirect(evaluator, args):
         cell = evaluator.workbook.get_cell(ref.sheet_name or evaluator.sheet.sheet_name, ref)
 
         evaluator.workbook.dependency_graph.link_runtime(evaluator.c, cell)
-        evaluator.c.check_references(evaluator.workbook)
+        evaluator.c.check_cycles(evaluator.workbook)
 
         # If the argument can be parsed as a cell reference, but is invalid due to an error
         # returns BAD_REFERENCE
