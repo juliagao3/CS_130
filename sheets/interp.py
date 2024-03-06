@@ -207,7 +207,6 @@ class FormulaEvaluator(lark.visitors.Interpreter):
         op = values[1]
         right = base_types.to_number(values[2])
 
-        print(left, right, op)
         e = error.propagate_errors([left, right])
 
         if e is not None:
