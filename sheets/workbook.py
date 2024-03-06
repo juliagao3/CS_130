@@ -121,7 +121,7 @@ class Workbook:
         #
         # If the specified sheet name is not found, a KeyError is raised.
         
-        return self.sheet_map[sheet_name.lower()].extent
+        return self.sheet_map[sheet_name.lower()].get_extent()
 
     def set_cell_contents(self, sheet_name: str, location: str,
                           contents: Optional[str]) -> None:

@@ -39,38 +39,24 @@ class Sheet:
     def update_sheet_name(self, new_name):
         self.sheet_name = new_name
 
+    def get_extent(self):
+        extent = (0, 0)
+        for location, cell in self.cells.items():
+            if cell.contents is None:
+                continue
+            extent = (max(extent[0], location[0]),
+                        max(extent[1], location[1]))
+        return extent
+
     def set_cell_contents(self, workbook, ref: Reference, content: str):
         location = ref.tuple()
 
         if location not in self.cells:
             self.cells[location] = Cell(self, ref)
 
-        old_contents = self.cells[location].contents
         self.cells[location].set_contents(workbook, content)
 
-        empty = content is None or content == "" or content.isspace()
-        was_empty = old_contents is None or old_contents == "" or old_contents.isspace()
-        
-        if empty and not was_empty:
-            index_col = bisect.bisect_left(self.cols_hist, location[0])
-            index_row = bisect.bisect_left(self.rows_hist, location[1])
-            self.cols_hist.pop(index_col)
-            self.rows_hist.pop(index_row)
-
-            assert len(self.cols_hist) == len(self.rows_hist)
-
-            if len(self.cols_hist) == 0:
-                self.extent = (0, 0)
-            else:
-                self.extent = (self.cols_hist[len(self.cols_hist) - 1], self.rows_hist[len(self.rows_hist) - 1])
-        elif not empty:
-            self.extent = (max(self.extent[0], location[0]),
-                            max(self.extent[1], location[1]))
-            bisect.insort(self.cols_hist, location[0])
-            bisect.insort(self.rows_hist, location[1])
-
         return self.cells[location]
-    
 
     def get_cell_contents(self, ref: Reference):
         location = ref.tuple()
