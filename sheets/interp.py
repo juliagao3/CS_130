@@ -266,17 +266,14 @@ class FormulaEvaluator(lark.visitors.Interpreter):
         
         sheet_name = strip_quotes(sheet_name)
 
-        ref = Reference.from_string(cell_ref, allow_absolute=True)
-        ref.abs_col = False
-        ref.abs_row = False
-        cell_ref = str(ref)
-
         try:
+            ref = Reference.from_string(cell_ref, allow_absolute=True)
+            ref.abs_col = False
+            ref.abs_row = False
+            cell_ref = str(ref)
             return self.workbook.get_cell_value(sheet_name, cell_ref) 
-        except ValueError:
-            assert "Uncaught bad reference!!!"
-        except KeyError:
-            assert "Uncaught bad reference!!!"
+        except (ValueError, KeyError):
+            return CellError(CellErrorType.BAD_REFERENCE, cell_ref)
 
     @visit_children_decor
     def concat_expr(self, values):
