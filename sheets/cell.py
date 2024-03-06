@@ -48,8 +48,6 @@ class Cell:
             raise FormulaError(CellError(CellErrorType.PARSE_ERROR, ""))
 
     def check_references(self, workbook):
-        is_error = False
-
         static_refs, all_refs = interp.find_refs(workbook, self.sheet, self.formula_tree)
 
         # link to all referenced sheet names - even if they're not used
@@ -64,15 +62,11 @@ class Cell:
                 cell = workbook.get_cell(sheet_name, ref)
                 workbook.dependency_graph.link(self, cell)
             except (KeyError, ValueError):
-                is_error = True
                 pass
                 
         for cycle in workbook.dependency_graph.get_cycles():
             if self in cycle:
                 raise FormulaError(CellError(CellErrorType.CIRCULAR_REFERENCE, ""))
-
-        if is_error:
-            raise FormulaError(CellError(CellErrorType.BAD_REFERENCE, ""))
 
     def evaluate_formula(self, workbook):
         value = interp.evaluate_formula(workbook, self.sheet, self, self.formula_tree)
@@ -105,12 +99,7 @@ class Cell:
             self.check_references(workbook)
             self.evaluate_formula(workbook)
         except FormulaError as e:
-            # If we get a BAD_REFERENCE error when checking references, it will raise
-            # before checking the formula. In that case, the value should be False
-            if self.contents[1:8] == "ISBLANK" and e.value.get_type() == CellErrorType.BAD_REFERENCE:
-                self.set_value(False)
-            else:
-                self.set_value(e.value)
+            self.set_value(e.value)
 
     def set_contents(self, workbook, contents: str):
         workbook.sheet_references.clear_forward_links((self.sheet, self))
@@ -131,16 +120,7 @@ class Cell:
                 self.check_references(workbook)
                 self.evaluate_formula(workbook)
             except FormulaError as e:
-                # If we get a BAD_REFERENCE error when checking references, it will raise
-                # before checking the formula. In that case, the value should be False
-                if contents[1:8] == "ISBLANK" and e.value.get_type() == CellErrorType.BAD_REFERENCE:
-                    self.set_value(False)
-                # If we get a PARSE_ERROR error when parsing the formula, it will raise 
-                # before checking it. In that case, the value should be BAD_REFERENCE
-                elif contents[1:9] == "INDIRECT" and e.value.get_type() == CellErrorType.PARSE_ERROR:
-                    self.set_value(CellError(CellErrorType.BAD_REFERENCE, ""))
-                else:
-                    self.set_value(e.value)
+                self.set_value(e.value)
         elif contents[0] == "'":
             self.set_value(contents[1:])
         elif contents.lower() == "true":
