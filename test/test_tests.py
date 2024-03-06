@@ -328,6 +328,16 @@ class TestClass(unittest.TestCase):
                 wb.set_cell_contents(sheet_name, "C4", "")
                 self.assertEqual(wb.get_sheet_extent(sheet_name), init_extent)
                 
+        def test_extent_histogram(self):
+                wb = sheets.Workbook()
+                i, n = wb.new_sheet(None)
+
+                wb.set_cell_contents(n, "J10", "hi")
+                wb.set_cell_contents(n, "J10", "hello")
+                wb.set_cell_contents(n, "J10", "")
+
+                self.assertEqual(wb.get_sheet_extent(n), (0, 0))
+
         def test_multiple_sheets(self):
                 wb = sheets.Workbook("wb")
                 sheet_num1, sheet_name1 = wb.new_sheet("Sheet1")
