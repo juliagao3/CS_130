@@ -1,9 +1,39 @@
 import bisect
 
+import functools
+
 from . import base_types
 
 from .cell import Cell
 from .reference import Reference
+
+from typing import List
+
+@functools.total_ordering
+class SortRow:
+
+    def __init__(self, sheet, sort_cols, order, row_index):
+        self.sheet = sheet
+        self.sort_cols = sort_cols
+        self.order = order
+        self.row_index = row_index
+    
+    def __lt__(self, other):
+        for col_order, col_index in zip(self.order, self.sort_cols):
+            my_ref = Reference(col_index, self.row_index)
+            my_value = self.sheet.get_cell_value(my_ref)
+
+            other_ref = Reference(col_index, other.row_index)
+            other_value = self.sheet.get_cell_value(other_ref)
+
+            if base_types.lt(my_value, other_value):
+                return True ^ col_order
+            elif base_types.lt(other_value, my_value):
+                return False ^ col_order
+        return False
+    
+    def __str__(self):
+        return str(self.row_index)
 
 class Sheet:
     def __init__(self, workbook, sheet_name):
@@ -80,3 +110,29 @@ class Sheet:
             self.cells[location] = Cell(self, str(ref))
         
         return self.cells[location]
+
+    def sort_region(self, workbook, start_ref, end_ref, sort_cols: List[int]):
+        order = [False if col > 0 else True for col in sort_cols]
+        sort_cols = [start_ref.col + abs(col) - 1 for col in sort_cols]
+
+        sort_rows = [SortRow(self, sort_cols, order, row) for row in range(start_ref.row, end_ref.row + 1)]
+        sort_rows.sort()
+
+        copy = []
+
+        for col in range(start_ref.col, end_ref.col + 1):
+            l = []
+            for row in range(start_ref.row, end_ref.row + 1):
+                ref = Reference(col, row)
+                l.append(self.get_cell(ref))
+            copy.append(l)
+
+        for to_row_relative, sort_row in enumerate(sort_rows):
+            to_row = to_row_relative + start_ref.row
+            from_row = sort_row.row_index
+            for col in range(start_ref.col, end_ref.col + 1):
+                c = copy[col - start_ref.col][from_row - start_ref.row]
+                c.location = Reference(col, to_row)
+                c.move_formula(workbook, (0, to_row - from_row))
+                self.cells[(col, to_row)] = copy[col - start_ref.col][from_row - start_ref.row]
+

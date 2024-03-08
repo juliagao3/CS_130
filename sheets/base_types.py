@@ -3,6 +3,8 @@ import re
 
 from typing import Any
 
+from . import error
+
 from .error import CellError, CellErrorType
 
 def sheet_name_is_valid(name: str):
@@ -77,3 +79,22 @@ def to_string(value: Any) -> str:
         return str(value).upper()
 
     return CellError(CellErrorType.TYPE_ERROR, f"failed to convert type {type(value)} to a string")
+
+def lt(a, b):
+    if isinstance(a, type(b)):
+        if isinstance(a, str):
+            a = a.lower()
+
+        if isinstance(b, str):
+            b = b.lower()
+
+        if isinstance(a, CellError):
+            a = a.get_type()
+
+        if isinstance(b, CellError):
+            b = b.get_type()
+
+        return a < b
+    else:
+        types = {type(None): 0, CellError: 1, decimal.Decimal: 2, str: 3, bool: 4}
+        return types[type(a)] < types[type(b)]
