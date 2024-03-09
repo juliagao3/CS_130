@@ -1,5 +1,3 @@
-import bisect
-
 import functools
 
 from . import base_types
@@ -121,11 +119,11 @@ class Sheet:
         copy = []
 
         for col in range(start_ref.col, end_ref.col + 1):
-            l = []
+            row_list = []
             for row in range(start_ref.row, end_ref.row + 1):
                 ref = Reference(col, row)
-                l.append(self.get_cell(ref))
-            copy.append(l)
+                row_list.append(self.get_cell(ref))
+            copy.append(row_list)
 
         for to_row_relative, sort_row in enumerate(sort_rows):
             to_row = to_row_relative + start_ref.row

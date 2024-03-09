@@ -3,8 +3,6 @@ import re
 
 from typing import Any
 
-from . import error
-
 from .error import CellError, CellErrorType
 
 def sheet_name_is_valid(name: str):
