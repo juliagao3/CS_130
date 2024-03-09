@@ -417,9 +417,11 @@ class Workbook:
 
         for c in new_sheet.cells.values():
             c.sheet = new_sheet
-            c.recompute_value(self)
-            self.notify({c})
 
+        for c in new_sheet.cells.values():
+            c.check_references(self)
+
+        self.update_cells(new_sheet.cells.values())
         self.update_cells_referencing_sheet(new_name)
 
         return (len(self.sheets) - 1, new_name)

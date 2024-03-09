@@ -51,6 +51,9 @@ class Cell:
             raise FormulaError(CellError(CellErrorType.PARSE_ERROR, ""))
 
     def check_references(self, workbook):
+        if self.formula_tree is None:
+            return
+
         static_refs, all_refs = interp.find_refs(workbook, self.sheet, self.formula_tree)
 
         # link to all referenced sheet names - even if they're not used
