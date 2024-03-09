@@ -208,6 +208,8 @@ class Workbook:
                 continue
             node.recompute_value(self)
 
+        self.notify(nodes)
+
     def update_ancestors(self, nodes):
         self.update_cells(self.dependency_graph.get_ancestors_of_set(nodes))
 
