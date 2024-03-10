@@ -105,7 +105,7 @@ class Sheet:
         location = ref.tuple()
 
         if location not in self.cells:
-            self.cells[location] = Cell(self, str(ref))
+            self.cells[location] = Cell(self, ref)
         
         return self.cells[location]
 
