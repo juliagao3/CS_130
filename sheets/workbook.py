@@ -405,26 +405,21 @@ class Workbook:
 
         sheet_object = self.sheet_map[sheet_name.lower()]
         sheet_name = sheet_object.sheet_name
-        new_sheet = copy.deepcopy(sheet_object)
-        
+
         i = 1
         new_name = sheet_name + "_" + str(i)
         while new_name.lower() in self.sheet_map:
             i += 1
             new_name = sheet_name + "_" + str(i)
-        
-        new_sheet.sheet_name = new_name
-        self.sheets.append(new_sheet)
-        self.sheet_map[new_name.lower()] = new_sheet
 
-        for c in new_sheet.cells.values():
-            c.sheet = new_sheet
+        self.new_sheet(new_name)
+        new_sheet = self.sheet_map[new_name.lower()]
 
-        for c in new_sheet.cells.values():
-            c.check_references(self)
+        for c in sheet_object.cells.values():
+            new_sheet.get_cell(c.location).copy_cell(c, self, (0, 0))
 
-        self.update_cells(new_sheet.cells.values())
         self.update_cells_referencing_sheet(new_name)
+        self.notify(new_sheet.cells.values())
 
         return (len(self.sheets) - 1, new_name)
     
