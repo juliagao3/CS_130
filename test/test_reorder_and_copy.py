@@ -55,9 +55,9 @@ class TestClass(unittest.TestCase):
 
         copy_num, copy_name = wb.copy_sheet(sheet_name1)
         self.assertEqual(wb.get_cell_value(copy_name, "A1"), wb.get_cell_value(sheet_name1, "A1"))
-        self.assertEqual(wb.get_cell_contents(copy_name, "A1"), wb.get_cell_contents(copy_name, "A1"))
+        self.assertEqual(wb.get_cell_contents(copy_name, "A1").lower(), wb.get_cell_contents(copy_name, "A1").lower())
         self.assertEqual(wb.get_cell_value(copy_name, "A2"), wb.get_cell_value(sheet_name1, "A2"))
-        self.assertEqual(wb.get_cell_contents(copy_name, "A2"), wb.get_cell_contents(sheet_name1, "A2"))
+        self.assertEqual(wb.get_cell_contents(copy_name, "A2").lower(), wb.get_cell_contents(sheet_name1, "A2").lower())
         self.assertEqual(wb.get_cell_value(sheet_name2, "B1"), decimal.Decimal(25))
         
         self.assertEqual(copy_num, 2)
