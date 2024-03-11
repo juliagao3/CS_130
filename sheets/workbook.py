@@ -275,13 +275,17 @@ class Workbook:
                         raise TypeError("Input JSON has an incorrect type: cell-contents should be a dict.")
                     for location in cell_contents.keys():
                         if isinstance(cell_contents[location], str):
-                            wb.set_cell_contents(name, location, cell_contents[location])
+                            ref = Reference.from_string(location)
+                            wb.get_cell(name, ref).set_contents(wb, cell_contents[location], evaluate_formulas=False)
                         else:
                             raise TypeError("Input JSON has an incorrect type: cell contents should be strings.")            
                 except TypeError:
                     raise TypeError("Input JSON has an incorrect type: sheet name should be a string.")
         except KeyError:
             raise KeyError("Input JSON is missing an expected key: 'sheets', 'name', or 'cell-contents'.")
+        
+        for sheet in wb.sheets:
+            wb.update_cells(sheet.cells.values())
 
         return wb
 

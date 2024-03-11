@@ -20,7 +20,6 @@ def remove_trailing_zeros(d: decimal.Decimal):
         num = num[:-1]
     return decimal.Decimal(num)
 
-
 class Cell: 
     def __init__(self, sheet, location):
         self.sheet = sheet
@@ -122,7 +121,7 @@ class Cell:
             self.contents = interp.move_formula(offset, self.formula_tree)
             self.check_references(workbook)
 
-    def set_contents(self, workbook, contents: str):
+    def set_contents(self, workbook, contents: str, evaluate_formulas = True):
         workbook.sheet_references.clear_forward_links((self.sheet, self))
         workbook.dependency_graph.clear_forward_links(self)
         self.formula_tree = None
@@ -139,7 +138,9 @@ class Cell:
             try:
                 self.parse_formula()
                 self.check_references(workbook)
-                self.evaluate_formula(workbook)
+
+                if evaluate_formulas:
+                    self.evaluate_formula(workbook)
             except FormulaError as e:
                 self.set_value(e.value)
         elif contents[0] == "'":
