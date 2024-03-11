@@ -234,7 +234,7 @@ def func_indirect(evaluator, args):
 
 def numeric_function(evaluator, args, f):
     if len(args) < 1:
-        return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "MIN requires at least 1 argument")
+        return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, f"{f.__name__} requires at least 1 argument")
 
     numbers = []
 
