@@ -1,5 +1,3 @@
-from . import reference
-
 from .reference import Reference
 
 class CellRange:
