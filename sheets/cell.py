@@ -32,13 +32,7 @@ class Cell:
         return str(self.contents)
         
     def set_value(self, value):
-        old_value = self.value
         self.value = value
-        if isinstance(old_value, CellError) and isinstance(value, CellError):
-            old_value = str(old_value)
-            value = str(value)            
-        if value != old_value:
-            self.sheet.workbook.notify({self})
 
     def get_value(self):
         return self.value
