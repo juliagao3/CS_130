@@ -15,4 +15,8 @@ class CellRange:
     def generate(self):
         for row in range(self.start_ref.row, self.end_ref.row + 1):
             for col in range(self.start_ref.col, self.end_ref.col + 1):
-                yield Reference(col, row)
+                yield Reference(col, row, sheet_name = self.sheet_name)
+    
+    def generate_values(self, workbook):
+        for ref in self.generate():
+            yield workbook.get_cell(ref.sheet_name, ref).value

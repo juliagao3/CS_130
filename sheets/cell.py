@@ -7,6 +7,7 @@ from . import interp
 from . import reference
 
 from .error import CellError, CellErrorType, FormulaError
+from .range import CellRange
 
 def is_empty_content_string(contents):
     return contents is None or contents == "" or contents.isspace()
@@ -78,6 +79,10 @@ class Cell:
 
         if type(value) == decimal.Decimal:
             value = remove_trailing_zeros(value)
+
+        if type(value) == CellRange:
+            ref = next(value.generate())
+            value = workbook.get_cell(ref.sheet_name, ref).value
 
         self.set_value(value)
 

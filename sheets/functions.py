@@ -1,11 +1,14 @@
 import sheets
 
+import decimal
 import enum
 
 from . import error
 from . import interp
 from . import reference
 from . import base_types
+
+from .range import CellRange
 
 def link_subtree(evaluator, subtree):
     finder = interp.CellRefFinder(evaluator.sheet.sheet_name)
@@ -229,6 +232,51 @@ def func_indirect(evaluator, args):
     except (KeyError, ValueError):
         return sheets.CellError(sheets.CellErrorType.BAD_REFERENCE, args[0])
 
+def numeric_function(evaluator, args, f):
+    if len(args) < 1:
+        return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "MIN requires at least 1 argument")
+
+    numbers = []
+
+    for arg in args:
+        if type(arg) == CellRange:
+            numbers += list(arg.generate_values(evaluator.workbook))
+        else:
+            numbers.append(base_types.to_number(arg))
+    
+    numbers = list(map(lambda i: base_types.to_number(i), filter(lambda i: i is not None, numbers)))
+
+    e = error.propagate_errors(numbers)
+
+    if e is not None:
+        return e
+
+    return f(numbers)
+
+def func_min(evaluator, args):
+    def custom_min(nums):
+        if len(nums) == 0:
+            return decimal.Decimal(0)
+        return min(nums)
+    return numeric_function(evaluator, args, custom_min)
+
+def func_max(evaluator, args):
+    def custom_max(nums):
+        if len(nums) == 0:
+            return decimal.Decimal(0)
+        return max(nums)
+    return numeric_function(evaluator, args, custom_max)
+
+def func_sum(evaluator, args):
+    return numeric_function(evaluator, args, sum)
+
+def func_average(evaluator, args):
+    def average(nums):
+        if len(nums) == 0:
+            return error.CellError(error.CellErrorType.DIVIDE_BY_ZERO, "")
+        return sum(nums)/len(nums)
+    return numeric_function(evaluator, args, average)
+
 functions = {
     "version":  (ArgEvaluation.EAGER, func_version  ),
     "and":      (ArgEvaluation.EAGER, func_and      ),
@@ -242,4 +290,8 @@ functions = {
     "isblank":  (ArgEvaluation.EAGER, func_isblank  ),
     "iserror":  (ArgEvaluation.EAGER, func_iserror  ),
     "indirect": (ArgEvaluation.EAGER, func_indirect ),
+    "min":      (ArgEvaluation.EAGER, func_min),
+    "max":      (ArgEvaluation.EAGER, func_max),
+    "sum":      (ArgEvaluation.EAGER, func_sum),
+    "average":  (ArgEvaluation.EAGER, func_average),
 }

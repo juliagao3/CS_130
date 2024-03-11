@@ -12,6 +12,7 @@ from . import functions
 
 from .error     import CellError, CellErrorType
 from .reference import Reference
+from .range     import CellRange
 
 parser = lark.Lark.open('formulas.lark', rel_to=__file__, start='formula')
 
@@ -276,6 +277,36 @@ class FormulaEvaluator(lark.visitors.Interpreter):
             return self.workbook.get_cell_value(sheet_name, cell_ref) 
         except (ValueError, KeyError):
             return CellError(CellErrorType.BAD_REFERENCE, cell_ref)
+
+    def cell_range(self, tree):
+        start = list(map(str, tree.children[0].children))
+        end = list(map(str, tree.children[1].children))
+
+        sheet_name = None
+
+        if len(start) > 1:
+            sheet_name = start[0]
+            start = start[1]
+        else:
+            start = start[0]
+        
+        if len(end) > 1:
+            if sheet_name is not None:
+                if end[0] != sheet_name:
+                    return CellError(CellErrorType.BAD_REFERENCE, end[0])
+            else:
+                sheet_name = end[0]
+                end = end[1]
+        else:
+            end = end[0]
+        
+        if sheet_name is None:
+            sheet_name = self.sheet.sheet_name
+        
+        try:
+            return CellRange(sheet_name, start, end)
+        except (ValueError, KeyError):
+            return CellError(CellErrorType.BAD_REFERENCE, f"{start}:{end}")
 
     @visit_children_decor
     def concat_expr(self, values):
