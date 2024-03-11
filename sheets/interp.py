@@ -64,11 +64,10 @@ class CellRefFinder(lark.visitors.Interpreter):
             return CellError(CellErrorType.TYPE_ERROR, "function requires at least one argument")
 
     def cell(self, tree):
-        if len(tree.children) == 1:
-            ref = (self.sheet_name, tree.children[0])
-        else:
-            assert len(tree.children) == 2
-            ref = (strip_quotes(tree.children[0]).lower(), tree.children[1])
+        try:
+            ref = Reference.from_string("!".join(tree.children), default_sheet_name=self.sheet_name, allow_absolute=True, check_bounds=False)
+        except ValueError:
+            return
 
         self.refs.append(ref)
 

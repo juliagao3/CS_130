@@ -51,15 +51,15 @@ class Cell:
         static_refs, all_refs = interp.find_refs(workbook, self.sheet, self.formula_tree)
 
         # link to all referenced sheet names - even if they're not used
-        for sheet_name, _location in all_refs:
-            workbook.sheet_references.link(self, sheet_name)
+        for ref in all_refs:
+            workbook.sheet_references.link(self, ref.sheet_name.lower())
 
         # only link to the cells that are used in evaluation every time
         # (the static references)
-        for sheet_name, location in static_refs:
+        for ref in static_refs:
             try:
-                ref = reference.Reference.from_string(location, allow_absolute=True)
-                cell = workbook.get_cell(sheet_name, ref)
+                ref.check_bounds()
+                cell = workbook.get_cell(ref.sheet_name, ref)
                 workbook.dependency_graph.link(self, cell)
             except (KeyError, ValueError):
                 pass

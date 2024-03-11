@@ -14,10 +14,8 @@ def link_subtree(evaluator, subtree):
     finder = interp.CellRefFinder(evaluator.sheet.sheet_name)
     finder.visit(subtree)
 
-    for sheet_name, location in finder.refs:
-        ref = reference.Reference.from_string(location, allow_absolute=True)
-
-        cell = evaluator.workbook.get_cell(sheet_name, ref)
+    for ref in finder.refs:
+        cell = evaluator.workbook.get_cell(ref.sheet_name, ref)
 
         evaluator.workbook.dependency_graph.link_runtime(evaluator.c, cell)
         evaluator.workbook.sheet_references.link_runtime(evaluator.c, ref.sheet_name or evaluator.sheet.sheet_name)
