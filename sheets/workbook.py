@@ -286,8 +286,8 @@ class Workbook:
         except KeyError:
             raise KeyError("Input JSON is missing an expected key: 'sheets', 'name', or 'cell-contents'.")
         
-        for sheet in wb.sheets:
-            wb.update_cells(sheet.cells.values(), send_notifications=False)
+        for s in wb.sheets:
+            wb.update_cells(s.cells.values(), send_notifications=False)
 
         return wb
 
