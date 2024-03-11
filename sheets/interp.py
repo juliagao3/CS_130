@@ -148,6 +148,24 @@ class FormulaPrinter(lark.visitors.Interpreter):
         
 class FormulaEvaluator(lark.visitors.Interpreter):
 
+    CMP_OPS = {
+                "=":  lambda a, b: a == b,
+                "==": lambda a, b: a == b,
+                "<>": lambda a, b: a != b,
+                "!=": lambda a, b: a != b,
+                ">":  lambda a, b: a > b,
+                "<":  lambda a, b: a < b,
+                ">=": lambda a, b: a >= b,
+                "<=": lambda a, b: a <= b
+            }
+
+    CMP_DEFAULTS = {
+                bool: False,
+                str: "",
+                decimal.Decimal: decimal.Decimal("0"),
+                type(None): None
+            }
+
     def __init__(self, workbook, sheet, cell):
         self.workbook = workbook
         self.sheet = sheet
@@ -155,32 +173,16 @@ class FormulaEvaluator(lark.visitors.Interpreter):
 
     @visit_children_decor
     def cmp_expr(self, values):
-        ops = { "=":  lambda a, b: a == b,
-                "==": lambda a, b: a == b,
-                "<>": lambda a, b: a != b,
-                "!=": lambda a, b: a != b,
-                ">":  lambda a, b: a > b,
-                "<":  lambda a, b: a < b,
-                ">=": lambda a, b: a >= b,
-                "<=": lambda a, b: a <= b }
-
-        defaults = {
-            bool: False,
-            str: "",
-            decimal.Decimal: decimal.Decimal("0"),
-            type(None): None
-        }
-
         e = error.propagate_errors([values[0], values[2]])
 
         if e is not None:
             return e
 
         if values[0] is None:
-            values[0] = defaults[type(values[2])]
+            values[0] = FormulaEvaluator.CMP_DEFAULTS[type(values[2])]
 
         if values[2] is None:
-            values[2] = defaults[type(values[0])]
+            values[2] = FormulaEvaluator.CMP_DEFAULTS[type(values[0])]
 
         if values[0] is None and values[2] is None:
             values[0] = "None"
@@ -193,13 +195,13 @@ class FormulaEvaluator(lark.visitors.Interpreter):
             if isinstance(values[2], str):
                 values[2] = values[2].lower()
 
-            if values[1] not in ops:
+            if values[1] not in FormulaEvaluator.CMP_OPS:
                 assert f"Unexpected cmp_expr operator: {values[1]}"
 
-            return ops[values[1]](values[0], values[2])
+            return FormulaEvaluator.CMP_OPS[values[1]](values[0], values[2])
         else:
             types = {decimal.Decimal: 0, str: 1, bool: 2}
-            return ops[values[1]](types[type(values[0])], types[type(values[2])])
+            return FormulaEvaluator.CMP_OPS[values[1]](types[type(values[0])], types[type(values[2])])
 
     @visit_children_decor
     def add_expr(self, values):
@@ -292,7 +294,7 @@ class FormulaEvaluator(lark.visitors.Interpreter):
     
     @visit_children_decor
     def error(self, values):
-        return CellError(CellErrorType.from_string(values[0]), "")
+        return CellError(CellError.from_string(values[0]), "")
     
     @visit_children_decor
     def parens(self, values):

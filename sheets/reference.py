@@ -31,8 +31,10 @@ def unquote(s: Optional[str]) -> Optional[str]:
 
 class Reference:
 
+    MAX_COL = from_base_26("zzzz")
+
     def __init__(self, col: int, row: int, abs_col: bool = False, abs_row: bool = False, sheet_name: Optional[str] = None):
-        if col <= 0 or col > from_base_26("zzzz") or row <= 0 or row > 9999:
+        if col <= 0 or col > Reference.MAX_COL or row <= 0 or row > 9999:
             raise ValueError
 
         self.sheet_name = sheet_name

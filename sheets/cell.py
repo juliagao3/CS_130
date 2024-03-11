@@ -20,7 +20,6 @@ def remove_trailing_zeros(d: decimal.Decimal):
         num = num[:-1]
     return decimal.Decimal(num)
 
-
 class Cell: 
     def __init__(self, sheet, location):
         self.sheet = sheet
@@ -33,13 +32,7 @@ class Cell:
         return str(self.contents)
         
     def set_value(self, value):
-        old_value = self.value
         self.value = value
-        if isinstance(old_value, CellError) and isinstance(value, CellError):
-            old_value = str(old_value)
-            value = str(value)            
-        if value != old_value:
-            self.sheet.workbook.notify({self})
 
     def get_value(self):
         return self.value
@@ -122,7 +115,7 @@ class Cell:
             self.contents = interp.move_formula(offset, self.formula_tree)
             self.check_references(workbook)
 
-    def set_contents(self, workbook, contents: str):
+    def set_contents(self, workbook, contents: str, evaluate_formulas = True):
         workbook.sheet_references.clear_forward_links((self.sheet, self))
         workbook.dependency_graph.clear_forward_links(self)
         self.formula_tree = None
@@ -139,7 +132,9 @@ class Cell:
             try:
                 self.parse_formula()
                 self.check_references(workbook)
-                self.evaluate_formula(workbook)
+
+                if evaluate_formulas:
+                    self.evaluate_formula(workbook)
             except FormulaError as e:
                 self.set_value(e.value)
         elif contents[0] == "'":
@@ -148,8 +143,8 @@ class Cell:
             self.set_value(True)
         elif contents.lower() == "false":
             self.set_value(False)
-        elif CellErrorType.from_string(contents) is not None:
-            self.set_value(CellError(CellErrorType.from_string(contents), ""))
+        elif CellError.from_string(contents) is not None:
+            self.set_value(CellError(CellError.from_string(contents), ""))
         else:
             try:
                 self.set_value(remove_trailing_zeros(decimal.Decimal(contents)))
