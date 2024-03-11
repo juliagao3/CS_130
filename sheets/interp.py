@@ -294,7 +294,7 @@ class FormulaEvaluator(lark.visitors.Interpreter):
     
     @visit_children_decor
     def error(self, values):
-        return CellError(CellErrorType.from_string(values[0]), "")
+        return CellError(CellError.from_string(values[0]), "")
     
     @visit_children_decor
     def parens(self, values):
