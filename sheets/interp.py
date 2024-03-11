@@ -296,7 +296,7 @@ class FormulaEvaluator(lark.visitors.Interpreter):
                     return CellError(CellErrorType.BAD_REFERENCE, end[0])
             else:
                 sheet_name = end[0]
-                end = end[1]
+            end = end[1]
         else:
             end = end[0]
         
