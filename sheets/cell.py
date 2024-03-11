@@ -143,8 +143,8 @@ class Cell:
             self.set_value(True)
         elif contents.lower() == "false":
             self.set_value(False)
-        elif CellErrorType.from_string(contents) is not None:
-            self.set_value(CellError(CellErrorType.from_string(contents), ""))
+        elif CellError.from_string(contents) is not None:
+            self.set_value(CellError(CellError.from_string(contents), ""))
         else:
             try:
                 self.set_value(remove_trailing_zeros(decimal.Decimal(contents)))

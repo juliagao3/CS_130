@@ -9,21 +9,6 @@ class CellErrorType(enum.Enum):
     '''
     This enum specifies the kinds of errors that spreadsheet cells can hold.
     '''
-
-    def from_string(s):
-        errors = {
-                "#ERROR!": CellErrorType.PARSE_ERROR,
-                "#CIRCREF!": CellErrorType.CIRCULAR_REFERENCE,
-                "#REF!": CellErrorType.BAD_REFERENCE,
-                "#NAME?": CellErrorType.BAD_NAME,
-                "#VALUE!": CellErrorType.TYPE_ERROR,
-                "#DIV/0!": CellErrorType.DIVIDE_BY_ZERO
-        }
-        s = s.upper()
-        if s in errors:
-            return errors[s]
-        return None
-    
     # A formula doesn't parse successfully ("#ERROR!")
     PARSE_ERROR = 1
 
@@ -75,19 +60,34 @@ class CellError:
     def __repr__(self) -> str:
         return self.__str__()
 
+    ERRORS = {
+                "#ERROR!":      CellErrorType.PARSE_ERROR,
+                "#CIRCREF!":    CellErrorType.CIRCULAR_REFERENCE,
+                "#REF!":        CellErrorType.BAD_REFERENCE,
+                "#NAME?":       CellErrorType.BAD_NAME,
+                "#VALUE!":      CellErrorType.TYPE_ERROR,
+                "#DIV/0!":      CellErrorType.DIVIDE_BY_ZERO
+    }
+
+    PRIORITIES = {
+        CellErrorType.PARSE_ERROR:           6,
+        CellErrorType.CIRCULAR_REFERENCE:    5,
+        CellErrorType.BAD_REFERENCE:         4,
+        CellErrorType.BAD_NAME:              4,
+        CellErrorType.TYPE_ERROR:            4,
+        CellErrorType.DIVIDE_BY_ZERO:        4,
+    }
+    
+    def from_string(s):
+        s = s.upper()
+        if s in CellError.ERRORS:
+            return CellError.ERRORS[s]
+        return None
+
 def propagate_errors(values: List[Any]):
     def get_error_priority(value):
-        priorities = {
-            CellErrorType.PARSE_ERROR:           6,
-            CellErrorType.CIRCULAR_REFERENCE:    5,
-            CellErrorType.BAD_REFERENCE:         4,
-            CellErrorType.BAD_NAME:              4,
-            CellErrorType.TYPE_ERROR:            4,
-            CellErrorType.DIVIDE_BY_ZERO:        4,
-        }
-
         if isinstance(value, CellError):
-            return priorities[value.get_type()]
+            return CellError.PRIORITIES[value.get_type()]
         else:
             return 0
 
