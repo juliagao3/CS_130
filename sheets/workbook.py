@@ -155,7 +155,14 @@ class Workbook:
         # nature of the issue.
         
         r = Reference.from_string(location)
+
+        old_value = self.get_cell_value(sheet_name, location)
+
         cell = self.sheet_map[sheet_name.lower()].set_cell_contents(self, r, contents)
+
+        if self.get_cell_value(sheet_name, location) != old_value:
+            self.notify({cell})
+
         self.update_ancestors({cell})
 
     def get_cell_contents(self, sheet_name: str, location: str) -> Optional[str]:
@@ -206,8 +213,8 @@ class Workbook:
         return self.sheet_map[sheet_name.lower()].get_cell(ref)
 
     def update_cells(self, nodes, send_notifications: bool = True):
-        if send_notifications:
-            saved_values = self.copy_cell_values(nodes)
+        # if send_notifications:
+        saved_values = self.copy_cell_values(nodes)
 
         order = self.dependency_graph.get_topological_order()
 
@@ -220,8 +227,8 @@ class Workbook:
                 continue
             node.recompute_value(self)
 
-        if send_notifications:
-            self.notify(self.find_changed_cells(saved_values))
+        # if send_notifications:
+        self.notify(self.find_changed_cells(saved_values))
 
     def update_ancestors(self, nodes):
         self.update_cells(self.dependency_graph.get_ancestors_of_set(nodes))
