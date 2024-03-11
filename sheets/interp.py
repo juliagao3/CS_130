@@ -74,6 +74,40 @@ class CellRefFinder(lark.visitors.Interpreter):
         if self.static_context:
             self.static_refs.append(ref)
 
+    def cell_range(self, tree):
+        start = list(map(str, tree.children[0].children))
+        end = list(map(str, tree.children[1].children))
+
+        sheet_name = None
+
+        if len(start) > 1:
+            sheet_name = start[0]
+            start = start[1]
+        else:
+            start = start[0]
+        
+        if len(end) > 1:
+            if sheet_name is not None:
+                if end[0] != sheet_name:
+                    return CellError(CellErrorType.BAD_REFERENCE, end[0])
+            else:
+                sheet_name = end[0]
+            end = end[1]
+        else:
+            end = end[0]
+        
+        if sheet_name is None:
+            sheet_name = self.sheet_name
+        
+        r = CellRange(sheet_name, start, end, check_bounds=False)
+
+        for ref in r.generate():
+            self.refs.append(ref)
+
+            if self.static_context:
+                self.static_refs.append(ref)
+
+
 class SheetRenamer(lark.visitors.Transformer_InPlace):
 
     def __init__(self, old_name, new_name):
