@@ -17,6 +17,7 @@ class TestClass(unittest.TestCase):
         def on_cells_changed(workbook, changed_cells):
             nonlocal updated
             for cell in changed_cells:
+                self.assertFalse(cell in updated)
                 updated.add(cell)
             raise Exception
 
@@ -112,6 +113,7 @@ class TestClass(unittest.TestCase):
         def on_cells_changed(workbook, changed_cells):
             nonlocal updated
             for cell in changed_cells:
+                self.assertFalse(cell in updated)
                 updated.add(cell)
             raise Exception
 
@@ -138,6 +140,7 @@ class TestClass(unittest.TestCase):
         def on_cells_changed(workbook, changed_cells):
             nonlocal updated
             for cell in changed_cells:
+                self.assertFalse(cell in updated)
                 updated.add(cell)
             raise Exception
 
@@ -172,6 +175,7 @@ class TestClass(unittest.TestCase):
 
         def on_update(wb, locations):
             for loc in locations:
+                self.assertFalse(loc in changed)
                 changed.add(loc)
 
         wb.set_cell_contents(n, "A1", "HI")
@@ -182,6 +186,30 @@ class TestClass(unittest.TestCase):
         num, name = wb.copy_sheet(n)
 
         self.assertSetEqual(changed, set([(name, "a1"), (name, "a2")]))
+
+    def test_sort_notifications(self):
+        wb = sheets.Workbook()
+        i, n = wb.new_sheet()
+
+        updated = set()
+
+        def on_update(wb, locations):
+            for loc in locations:
+                self.assertFalse(loc in updated)
+                updated.add(loc)
+
+        row_count = 10
+
+        for row in range(1, row_count + 1):
+            wb.set_cell_contents(n, "A" + str(row), f"={row_count+1-row}")
+
+        wb.notify_cells_changed(on_update)
+        wb.sort_region(n, "A1", f"A{row_count}", [1])
+
+        self.assertSetEqual(updated, set([(n, f"a{i}") for i in range(1, row_count + 1)]))
+
+        for new_row in range(1, row_count + 1):
+            self.assertEqual(wb.get_cell_value(n, "A" + str(new_row)), decimal.Decimal(new_row))
 
 
 if __name__ == "__main__":

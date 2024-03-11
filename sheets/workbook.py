@@ -1,5 +1,5 @@
 import json
-from typing import List, Dict, Any, Optional, Tuple, Callable, Iterable, TextIO
+from typing import List, Dict, Any, Optional, Tuple, Callable, Iterable, TextIO, Set
 
 from . import base_types
 from . import cell
@@ -9,6 +9,7 @@ from .error     import CellError, CellErrorType
 from .graph     import Graph
 from .reference import Reference
 from .sheet     import Sheet
+from .range     import CellRange
 
 class Workbook:
     # A workbook containing zero or more named spreadsheets.
@@ -38,6 +39,14 @@ class Workbook:
 
         # function to call when cells update
         self.notify_functions = []
+
+    def copy_cell_values(self, cells: Set[cell.Cell]) -> Dict[cell.Cell, Any]:
+        return {(c.sheet.sheet_name, c.location): c.value for c in cells}
+
+    def find_changed_cells(self, saved_values: Dict[cell.Cell, Any]):
+        #for location, value in saved_values.items():
+        #   print(f"Cell at {location[0], str(location[1])} was {value} and is now {self.get_cell(location[0], location[1]).value}")
+        return set(map(lambda t: self.get_cell(t[0], t[1]), filter(lambda t: self.get_cell(t[0], t[1]).value != saved_values[t], saved_values.keys())))
 
     def num_sheets(self) -> int:
         # Return the number of spreadsheets in the workbook.
@@ -197,7 +206,10 @@ class Workbook:
         return self.sheet_map[sheet_name.lower()].get_cell(ref)
 
     def update_cells(self, nodes):
+        saved_values = self.copy_cell_values(nodes)
+
         order = self.dependency_graph.get_topological_order()
+
         for c in order:
             if c in nodes:
                 c.recompute_value(self)
@@ -207,7 +219,7 @@ class Workbook:
                 continue
             node.recompute_value(self)
 
-        self.notify(nodes)
+        self.notify(self.find_changed_cells(saved_values))
 
     def update_ancestors(self, nodes):
         self.update_cells(self.dependency_graph.get_ancestors_of_set(nodes))
@@ -610,18 +622,15 @@ class Workbook:
         # If any cell location is invalid, a ValueError is raised.
         # If the sort_cols list is invalid in any way, a ValueError is raised.
 
-        start_location_initial = Reference.from_string(start_location)
-        end_location_initial = Reference.from_string(end_location)
-        
-        start_ref = Reference(min(start_location_initial.col, end_location_initial.col), min(start_location_initial.row, end_location_initial.row))
-        end_ref = Reference(max(start_location_initial.col, end_location_initial.col), max(start_location_initial.row, end_location_initial.row))
+        cell_range = CellRange(sheet_name, start_location, end_location)
+        cells = set(map(lambda ref: self.get_cell(sheet_name, ref), cell_range.generate()))
 
         if len(sort_cols) == 0:
             raise ValueError
 
         sort_cols_set = set()
         for col in sort_cols:
-            if col > end_ref.col - start_ref.col + 1 and col <= 1:
+            if col > cell_range.end_ref.col - cell_range.start_ref.col + 1 and col <= 1:
                 raise ValueError
 
             if col == 0:
@@ -632,5 +641,11 @@ class Workbook:
 
             sort_cols_set.add(abs(col))
         
+        saved_values = self.copy_cell_values(cells)
+
         sheet_object = self.sheet_map[sheet_name.lower()]
-        sheet_object.sort_region(self, start_ref, end_ref, sort_cols)
+        sheet_object.sort_region(self, cell_range.start_ref, cell_range.end_ref, sort_cols)
+
+        self.notify(self.find_changed_cells(saved_values))
+
+        self.update_ancestors(cells)
