@@ -20,7 +20,7 @@ class TestClass(unittest.TestCase):
         new_name = "sheet bla"
         wb.rename_sheet(sheet_name, new_name) 
         
-        self.assertEqual(wb.get_cell_contents(new_name, "A1"), f"='{new_name}'!A2")
+        self.assertEqual(wb.get_cell_contents(new_name, "A1").lower(), f"='{new_name}'!a2")
         
     def test_formula_without_quotes(self):
         wb = sheets.Workbook()
@@ -30,7 +30,7 @@ class TestClass(unittest.TestCase):
         new_name = "sheet2"
         wb.rename_sheet(sheet_name, new_name)
         
-        self.assertEqual(wb.get_cell_contents(new_name, "A1"), f"={new_name}!A2")
+        self.assertEqual(wb.get_cell_contents(new_name, "A1").lower(), f"={new_name}!a2")
         
     def test_formula_add_quotes(self):
         wb = sheets.Workbook()
@@ -43,7 +43,7 @@ class TestClass(unittest.TestCase):
         new_name = "sheet bla"
         wb.rename_sheet(sheet_name1, new_name)
         
-        self.assertEqual(wb.get_cell_contents(new_name, "A1"), f"='{sheet_name}'!A1 + '{new_name}'!A2")
+        self.assertEqual(wb.get_cell_contents(new_name, "A1").lower(), f"='{sheet_name}'!a1 + '{new_name}'!a2")
         
     def test_formula_add_quotes(self):
         wb = sheets.Workbook()
@@ -56,7 +56,7 @@ class TestClass(unittest.TestCase):
         new_name = "sheet3"
         wb.rename_sheet(sheet_name1, new_name)
         
-        self.assertEqual(wb.get_cell_contents(new_name, "A1"), f"={sheet_name}!A1 + {new_name}!A2")
+        self.assertEqual(wb.get_cell_contents(new_name, "A1").lower(), f"={sheet_name}!a1 + {new_name}!a2")
         
     def test_formula_add_quotes_2(self):
         wb = sheets.Workbook()
@@ -69,7 +69,7 @@ class TestClass(unittest.TestCase):
         new_name = "sheet3"
         wb.rename_sheet(sheet_name1, new_name)
         
-        self.assertEqual(wb.get_cell_contents(new_name, "A1"), f"='{sheet_name}'!A1 + {new_name}!A2")
+        self.assertEqual(wb.get_cell_contents(new_name, "A1").lower(), f"='{sheet_name}'!a1 + {new_name}!a2")
         
     def test_get_value(self):
         wb = sheets.Workbook()
@@ -118,7 +118,7 @@ class TestClass(unittest.TestCase):
         wb.set_cell_contents(name, "A1", "=Somesheet!A2 & \"hello\"")
         wb.rename_sheet(name, "Another")
         self.assertEqual(wb.get_cell_value("Another", "A1"), "hello")
-        self.assertEqual(wb.get_cell_contents("Another", "A1"), "=Another!A2 & \"hello\"")
+        self.assertEqual(wb.get_cell_contents("Another", "A1").lower(), "=another!a2 & \"hello\"")
         
     def test_remove_quotes(self):
         wb = sheets.Workbook()

@@ -1,7 +1,5 @@
 import re
 
-from typing import Optional
-
 from .reference import Reference
 
 class CellRange:

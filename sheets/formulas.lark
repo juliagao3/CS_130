@@ -44,10 +44,8 @@ func_expr : FUNCTION "(" ((expression ",")* expression)? ")"
       | BOOL                    -> boolean
       | "(" expression ")"      -> parens
 
-cell : (_sheetname "!")? CELLREF
+cell : CELLREF
 cell_range : cell ":" cell
-
-_sheetname : SHEET_NAME | QUOTED_SHEET_NAME
 
 //========================================
 // Lexer terminals
@@ -66,15 +64,7 @@ ERROR_VALUE: ("#ERROR!"i | "#CIRCREF!"i | "#REF!"i | "#NAME?"i | "#VALUE!"i | "#
 
 // Lexer rules for different kinds of terminals
 
-CELLREF: /\$?[A-Za-z]+\$?[1-9][0-9]*/
-
-// Unquoted sheet names cannot contain spaces, and are otherwise very simple.
-SHEET_NAME: /[A-Za-z_][A-Za-z0-9_]*/
-
-// Quoted sheet names can contain spaces and other interesting characters.  Note
-// that this lexer rule also matches invalid sheet names, but that isn't a big
-// deal here.
-QUOTED_SHEET_NAME: /\'[^']*\'/
+CELLREF: /(([A-Za-z_][A-Za-z0-9_]*|'[^']*')!)?\$?[A-Za-z]+\$?[0-9]+/
 
 // Don't need to support signs on numbers because we have unary +/- operator
 // support in the parser.

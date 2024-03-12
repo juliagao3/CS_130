@@ -65,7 +65,7 @@ class CellRefFinder(lark.visitors.Interpreter):
 
     def cell(self, tree):
         try:
-            ref = Reference.from_string(self.sheet_name, "!".join(tree.children))
+            ref = Reference.from_string(self.sheet_name, str(tree.children[0]))
         except ValueError:
             # don't include bad references
             return
@@ -76,31 +76,13 @@ class CellRefFinder(lark.visitors.Interpreter):
             self.static_refs.append(ref)
 
     def cell_range(self, tree):
-        start = list(map(str, tree.children[0].children))
-        end = list(map(str, tree.children[1].children))
-
-        sheet_name = None
-
-        if len(start) > 1:
-            sheet_name = start[0]
-            start = start[1]
-        else:
-            start = start[0]
-        
-        if len(end) > 1:
-            if sheet_name is not None:
-                if end[0] != sheet_name:
-                    return CellError(CellErrorType.BAD_REFERENCE, end[0])
-            else:
-                sheet_name = end[0]
-            end = end[1]
-        else:
-            end = end[0]
-        
-        if sheet_name is None:
-            sheet_name = self.sheet_name
-        
-        r = CellRange(sheet_name, start, end)
+        try:
+            start = str(tree.children[0].children[0])
+            end = str(tree.children[1].children[0])
+            r = CellRange(self.sheet_name, start, end)
+        except ValueError:
+            # don't include bad ranges
+            return
 
         for ref in r.generate():
             self.refs.append(ref)
@@ -117,14 +99,18 @@ class SheetRenamer(lark.visitors.Transformer_InPlace):
 
     @v_args(tree=True)
     def cell(self, tree):
-        values = tree.children
-        if len(values) > 1:
-            values[0] = strip_quotes(values[0])
-            if values[0].lower() == self.old_name.lower():
-                values[0] = self.new_name
-            
-            if base_types.sheet_name_needs_quotes(values[0]):
-                values[0] = "'" + values[0] + "'"
+        try:
+            # don't need to pass sheet name here cause we're just doing a
+            # cosmetic change
+            ref = Reference.from_string(None, str(tree.children[0]))
+
+            if ref.sheet_name is not None and ref.sheet_name.lower() == self.old_name.lower():
+                ref.sheet_name = self.new_name
+                tree.children[0] = str(ref)
+        except ValueError:
+            # don't include bad references
+            pass
+
         return tree
     
 class FormulaPrinter(lark.visitors.Interpreter):
@@ -151,7 +137,7 @@ class FormulaPrinter(lark.visitors.Interpreter):
     
     @visit_children_decor
     def cell(self, values):
-        return "!".join(values)
+        return values[0]
     
     @visit_children_decor
     def cell_range(self, values):
@@ -294,53 +280,22 @@ class FormulaEvaluator(lark.visitors.Interpreter):
         
     @visit_children_decor
     def cell(self, values):
-        sheet_name = self.sheet.sheet_name
-        cell_ref = values[0]
-
-        if len(values) > 1:
-            sheet_name = values[0]
-            cell_ref = values[1]
-        
-        sheet_name = strip_quotes(sheet_name)
-
         try:
-            ref = Reference.from_string(sheet_name, cell_ref)
+            ref = Reference.from_string(self.sheet.sheet_name, values[0])
+            ref.check_bounds()
             ref.abs_col = False
             ref.abs_row = False
-            cell_ref = str(ref)
-            return self.workbook.get_cell_value(sheet_name, cell_ref) 
+            return self.workbook.get_cell(ref).value
         except (ValueError, KeyError):
-            return CellError(CellErrorType.BAD_REFERENCE, cell_ref)
+            return CellError(CellErrorType.BAD_REFERENCE, values[0])
 
     def cell_range(self, tree):
-        start = list(map(str, tree.children[0].children))
-        end = list(map(str, tree.children[1].children))
-
-        sheet_name = None
-
-        if len(start) > 1:
-            sheet_name = start[0]
-            start = start[1]
-        else:
-            start = start[0]
-        
-        if len(end) > 1:
-            if sheet_name is not None:
-                if end[0] != sheet_name:
-                    return CellError(CellErrorType.BAD_REFERENCE, end[0])
-            else:
-                sheet_name = end[0]
-            end = end[1]
-        else:
-            end = end[0]
-        
-        if sheet_name is None:
-            sheet_name = self.sheet.sheet_name
-        
         try:
-            return CellRange(sheet_name, start, end)
+            start = str(tree.children[0].children[0])
+            end = str(tree.children[1].children[0])
+            return CellRange(self.sheet.sheet_name, start, end)
         except (ValueError, KeyError):
-            return CellError(CellErrorType.BAD_REFERENCE, f"{start}:{end}")
+            return CellError(CellErrorType.BAD_REFERENCE, f"{tree.children[0]}:{tree.children[1]}")
 
     @visit_children_decor
     def concat_expr(self, values):
@@ -393,17 +348,10 @@ class FormulaMover(lark.visitors.Transformer_InPlace):
 
     @v_args(tree=True)
     def cell(self, tree):
-        values = tree.children
-        # checks and changes the referenced cells in the formula
-        location = values[0]
-
-        if len(values) > 1:
-            location = values[1]
-
         try:
             # We can safely pass None here because we don't use this reference
             # to get a cell value.
-            ref = Reference.from_string(None, location)
+            ref = Reference.from_string(None, str(tree.children[0]))
         except ValueError:
             # https://piazza.com/class/lqvau3tih6k26o/post/33
             # :>
@@ -414,12 +362,9 @@ class FormulaMover(lark.visitors.Transformer_InPlace):
             new_value = str(ref.moved(self.offset))
         except ValueError:
             new_value = "#REF!"
-
-        if len(values) > 1:
-            values[1] = new_value
-        else:
-            values[0] = new_value
         
+        tree.children[0] = new_value
+
         return tree
         
 def parse_formula(formula):
