@@ -7,10 +7,16 @@ class CellRange:
     range_regex = re.compile("((([A-Za-z_][A-Za-z0-9_]*|'[^']*')!)?\$?[A-Za-z]+\$?[0-9]+):((([A-Za-z_][A-Za-z0-9_]*|'[^']*')!)?\$?[A-Za-z]+\$?[0-9]+)")
 
     def __init__(self, sheet_name: str, start_location: str, end_location: str):
-        self.sheet_name = sheet_name
+        start_location_initial = Reference.from_string(None, start_location)
+        end_location_initial = Reference.from_string(None, end_location)
 
-        start_location_initial = Reference.from_string(sheet_name, start_location)
-        end_location_initial = Reference.from_string(sheet_name, end_location)
+        self.sheet_name = start_location_initial.sheet_name or end_location_initial.sheet_name or sheet_name
+
+        if start_location_initial.sheet_name is None:
+            start_location_initial.sheet_name = self.sheet_name
+
+        if end_location_initial.sheet_name is None:
+            end_location_initial.sheet_name = self.sheet_name
 
         self.start_ref = Reference.min(start_location_initial, end_location_initial)
         self.end_ref = Reference.max(start_location_initial, end_location_initial)

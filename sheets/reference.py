@@ -46,11 +46,11 @@ class Reference:
         self.row = row
     
     def max(a, b):
-        assert a.sheet_name == b.sheet_name
+        assert a.sheet_name == b.sheet_name or (a.sheet_name is None and b.sheet_name is None)
         return Reference(a.sheet_name, max(a.col, b.col), max(a.row, b.row))
 
     def min(a, b):
-        assert a.sheet_name == b.sheet_name
+        assert a.sheet_name == b.sheet_name or (a.sheet_name is None and b.sheet_name is None)
         return Reference(a.sheet_name, min(a.col, b.col), min(a.row, b.row))
 
     def check_bounds(self):
