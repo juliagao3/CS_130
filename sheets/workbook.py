@@ -384,8 +384,8 @@ class Workbook:
             c.location.sheet_name = new_sheet_name
 
         if sheet_name.lower() in self.sheet_references.backward:
-            for cell in self.sheet_references.get_backward_links(sheet_name.lower()):
-                cell.rename_sheet(self, sheet_name, new_sheet_name)
+            for c in self.sheet_references.get_backward_links(sheet_name.lower()):
+                c.rename_sheet(self, sheet_name, new_sheet_name)
 
         self.update_cells_referencing_sheet(new_sheet_name)
 
