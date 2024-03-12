@@ -19,7 +19,8 @@ def link_subtree(evaluator, subtree):
 
         evaluator.workbook.dependency_graph.link_runtime(evaluator.c, cell)
         evaluator.workbook.sheet_references.link_runtime(evaluator.c, ref.sheet_name or evaluator.sheet.sheet_name)
-        evaluator.c.check_references(evaluator.workbook)
+
+    evaluator.c.check_cycles(evaluator.workbook)
 
 class ArgEvaluation(enum.Enum):
     EAGER = 0
