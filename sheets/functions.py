@@ -1,5 +1,6 @@
 import sheets
 
+import decimal
 import enum
 
 from . import error
@@ -7,18 +8,19 @@ from . import interp
 from . import reference
 from . import base_types
 
+from .range import CellRange
+
 def link_subtree(evaluator, subtree):
     finder = interp.CellRefFinder(evaluator.sheet.sheet_name)
     finder.visit(subtree)
 
-    for sheet_name, location in finder.refs:
-        ref = reference.Reference.from_string(location, allow_absolute=True)
-
-        cell = evaluator.workbook.get_cell(sheet_name, ref)
+    for ref in finder.refs:
+        cell = evaluator.workbook.get_cell(ref.sheet_name, ref)
 
         evaluator.workbook.dependency_graph.link_runtime(evaluator.c, cell)
         evaluator.workbook.sheet_references.link_runtime(evaluator.c, ref.sheet_name or evaluator.sheet.sheet_name)
-        evaluator.c.check_references(evaluator.workbook)
+
+    evaluator.c.check_cycles(evaluator.workbook)
 
 class ArgEvaluation(enum.Enum):
     EAGER = 0
@@ -210,6 +212,20 @@ def func_indirect(evaluator, args):
         return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "INDIRECT requires exactly 1 argument")
 
     try:
+        r = CellRange.from_string(str(args[0]).lower(), default_sheet_name=evaluator.sheet.sheet_name)
+
+        for ref in r.generate():
+            evaluator.workbook.sheet_references.link_runtime(evaluator.c, ref.sheet_name or evaluator.sheet.sheet_name)
+            cell = evaluator.workbook.get_cell(ref.sheet_name or evaluator.sheet.sheet_name, ref)
+            evaluator.workbook.dependency_graph.link_runtime(evaluator.c, cell)
+
+        evaluator.c.check_cycles(evaluator.workbook)
+
+        return r
+    except (KeyError, ValueError):
+        pass
+
+    try:
         ref = reference.Reference.from_string(str(args[0]).lower(), allow_absolute=True)
 
         evaluator.workbook.sheet_references.link_runtime(evaluator.c, ref.sheet_name or evaluator.sheet.sheet_name)
@@ -229,6 +245,135 @@ def func_indirect(evaluator, args):
     except (KeyError, ValueError):
         return sheets.CellError(sheets.CellErrorType.BAD_REFERENCE, args[0])
 
+def numeric_function(evaluator, args, f):
+    if len(args) < 1:
+        return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, f"{f.__name__} requires at least 1 argument")
+
+    numbers = []
+
+    for arg in args:
+        if type(arg) == CellRange:
+            numbers += list(arg.generate_values(evaluator.workbook))
+        else:
+            numbers.append(base_types.to_number(arg))
+    
+    numbers = list(map(lambda i: base_types.to_number(i), filter(lambda i: i is not None, numbers)))
+
+    e = error.propagate_errors(numbers)
+
+    if e is not None:
+        return e
+
+    return f(numbers)
+
+def func_min(evaluator, args):
+    def custom_min(nums):
+        if len(nums) == 0:
+            return decimal.Decimal(0)
+        return min(nums)
+    return numeric_function(evaluator, args, custom_min)
+
+def func_max(evaluator, args):
+    def custom_max(nums):
+        if len(nums) == 0:
+            return decimal.Decimal(0)
+        return max(nums)
+    return numeric_function(evaluator, args, custom_max)
+
+def func_sum(evaluator, args):
+    return numeric_function(evaluator, args, sum)
+
+def func_average(evaluator, args):
+    def average(nums):
+        if len(nums) == 0:
+            return error.CellError(error.CellErrorType.DIVIDE_BY_ZERO, "")
+        return sum(nums)/len(nums)
+    return numeric_function(evaluator, args, average)
+
+def func_vlookup(evaluator, args):
+    if len(args) != 3:
+        return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "VLOOKUP requires at exactly 3 arguments")
+    
+    key = evaluator.visit(args[0])
+    region = evaluator.visit(args[1])
+    index = base_types.to_number(evaluator.visit(args[2]))
+
+    if type(region) != CellRange:
+        return error.CellError(error.CellErrorType.TYPE_ERROR, "")
+
+    e = error.propagate_errors([key, region, index])
+    
+    if e is not None:
+        return e
+    
+    if index < 1 or index > region.end_ref.col - region.start_ref.col + 1:
+        return error.CellError(error.CellErrorType.TYPE_ERROR, "")
+
+    search_values = []
+    target_values = []
+
+    for ref in region.generate_column(0):
+        cell = evaluator.workbook.get_cell(ref.sheet_name, ref)
+        evaluator.workbook.dependency_graph.link_runtime(evaluator.c, cell)
+        evaluator.workbook.sheet_references.link_runtime(evaluator.c, ref.sheet_name or evaluator.sheet.sheet_name)
+        search_values.append(cell.value)
+
+    for ref in region.generate_column(index-1):
+        cell = evaluator.workbook.get_cell(ref.sheet_name, ref)
+        evaluator.workbook.dependency_graph.link_runtime(evaluator.c, cell)
+        evaluator.workbook.sheet_references.link_runtime(evaluator.c, ref.sheet_name or evaluator.sheet.sheet_name)
+        target_values.append(cell.value)
+
+    evaluator.c.check_cycles(evaluator.workbook)
+
+    for search_value, target_value in zip(search_values, target_values):
+        if search_value == key:
+            return target_value
+
+    return error.CellError(error.CellErrorType.TYPE_ERROR, "")
+
+def func_hlookup(evaluator, args):
+    if len(args) != 3:
+        return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "HLOOKUP requires at exactly 3 arguments")
+    
+    key = evaluator.visit(args[0])
+    region = evaluator.visit(args[1])
+    index = base_types.to_number(evaluator.visit(args[2]))
+
+    if type(region) != CellRange:
+        return error.CellError(error.CellErrorType.TYPE_ERROR, "")
+
+    e = error.propagate_errors([key, region, index])
+    
+    if e is not None:
+        return e
+    
+    if index < 1 or index > region.end_ref.row - region.start_ref.row + 1:
+        return error.CellError(error.CellErrorType.TYPE_ERROR, "")
+
+    search_values = []
+    target_values = []
+
+    for ref in region.generate_row(0):
+        cell = evaluator.workbook.get_cell(ref.sheet_name, ref)
+        evaluator.workbook.dependency_graph.link_runtime(evaluator.c, cell)
+        evaluator.workbook.sheet_references.link_runtime(evaluator.c, ref.sheet_name or evaluator.sheet.sheet_name)
+        search_values.append(cell.value)
+
+    for ref in region.generate_row(index-1):
+        cell = evaluator.workbook.get_cell(ref.sheet_name, ref)
+        evaluator.workbook.dependency_graph.link_runtime(evaluator.c, cell)
+        evaluator.workbook.sheet_references.link_runtime(evaluator.c, ref.sheet_name or evaluator.sheet.sheet_name)
+        target_values.append(cell.value)
+
+    evaluator.c.check_cycles(evaluator.workbook)
+
+    for search_value, target_value in zip(search_values, target_values):
+        if search_value == key:
+            return target_value
+
+    return error.CellError(error.CellErrorType.TYPE_ERROR, "")
+
 functions = {
     "version":  (ArgEvaluation.EAGER, func_version  ),
     "and":      (ArgEvaluation.EAGER, func_and      ),
@@ -242,4 +387,10 @@ functions = {
     "isblank":  (ArgEvaluation.EAGER, func_isblank  ),
     "iserror":  (ArgEvaluation.EAGER, func_iserror  ),
     "indirect": (ArgEvaluation.EAGER, func_indirect ),
+    "min":      (ArgEvaluation.EAGER, func_min),
+    "max":      (ArgEvaluation.EAGER, func_max),
+    "sum":      (ArgEvaluation.EAGER, func_sum),
+    "average":  (ArgEvaluation.EAGER, func_average),
+    "vlookup":  (ArgEvaluation.LAZY,  func_vlookup),
+    "hlookup":  (ArgEvaluation.LAZY,  func_hlookup)
 }

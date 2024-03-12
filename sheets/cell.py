@@ -4,9 +4,9 @@ import decimal
 from typing import Tuple
 
 from . import interp
-from . import reference
 
 from .error import CellError, CellErrorType, FormulaError
+from .range import CellRange
 
 def is_empty_content_string(contents):
     return contents is None or contents == "" or contents.isspace()
@@ -50,15 +50,15 @@ class Cell:
         static_refs, all_refs = interp.find_refs(workbook, self.sheet, self.formula_tree)
 
         # link to all referenced sheet names - even if they're not used
-        for sheet_name, _location in all_refs:
-            workbook.sheet_references.link(self, sheet_name)
+        for ref in all_refs:
+            workbook.sheet_references.link(self, ref.sheet_name.lower())
 
         # only link to the cells that are used in evaluation every time
         # (the static references)
-        for sheet_name, location in static_refs:
+        for ref in static_refs:
             try:
-                ref = reference.Reference.from_string(location, allow_absolute=True)
-                cell = workbook.get_cell(sheet_name, ref)
+                ref.check_bounds()
+                cell = workbook.get_cell(ref.sheet_name, ref)
                 workbook.dependency_graph.link(self, cell)
             except (KeyError, ValueError):
                 pass
@@ -78,6 +78,10 @@ class Cell:
 
         if type(value) == decimal.Decimal:
             value = remove_trailing_zeros(value)
+
+        if type(value) == CellRange:
+            ref = next(value.generate())
+            value = workbook.get_cell(ref.sheet_name, ref).value
 
         self.set_value(value)
 

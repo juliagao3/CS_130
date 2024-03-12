@@ -12,6 +12,7 @@ from . import functions
 
 from .error     import CellError, CellErrorType
 from .reference import Reference
+from .range     import CellRange
 
 parser = lark.Lark.open('formulas.lark', rel_to=__file__, start='formula')
 
@@ -63,16 +64,49 @@ class CellRefFinder(lark.visitors.Interpreter):
             return CellError(CellErrorType.TYPE_ERROR, "function requires at least one argument")
 
     def cell(self, tree):
-        if len(tree.children) == 1:
-            ref = (self.sheet_name, tree.children[0])
-        else:
-            assert len(tree.children) == 2
-            ref = (strip_quotes(tree.children[0]).lower(), tree.children[1])
+        try:
+            ref = Reference.from_string("!".join(tree.children), default_sheet_name=self.sheet_name, allow_absolute=True, check_bounds=False)
+        except ValueError:
+            return
 
         self.refs.append(ref)
 
         if self.static_context:
             self.static_refs.append(ref)
+
+    def cell_range(self, tree):
+        start = list(map(str, tree.children[0].children))
+        end = list(map(str, tree.children[1].children))
+
+        sheet_name = None
+
+        if len(start) > 1:
+            sheet_name = start[0]
+            start = start[1]
+        else:
+            start = start[0]
+        
+        if len(end) > 1:
+            if sheet_name is not None:
+                if end[0] != sheet_name:
+                    return CellError(CellErrorType.BAD_REFERENCE, end[0])
+            else:
+                sheet_name = end[0]
+            end = end[1]
+        else:
+            end = end[0]
+        
+        if sheet_name is None:
+            sheet_name = self.sheet_name
+        
+        r = CellRange(sheet_name, start, end, check_bounds=False)
+
+        for ref in r.generate():
+            self.refs.append(ref)
+
+            if self.static_context:
+                self.static_refs.append(ref)
+
 
 class SheetRenamer(lark.visitors.Transformer_InPlace):
 
@@ -276,6 +310,36 @@ class FormulaEvaluator(lark.visitors.Interpreter):
             return self.workbook.get_cell_value(sheet_name, cell_ref) 
         except (ValueError, KeyError):
             return CellError(CellErrorType.BAD_REFERENCE, cell_ref)
+
+    def cell_range(self, tree):
+        start = list(map(str, tree.children[0].children))
+        end = list(map(str, tree.children[1].children))
+
+        sheet_name = None
+
+        if len(start) > 1:
+            sheet_name = start[0]
+            start = start[1]
+        else:
+            start = start[0]
+        
+        if len(end) > 1:
+            if sheet_name is not None:
+                if end[0] != sheet_name:
+                    return CellError(CellErrorType.BAD_REFERENCE, end[0])
+            else:
+                sheet_name = end[0]
+            end = end[1]
+        else:
+            end = end[0]
+        
+        if sheet_name is None:
+            sheet_name = self.sheet.sheet_name
+        
+        try:
+            return CellRange(sheet_name, start, end)
+        except (ValueError, KeyError):
+            return CellError(CellErrorType.BAD_REFERENCE, f"{start}:{end}")
 
     @visit_children_decor
     def concat_expr(self, values):

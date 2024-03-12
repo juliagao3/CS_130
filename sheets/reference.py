@@ -33,17 +33,27 @@ class Reference:
 
     MAX_COL = from_base_26("zzzz")
 
-    def __init__(self, col: int, row: int, abs_col: bool = False, abs_row: bool = False, sheet_name: Optional[str] = None):
-        if col <= 0 or col > Reference.MAX_COL or row <= 0 or row > 9999:
-            raise ValueError
-
+    def __init__(self,
+                 col: int,
+                 row: int,
+                 abs_col: bool = False,
+                 abs_row: bool = False,
+                 sheet_name: Optional[str] = None,
+                 check_bounds: bool = True):
         self.sheet_name = sheet_name
         self.abs_col = abs_col
         self.abs_row = abs_row
         self.col = col
         self.row = row
 
-    def from_string(location_string: str, allow_absolute: bool = False):
+        if check_bounds:
+            self.check_bounds()
+    
+    def check_bounds(self):
+        if self.col <= 0 or self.col > Reference.MAX_COL or self.row <= 0 or self.row > 9999:
+            raise ValueError
+
+    def from_string(location_string: str, allow_absolute: bool = False, default_sheet_name: str = None, check_bounds: bool = True):
         if location_string is None:
             raise ValueError
 
@@ -58,13 +68,16 @@ class Reference:
         abs_col = groups[2] == "$"
         abs_row = groups[4] == "$"
 
+        if sheet_name is None:
+            sheet_name = default_sheet_name
+
         if not allow_absolute and (abs_col or abs_row):
             raise ValueError
 
         col = from_base_26(groups[3].lower())
         row = int(groups[5])
 
-        return Reference(col, row, abs_col, abs_row, sheet_name)
+        return Reference(col, row, abs_col, abs_row, sheet_name, check_bounds)
 
     def moved(self, offset: Tuple[int, int]):
         sheet_name = self.sheet_name

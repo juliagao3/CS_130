@@ -318,7 +318,7 @@ class Workbook:
     def notify(self, cells):
         for func in self.notify_functions:
             try:
-                func(self, map(lambda c: (c.sheet.sheet_name, str(c.location)), cells))
+                func(self, map(lambda c: (c.sheet.sheet_name, c.location.location_string()), cells))
             except: # noqa: E722
                 # We catch all exceptions here because there's no way to predict
                 # what kinds of bugs the users of this library will write in their
