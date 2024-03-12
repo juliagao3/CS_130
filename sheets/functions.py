@@ -212,6 +212,20 @@ def func_indirect(evaluator, args):
         return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "INDIRECT requires exactly 1 argument")
 
     try:
+        r = CellRange.from_string(str(args[0]).lower(), default_sheet_name=evaluator.sheet.sheet_name)
+
+        for ref in r.generate():
+            evaluator.workbook.sheet_references.link_runtime(evaluator.c, ref.sheet_name or evaluator.sheet.sheet_name)
+            cell = evaluator.workbook.get_cell(ref.sheet_name or evaluator.sheet.sheet_name, ref)
+            evaluator.workbook.dependency_graph.link_runtime(evaluator.c, cell)
+
+        evaluator.c.check_cycles(evaluator.workbook)
+
+        return r
+    except (KeyError, ValueError):
+        pass
+
+    try:
         ref = reference.Reference.from_string(str(args[0]).lower(), allow_absolute=True)
 
         evaluator.workbook.sheet_references.link_runtime(evaluator.c, ref.sheet_name or evaluator.sheet.sheet_name)
