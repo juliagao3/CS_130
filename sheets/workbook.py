@@ -380,8 +380,8 @@ class Workbook:
         self.sheet_map.pop(sheet_name.lower())
         self.sheet_map[new_sheet_name.lower()].sheet_name = new_sheet_name
 
-        for cell in sheet.cells.values():
-            cell.location.sheet_name = new_sheet_name
+        for c in sheet.cells.values():
+            c.location.sheet_name = new_sheet_name
 
         if sheet_name.lower() in self.sheet_references.backward:
             for cell in self.sheet_references.get_backward_links(sheet_name.lower()):
