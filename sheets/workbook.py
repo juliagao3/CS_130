@@ -490,10 +490,10 @@ class Workbook:
         for col in col_iter:
             for row in row_iter:
                 from_ref = start_ref.moved((col, row))
-                from_cell = self.get_cell(from_ref)
+                from_cell = sheet.get_cell(from_ref)
 
                 to_ref = to_start_ref.moved((col, row))
-                to_cell = self.get_cell(to_ref)
+                to_cell = to_sheet.get_cell(to_ref)
                 to_cell.copy_cell(from_cell, self, offset)
 
                 if is_move and to_cell is not from_cell:
