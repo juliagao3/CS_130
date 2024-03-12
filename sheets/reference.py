@@ -34,26 +34,36 @@ class Reference:
     MAX_COL = from_base_26("zzzz")
 
     def __init__(self,
+                 sheet_name: Optional[str],
                  col: int,
                  row: int,
                  abs_col: bool = False,
-                 abs_row: bool = False,
-                 sheet_name: Optional[str] = None,
-                 check_bounds: bool = True):
+                 abs_row: bool = False):
         self.sheet_name = sheet_name
         self.abs_col = abs_col
         self.abs_row = abs_row
         self.col = col
         self.row = row
-
-        if check_bounds:
-            self.check_bounds()
     
+    def max(a, b):
+        assert a.sheet_name == b.sheet_name
+        return Reference(a.sheet_name, max(a.col, b.col), max(a.row, b.row))
+
+    def min(a, b):
+        assert a.sheet_name == b.sheet_name
+        return Reference(a.sheet_name, min(a.col, b.col), min(a.row, b.row))
+
     def check_bounds(self):
         if self.col <= 0 or self.col > Reference.MAX_COL or self.row <= 0 or self.row > 9999:
             raise ValueError
+        return self
 
-    def from_string(location_string: str, allow_absolute: bool = False, default_sheet_name: str = None, check_bounds: bool = True):
+    def check_absolute(self):
+        if self.abs_col or self.abs_row:
+            raise ValueError
+        return self
+
+    def from_string(default_sheet_name: Optional[str], location_string: str):
         if location_string is None:
             raise ValueError
 
@@ -71,13 +81,10 @@ class Reference:
         if sheet_name is None:
             sheet_name = default_sheet_name
 
-        if not allow_absolute and (abs_col or abs_row):
-            raise ValueError
-
         col = from_base_26(groups[3].lower())
         row = int(groups[5])
 
-        return Reference(col, row, abs_col, abs_row, sheet_name, check_bounds)
+        return Reference(sheet_name, col, row, abs_col, abs_row)
 
     def moved(self, offset: Tuple[int, int]):
         sheet_name = self.sheet_name
@@ -87,7 +94,7 @@ class Reference:
             col += offset[0]
         if not self.abs_row:
             row += offset[1]
-        return Reference(col, row, self.abs_col, self.abs_row, sheet_name)
+        return Reference(sheet_name, col, row, self.abs_col, self.abs_row)
 
     def tuple(self) -> Tuple[int, int]:
         return (self.col, self.row)

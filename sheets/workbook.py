@@ -41,12 +41,12 @@ class Workbook:
         self.notify_functions = []
 
     def copy_cell_values(self, cells: Set[cell.Cell]) -> Dict[cell.Cell, Any]:
-        return {(c.sheet.sheet_name, c.location): c.value for c in cells}
+        return {c.location: c.value for c in cells}
 
     def find_changed_cells(self, saved_values: Dict[cell.Cell, Any]):
         #for location, value in saved_values.items():
         #   print(f"Cell at {location[0], str(location[1])} was {value} and is now {self.get_cell(location[0], location[1]).value}")
-        return set(map(lambda t: self.get_cell(t[0], t[1]), filter(lambda t: self.get_cell(t[0], t[1]).value != saved_values[t], saved_values.keys())))
+        return set(map(lambda loc: self.get_cell(loc), filter(lambda loc: self.get_cell(loc).value != saved_values[loc], saved_values.keys())))
 
     def num_sheets(self) -> int:
         # Return the number of spreadsheets in the workbook.
@@ -154,7 +154,7 @@ class Workbook:
         # rather, the cell's value will be a CellError object indicating the
         # nature of the issue.
         
-        r = Reference.from_string(location)
+        r = Reference.from_string(sheet_name, location).check_bounds().check_absolute()
 
         old_value = self.get_cell_value(sheet_name, location)
 
@@ -182,7 +182,7 @@ class Workbook:
         # This method will never return a zero-length string; instead, empty
         # cells are indicated by a value of None.
 
-        r = Reference.from_string(location)
+        r = Reference.from_string(sheet_name, location).check_bounds().check_absolute()
         return self.sheet_map[sheet_name.lower()].get_cell_contents(r)
 
     def get_cell_value(self, sheet_name: str, location: str) -> Any:
@@ -204,13 +204,13 @@ class Workbook:
         # whole number.  For example, this function would not return
         # Decimal('1.000'); rather it would return Decimal('1').
 
-        r = Reference.from_string(location)
+        r = Reference.from_string(sheet_name, location).check_bounds().check_absolute()
         solution = self.sheet_map[sheet_name.lower().strip()].get_cell_value(r)
         # if isinstance(solution, decimal.Decimal):
         return solution
     
-    def get_cell(self, sheet_name: str, ref: Reference):
-        return self.sheet_map[sheet_name.lower()].get_cell(ref)
+    def get_cell(self, ref: Reference):
+        return self.sheet_map[ref.sheet_name.lower()].get_cell(ref)
 
     def update_cells(self, nodes, send_notifications: bool = True):
         # if send_notifications:
@@ -284,8 +284,8 @@ class Workbook:
                         raise TypeError("Input JSON has an incorrect type: cell-contents should be a dict.")
                     for location in cell_contents.keys():
                         if isinstance(cell_contents[location], str):
-                            ref = Reference.from_string(location)
-                            wb.get_cell(name, ref).set_contents(wb, cell_contents[location], evaluate_formulas=False)
+                            ref = Reference.from_string(name, location)
+                            wb.get_cell(ref).set_contents(wb, cell_contents[location], evaluate_formulas=False)
                         else:
                             raise TypeError("Input JSON has an incorrect type: cell contents should be strings.")            
                 except TypeError:
@@ -375,9 +375,13 @@ class Workbook:
         if new_sheet_name.lower() in self.sheet_map:
             raise ValueError
         
-        self.sheet_map[new_sheet_name.lower()] = self.sheet_map[sheet_name.lower()]
+        sheet = self.sheet_map[sheet_name.lower()]
+        self.sheet_map[new_sheet_name.lower()] = sheet
         self.sheet_map.pop(sheet_name.lower())
         self.sheet_map[new_sheet_name.lower()].sheet_name = new_sheet_name
+
+        for cell in sheet.cells.values():
+            cell.location.sheet_name = new_sheet_name
 
         if sheet_name.lower() in self.sheet_references.backward:
             for cell in self.sheet_references.get_backward_links(sheet_name.lower()):
@@ -450,18 +454,18 @@ class Workbook:
     def move_or_copy(self, sheet_name: str, start_location: str,
             end_location: str, to_location: str, to_sheet: Optional[str] = None, is_move: bool = False) -> None:
 
-        if to_sheet is None:
-            to_sheet = sheet_name
+        to_sheet_name = to_sheet or sheet_name
 
         sheet = self.sheet_map[sheet_name.lower()]
-        to_sheet = self.sheet_map[to_sheet.lower()]
+        to_sheet = self.sheet_map[to_sheet_name.lower()]
 
-        start_location_initial = Reference.from_string(start_location)
-        end_location_initial = Reference.from_string(end_location)
+        start_location_initial = Reference.from_string(sheet_name, start_location).check_bounds().check_absolute()
+        end_location_initial = Reference.from_string(sheet_name, end_location).check_bounds().check_absolute()
         
-        start_ref = Reference(min(start_location_initial.col, end_location_initial.col), min(start_location_initial.row, end_location_initial.row), False, False)
-        end_ref = Reference(max(start_location_initial.col, end_location_initial.col), max(start_location_initial.row, end_location_initial.row), False, False)
-        to_start_ref = Reference.from_string(to_location)
+        start_ref = Reference.min(start_location_initial, end_location_initial)
+        end_ref = Reference.max(start_location_initial, end_location_initial)
+
+        to_start_ref = Reference.from_string(to_sheet_name, to_location).check_bounds().check_absolute()
 
         start_tuple = start_ref.tuple()
         end_tuple = end_ref.tuple()
@@ -486,10 +490,10 @@ class Workbook:
         for col in col_iter:
             for row in row_iter:
                 from_ref = start_ref.moved((col, row))
-                from_cell = self.get_cell(sheet.sheet_name, from_ref)
+                from_cell = self.get_cell(from_ref)
 
                 to_ref = to_start_ref.moved((col, row))
-                to_cell = self.get_cell(to_sheet.sheet_name, to_ref)
+                to_cell = self.get_cell(to_ref)
                 to_cell.copy_cell(from_cell, self, offset)
 
                 if is_move and to_cell is not from_cell:
@@ -635,8 +639,8 @@ class Workbook:
         # If any cell location is invalid, a ValueError is raised.
         # If the sort_cols list is invalid in any way, a ValueError is raised.
 
-        cell_range = CellRange(sheet_name, start_location, end_location)
-        cells = set(map(lambda ref: self.get_cell(sheet_name, ref), cell_range.generate()))
+        cell_range = CellRange(sheet_name, start_location, end_location).check_bounds().check_absolute()
+        cells = set(map(lambda ref: self.get_cell(ref), cell_range.generate()))
 
         if len(sort_cols) == 0:
             raise ValueError

@@ -18,10 +18,10 @@ class SortRow:
     
     def __lt__(self, other):
         for col_order, col_index in zip(self.order, self.sort_cols):
-            my_ref = Reference(col_index, self.row_index)
+            my_ref = Reference(self.sheet.sheet_name, col_index, self.row_index)
             my_value = self.sheet.get_cell_value(my_ref)
 
-            other_ref = Reference(col_index, other.row_index)
+            other_ref = Reference(self.sheet.sheet_name, col_index, other.row_index)
             other_value = self.sheet.get_cell_value(other_ref)
 
             if base_types.lt(my_value, other_value):
@@ -52,7 +52,7 @@ class Sheet:
             if self.cells[location].contents is None:
                 continue
             cell = self.cells[location]
-            cell_contents[str(cell.location)] = str(cell)
+            cell_contents[cell.location.location_string()] = str(cell)
         json_obj["cell-contents"] = cell_contents
         return json_obj
 
@@ -121,7 +121,7 @@ class Sheet:
         for col in range(start_ref.col, end_ref.col + 1):
             row_list = []
             for row in range(start_ref.row, end_ref.row + 1):
-                ref = Reference(col, row)
+                ref = Reference(self.sheet_name, col, row)
                 row_list.append(self.get_cell(ref))
             copy.append(row_list)
 
@@ -130,7 +130,7 @@ class Sheet:
             from_row = sort_row.row_index
             for col in range(start_ref.col, end_ref.col + 1):
                 c = copy[col - start_ref.col][from_row - start_ref.row]
-                c.location = Reference(col, to_row)
+                c.location = Reference(self.sheet_name, col, to_row)
                 c.move_formula(workbook, (0, to_row - from_row))
                 self.cells[(col, to_row)] = copy[col - start_ref.col][from_row - start_ref.row]
 

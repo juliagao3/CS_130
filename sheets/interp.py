@@ -65,8 +65,9 @@ class CellRefFinder(lark.visitors.Interpreter):
 
     def cell(self, tree):
         try:
-            ref = Reference.from_string("!".join(tree.children), default_sheet_name=self.sheet_name, allow_absolute=True, check_bounds=False)
+            ref = Reference.from_string(self.sheet_name, "!".join(tree.children))
         except ValueError:
+            # don't include bad references
             return
 
         self.refs.append(ref)
@@ -99,7 +100,7 @@ class CellRefFinder(lark.visitors.Interpreter):
         if sheet_name is None:
             sheet_name = self.sheet_name
         
-        r = CellRange(sheet_name, start, end, check_bounds=False)
+        r = CellRange(sheet_name, start, end)
 
         for ref in r.generate():
             self.refs.append(ref)
@@ -303,7 +304,7 @@ class FormulaEvaluator(lark.visitors.Interpreter):
         sheet_name = strip_quotes(sheet_name)
 
         try:
-            ref = Reference.from_string(cell_ref, allow_absolute=True)
+            ref = Reference.from_string(sheet_name, cell_ref)
             ref.abs_col = False
             ref.abs_row = False
             cell_ref = str(ref)
@@ -400,7 +401,9 @@ class FormulaMover(lark.visitors.Transformer_InPlace):
             location = values[1]
 
         try:
-            ref = Reference.from_string(location, allow_absolute=True)
+            # We can safely pass None here because we don't use this reference
+            # to get a cell value.
+            ref = Reference.from_string(None, location)
         except ValueError:
             # https://piazza.com/class/lqvau3tih6k26o/post/33
             # :>
