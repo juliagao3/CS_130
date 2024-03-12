@@ -292,7 +292,7 @@ def func_average(evaluator, args):
 
 def func_vlookup(evaluator, args):
     if len(args) != 3:
-        return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, f"VLOOKUP requires at exactly 3 arguments")
+        return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "VLOOKUP requires at exactly 3 arguments")
     
     key = evaluator.visit(args[0])
     region = evaluator.visit(args[1])
@@ -334,7 +334,7 @@ def func_vlookup(evaluator, args):
 
 def func_hlookup(evaluator, args):
     if len(args) != 3:
-        return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, f"HLOOKUP requires at exactly 3 arguments")
+        return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "HLOOKUP requires at exactly 3 arguments")
     
     key = evaluator.visit(args[0])
     region = evaluator.visit(args[1])

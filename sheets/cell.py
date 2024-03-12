@@ -4,7 +4,6 @@ import decimal
 from typing import Tuple
 
 from . import interp
-from . import reference
 
 from .error import CellError, CellErrorType, FormulaError
 from .range import CellRange
