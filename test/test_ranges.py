@@ -117,8 +117,100 @@ class TestClass(unittest.TestCase):
 
         wb.set_cell_contents(n, "A1", "10")
         wb.set_cell_contents(n, "A2", "20")
-        wb.set_cell_contents(n, "B1", "")
-        pass
+        wb.set_cell_contents(n, "C1", '=MIN(INDIRECT("A1:A2"))')
+
+        self.assertEqual(wb.get_cell_value(n, "C1"), decimal.Decimal(10))
+        
+        i, new_sheet = wb.new_sheet("B1")
+
+        #wb.set_cell_contents(new_sheet, "E1", "=IF(7<6, 1+1, 2+2)")
+
+        for i in range(1, 10):
+            wb.set_cell_contents(new_sheet, f"E{i}", f"={i}")
+            wb.set_cell_contents(new_sheet, f"F{i}", f'=E{i}')
+        wb.set_cell_contents(new_sheet, "D1", f'=INDIRECT("{new_sheet}" & "!F1:F9")')
+
+        #self.assertEqual(wb.get_cell_value(new_sheet, "F1"), decimal.Decimal(1))
+        self.assertEqual(wb.get_cell_value(new_sheet, "D1"), decimal.Decimal(1))
+        
+    def test_vlookup(self):
+        wb = sheets.Workbook()
+        i, n = wb.new_sheet()
+
+        for i in range(1, 10 + 1):
+            wb.set_cell_contents(n, f"A{i}", f"={i}")
+            wb.set_cell_contents(n, f"B{i}", f"={i**2}")
+            wb.set_cell_contents(n, f"C{i}", f"={i**3}")
+        wb.set_cell_contents(n, "D1", "=VLOOKUP(5, A1:C10, 3)")
+
+        self.assertEqual(wb.get_cell_value(n, "D1"), decimal.Decimal(125))
+
+    def test_vlookup_out_of_bounds(self):
+        wb = sheets.Workbook()
+        i, n = wb.new_sheet()
+
+        for i in range(1, 10 + 1):
+            wb.set_cell_contents(n, f"A{i}", f"={i}")
+            wb.set_cell_contents(n, f"B{i}", f"={i**2}")
+            wb.set_cell_contents(n, f"C{i}", f"={i**3}")
+        wb.set_cell_contents(n, "D1", "=VLOOKUP(5, A1:C10, 4)")
+
+        self.assertIsInstance(wb.get_cell_value(n, "D1"), sheets.CellError)
+        self.assertEqual(wb.get_cell_value(n, "D1").get_type(), sheets.CellErrorType.TYPE_ERROR)
+
+    def test_vlookup_circular(self):
+        wb = sheets.Workbook()
+        i, n = wb.new_sheet()
+
+        for i in range(1, 10 + 1):
+            wb.set_cell_contents(n, f"A{i}", f"={i}")
+            wb.set_cell_contents(n, f"B{i}", f"={i**2}")
+            wb.set_cell_contents(n, f"C{i}", f"={i**3}")
+        wb.set_cell_contents(n, "D1", "=VLOOKUP(5, A1:D10, 4)")
+
+        self.assertIsInstance(wb.get_cell_value(n, "D1"), sheets.CellError)
+        self.assertEqual(wb.get_cell_value(n, "D1").get_type(), sheets.CellErrorType.CIRCULAR_REFERENCE)
+
+        wb.set_cell_contents(n, "E1", f'=IFERROR(VLOOKUP(5, INDIRECT("{n}" & "!A1:C10"), 3), "")')
+        self.assertEqual(wb.get_cell_value(n, "E1"), decimal.Decimal(125))
+
+    def test_hlookup(self):
+        wb = sheets.Workbook()
+        i, n = wb.new_sheet()
+
+        for i in range(1, 10 + 1):
+            wb.set_cell_contents(n, f"{chr(i + ord('A'))}1", f"={i}")
+            wb.set_cell_contents(n, f"{chr(i + ord('A'))}2", f"={i**2}")
+            wb.set_cell_contents(n, f"{chr(i + ord('A'))}3", f"={i**3}")
+        wb.set_cell_contents(n, "A4", "=HLOOKUP(5, A1:J3, 3)")
+
+        self.assertEqual(wb.get_cell_value(n, "A4"), decimal.Decimal(125))
+
+    def test_hlookup_cycle(self):
+        wb = sheets.Workbook()
+        i, n = wb.new_sheet()
+
+        for i in range(1, 10 + 1):
+            wb.set_cell_contents(n, f"{chr(i + ord('A'))}1", f"={i}")
+            wb.set_cell_contents(n, f"{chr(i + ord('A'))}2", f"={i**2}")
+            wb.set_cell_contents(n, f"{chr(i + ord('A'))}3", f"={i**3}")
+        wb.set_cell_contents(n, "A4", "=HLOOKUP(5, A1:J4, 4)")
+
+        self.assertIsInstance(wb.get_cell_value(n, "A4"), sheets.CellError)
+        self.assertEqual(wb.get_cell_value(n, "A4").get_type(), sheets.CellErrorType.CIRCULAR_REFERENCE)
+
+    def test_hlookup_out_of_bounds(self):
+        wb = sheets.Workbook()
+        i, n = wb.new_sheet()
+
+        for i in range(1, 10 + 1):
+            wb.set_cell_contents(n, f"{chr(i + ord('A'))}1", f"={i}")
+            wb.set_cell_contents(n, f"{chr(i + ord('A'))}2", f"={i**2}")
+            wb.set_cell_contents(n, f"{chr(i + ord('A'))}3", f"={i**3}")
+        wb.set_cell_contents(n, "A4", "=HLOOKUP(5, A1:J3, 4)")
+
+        self.assertIsInstance(wb.get_cell_value(n, "A4"), sheets.CellError)
+        self.assertEqual(wb.get_cell_value(n, "A4").get_type(), sheets.CellErrorType.TYPE_ERROR)
 
 if __name__ == "__main__":
         unittest.main()
