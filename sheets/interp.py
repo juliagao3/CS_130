@@ -359,7 +359,7 @@ class FormulaMover(lark.visitors.Transformer_InPlace):
 
         # check if new loc is valid
         try:
-            new_value = str(ref.moved(self.offset))
+            new_value = str(ref.moved(self.offset).check_bounds())
         except ValueError:
             new_value = "#REF!"
         
