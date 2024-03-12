@@ -39,11 +39,33 @@ class CellRange:
 
         return CellRange(sheet_name, start, end, check_bounds)
     
+    def generate_column(self, col: int):
+        if col < 0 or col > self.end_ref.col - self.start_ref.col:
+            return ValueError
+
+        for row in range(self.start_ref.row, self.end_ref.row + 1):
+            yield Reference(int(col) + self.start_ref.col, row, sheet_name=self.sheet_name)
+
+    def generate_row(self, row: int):
+        if row < 0 or row > self.end_ref.row - self.start_ref.row:
+            return ValueError
+
+        for col in range(self.start_ref.col, self.end_ref.col + 1):
+            yield Reference(col, int(row) + self.start_ref.row, sheet_name=self.sheet_name)
+
     def generate(self):
         for row in range(self.start_ref.row, self.end_ref.row + 1):
             for col in range(self.start_ref.col, self.end_ref.col + 1):
                 yield Reference(col, row, sheet_name=self.sheet_name)
-    
+
+    def generate_column_values(self, col, workbook):
+        for ref in self.generate_column(col):
+            yield workbook.get_cell(ref.sheet_name, ref).value
+
+    def generate_row_values(self, row, workbook):
+        for ref in self.generate_row(row):
+            yield workbook.get_cell(ref.sheet_name, ref).value
+
     def generate_values(self, workbook):
         for ref in self.generate():
             yield workbook.get_cell(ref.sheet_name, ref).value
