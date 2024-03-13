@@ -1,29 +1,41 @@
-# CS_130
+# CS 130
 
-## Testing
+## Setting up a VENV
+
+You can optionally set up a venv to run this code to prevent it from
+interfering with other python packages on your system.
+
+Create one in the directory `venv_dir` using...
 
 ```
-python -m unittest tests.tests
+python3 -m venv venv_dir
 ```
 
-## TODO
+Then activate it using (assuming you're on macos/linux)...
 
-- [ ] write tests
-  - [x] basic dependency tests
-  - [x] cyclic dependency test
-  - [x] topological sort test
-- [x] formula parsing
-  - [x] add
-  - [x] mul
-  - [x] unary
-  - [x] concatenation
-  - [x] cell references
-  - [x] finding errors
-    - [x] parse error
-    - [x] bad reference (should move this to the dependency discovery code)
-    - [x] propagate referenced cell errors
-- [x] dependency discovery
-  - [x] maintain dependency graph
-    - [x] remove edges around cells whose content changes
-  - [x] identify cycles
-  - [x] topological sort
+```
+. ./venv_dir/bin/activate
+```
+
+## Getting the Required Packages
+
+Install the required packages using...
+
+```
+pip3 install -r requirements.txt
+```
+
+## Running Tests
+
+Run all the tests using...
+
+```
+python3 -m unittest
+```
+
+You can generate profiles using `cProfile` for diagnosing performance...
+
+```
+python3 -m cProfile -o out.profile test/test_stress.py
+```
+
