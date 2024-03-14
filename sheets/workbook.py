@@ -212,8 +212,7 @@ class Workbook:
     def get_cell(self, ref: Reference):
         return self.sheet_map[ref.sheet_name.lower()].get_cell(ref)
 
-    def update_cells(self, nodes, send_notifications: bool = True):
-        # if send_notifications:
+    def update_cells(self, nodes):
         saved_values = self.copy_cell_values(nodes)
 
         order = self.dependency_graph.get_topological_order()
@@ -227,7 +226,6 @@ class Workbook:
                 continue
             node.recompute_value(self)
 
-        # if send_notifications:
         self.notify(self.find_changed_cells(saved_values))
 
     def update_ancestors(self, nodes):
@@ -294,7 +292,7 @@ class Workbook:
             raise KeyError("Input JSON is missing an expected key: 'sheets', 'name', or 'cell-contents'.")
         
         for s in wb.sheets:
-            wb.update_cells(s.cells.values(), send_notifications=False)
+            wb.update_cells(s.cells.values())
 
         return wb
 
