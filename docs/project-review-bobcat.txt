@@ -1,0 +1,90 @@
+CS130 Project Review
+====================
+
+Team performing review: Ocelot
+Work being reviewed:  Bobcat
+
+The first two sections are for reviewing the `sheets` library code itself,
+excluding the test code and other aspects of the project.  The remaining
+sections are for those other supporting parts of the project.
+
+Feedback comments on design aspects of the `sheets` library
+-----------------------------------------------------------
+
+Consider the overall design and structure of the `sheets` library from
+the perspective of the GRASP principles (Lecture 20) - in particular the
+principles of high cohesion and low coupling.  What areas of the project
+codebase are structured in a highly effective way?  What areas of the
+codebase could be restructured to have higher cohesion and/or lower
+coupling?  Give specific suggestions for how to achieve this in the code.
+
+Effective parts
+- graph.py is abstracted away and can stand on its own. It doesn’t have any knowledge of the workbook, demonstrating low coupling.
+- They maintain consistent and clean prioritization of errors in errors.py by assigning a numerical priority to each type of error.
+- Reference class made conversion logic very clean.
+- Workbook almost only contained the public functions
+
+Room for improvement
+- In base_types.py, the to_number, to_string, and to_bool functions mix type conversion and error handling in the same function, which reduces cohesion. It could be better to raise an exception if the conversion fails, and then handle the exceptions in the code that calls those functions.
+- Move_or_copy needs to be split into helper functions
+- The algorithmic design of lazy evaluation could be improved — instead of running cycle detection many times, there is a more efficient way to implement lazy evaluation.
+
+Feedback comments on implementation aspects of the `sheets` library
+-------------------------------------------------------------------
+
+Consider the actual implementation of the project from the perspectives
+of coding style (naming, commenting, code formatting, decomposition into
+functions, etc.), and idiomatic use of the Python language and language
+features.  What practices are used effectively in the codebase to make
+for concise, readable and maintainable code?  What practices could or
+should be incorporated to improve the quality, expressiveness, readability
+and maintainability of the code?
+
+- Reference class was very nice! Typing was good (typing in the function arguments would be better
+- Consider using f strings for readability instead of .format so that you can directly substitute the variables that you want to be displayed
+- Commit messages should start with a capital letter and be in an imperative tone. So if you delete commit A whose commit message is “Add XYZ”, it’s very clear that we’re deleting the commit that adds XYZ.
+
+Feedback comments on testing aspects of the project
+---------------------------------------------------
+
+Consider the testing aspects of the project, from the perspective of "testing
+best practices" (Lectures 4-6):  completeness/thoroughness of testing,
+automation of testing, focus on testing the "most valuable" functionality vs.
+"trivial code," following the Arrange-Act-Assert pattern in individual tests,
+etc.  What testing practices are employed effectively in the project?  What
+testing practices should be incorporated to improve the quality-assurance
+aspects of the project?
+
+- Consider adding a setUp and tearDown functions to your test suites so you just instantiate the Workbook and an empty sheet once. That way you reduce repeated work.
+- For test_sort.py, you could create a helper function that takes in the cell contents for each cell involved in the setup. This way, you can 1) abstract away the trivialness of setting cell contents, and 2) easily understand the workbook setup by a quick visual glance, based on what was passed to that helper function. Some edge cases to consider:
+- Make sure formulas outside of the sort region are not updated if rows are indeed shifted around.
+- If the user specifies a sort region with columns outside the extent, make sure this doesn’t cause issues because the sort would involve None cells. Also, if the sort region for example included 1,000 cols outside of the extent, you would only want to sort on the columns inside the extent for the sake of performance.
+- Try a few smaller tests where you don’t just have a sort_region that aligns with the top left corner of the workbook.
+- Maybe add some tests with cells of mixed types (blank, error, number, string, boolean) as well as all different types of errors so you can also make sure the error enum value order is respected in the sorting as well.
+- For the test_tests.py file, consider breaking up the tests into different test suites so it’s clearer which sections of the file test what. That way, if you are for example working on a refactor for a specific feature X, you can simply run the tests in the TestFeatureX test suite for the initial runs (since those are the things that are most likely to fail), rather than having to run everything in that entire file.
+- Consider adding some integration tests for your new features to ensure they “meld” well with your existing features. For example, for Project 4 you could test how renaming, copy, load, save affects nesting functions. You could also test how move and copy cells affect functions and comparison operators. 
+- Also, try throwing in a few tests that involve references to the form SheetName!A1, and also where the sheet name reference includes unnecessary single quotes too (ex, ‘SheetName’!A1)
+- Currently, it seems that you directly pass in the sheet name to functions, but you could test edge cases like case insensitivity and unnecessary single quotes.
+- Also consider testing for case insensitivity for renaming sheets
+- Cell notifications for each of the large updates (copy, delete, etc.)
+- Depending on the number of tests for each test.py file, consider also refactoring your tests into different classes, rather than having all of your tests under “TestClass”
+ - Overall it seems like they focus on testing the “most valuable” and main functionality of each feature and spend considerably less time considering edge cases. We are curious to know how they are doing on acceptance tests considering this.
+
+Consider the implementation quality of the testing code itself, in the same
+areas described in the previous section.  What practices are used effectively
+in the testing code to make it concise, readable and maintainable?  What
+practices could or should be incorporated to improve the quality of the
+testing code?
+
+ - Generally, the code is pretty concise, readable, and maintainable. The functions seem to be cleanly decomposed into helper functions. In particular, Workbook.py mainly consists of the API and a few helper functions, since they utilize their sheet.py module well. For example, get_cell, get_cell_value, get_cell_contents are defined in sheet.py rather than workbook.py.
+ - A lot of their helper functions (particularly functions not in workbook.py) lack comments and documentation. However, generally they decompose their functions into smaller helper functions with low coupling allowing for ease of readability. For example, sheet.py has no documentation or comments.
+ - Many of the test files, especially test_sort, set the contents for a lot of rows (ex, where you specify row_count=10). Generally, it’s best to avoid setting so many cells since unit tests are intended to run quickly and test smaller aspects of the code.
+ - As mentioned earlier the tests could be separated into different classes
+
+Feedback comments on other aspects of the project
+-------------------------------------------------
+
+If you have any other comments - compliments or suggestions for improvement -
+that aren't covered by previous sections, please include them here.
+
+Overall, the codebase is extremely clean and it’s great that workbook.py mostly only includes the API functions.
