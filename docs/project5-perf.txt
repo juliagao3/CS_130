@@ -1,0 +1,30 @@
+Theory - We think that our library is spending a lot of time in setting cell contents when
+loading a Json workbook.
+Rationale - We were spending about 53.34% of our cumulative time setting cell contents which
+took up about 11.8 seconds out of the 21.8 seconds.
+Outcome - After our changes, we were able to spend only 33% of our time setting cell contents as
+it took up 4.40s seoncds out of 13.1 seconds. We were right!
+
+https://github.com/juliagao3/CS_130/commit/b626440d874b9e2464d0c9669ecae771782fe968
+
+Theory - We think that our library is spending a lot of time in copying a sheet and specifically
+in recomputing the value of each cell for all cells in the sheet and deepcopy.
+Rationale - We were spending about 1.97% of our time in deep copy which took 0.357 seconds
+out of the 17.8 seconds. 
+Outcome - After our changes, we were able to spend only 0.05% of our time in deepcopy as it
+took 0.006 seconds out of the 11.46 seconds. We were right for deepcopy but the rest of our code
+is still similar in time with the old version. It wasn't effective!
+
+https://github.com/juliagao3/CS_130/commit/d9677f76ae010d5a8a34e3c67cf6da68b21fbe02
+https://github.com/juliagao3/CS_130/commit/47c006a705233a2616ea31042f4097dbde9c1487
+
+Theory - We think that our library is spending a lot of time in moving cells in the set 
+cell contents of the sheet.py. 
+Rationale - We were spending about 53.13% of our time in setting cell contents which took 
+11 seconds out of the 20.3 seconds.
+Outcome - After our changes, we were able to spend 9.1% of our time in setting cell contents
+which took 1.26 seconds out of 13.5 seconds in setting cell contents. We improved by 7 seconds!
+We were right!
+
+https://github.com/juliagao3/CS_130/commit/6320f84eb973b35422ac426646539c7fa66dc486
+

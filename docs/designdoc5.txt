@@ -1,0 +1,151 @@
+CS130 Project 5 - Design Document
+=================================
+
+Please answer all questions in this design document.  Note that the final
+feedback section is optional, and you are not required to answer it if you
+don't want to.
+
+Unanswered or incompletely answered questions, or answers that don't actually
+match the code/repository, will result in deductions.
+
+Answers don't have to be deeply detailed!  We are mainly looking for an
+overview or summary description of how your project works, and your team's
+experiences working on this project.
+
+Logistics (7 points)
+--------------------
+
+L1.  [2pts] Enumerate all teammates here.
+     Sebastian Lamas, Cecilia Noble, Jacob Acosta, Julia Gao
+
+
+L2.  [2pts] What did each teammate focus on during this project?
+     We did the sorting feature as a group using Liveshare. We also implemented
+     cell ranges and the additional functions as a group.
+
+
+L3.  [3pts] Approximately how many hours did each teammate spend on the project?
+     ~ 22 hours
+
+
+Spreadsheet Engine Design (10 points)
+-------------------------------------
+
+D1.  [4pts] Give an overview of how you implemented sorting.  Do you sort the
+     rows directly?  Do you use adapter objects instead?  Some other technique?
+
+     Following the suggestion in the spec, we created a SortRow class in our
+     sheet.py. The SortRow class creates an adapter object in which we implemented
+     a rich comparison dunder method on the adapter object. The object is able
+     to encapsulate comparison of rows using __lt__. The __lt__ uses the base_types
+     comparison which compares based on the type of the cell object (eg. None, error,
+     number, string, boolean). Our method sort region in sheets.py creates an 
+     adapter object for each row in the region and sorts the list of adapter objects. 
+     Once sorted, we are able to move each row to its final position based on the
+     index in the sorted list of adapter objects. 
+
+
+D2.  [3pts] How does your implementation solve the problem of supporting the
+     user-specified row ordering based on both the columns and the ordering to
+     sort by?  Did you create any classes or functions to help specifically with
+     this task?
+     
+     Our implementation does not use any classes or function to help specifically
+     with this task. In workbook.py, we support user-specific row ordering based on columns
+     by checking that the list of columns is valid using a set. We check if the absolute
+     value of the col has been added to the set since we are not allowed to sort twice on
+     a single column. In sheet.py, we check the order of the columns by checking if the value
+     is positive or negative and setting them to False or True accordingly. Then in our
+     class SortRow, in the __lt__ comparison, we return whether we should sort in ascending
+     or descending order using the check mentioned before. 
+
+D3.  [3pts] Briefly describe the changes you made to your spreadsheet engine to
+     satisfy the stricter cell-change notification behaviors.  Did you find this
+     to be largely straightforward to change?  Why or why not?
+
+     This was a straightforward change. Previously, we were sending notifications for every time
+     a cell changed values. Now, we have two functions in workbook.py that copy the values 
+     of the cells and find the cells whose values were modified. We send updates to only
+     those values that get changed only once. 
+
+
+Performance Improvement (13 pts)
+--------------------------------
+
+In this project you must improve the performance of operations that involve
+bulk updating of cell formulas and/or values.  In the previous project your
+team should have written some performance-testing code in preparation for this
+effort, and should have run it under a profiler to get an initial sense of
+where improvements can be made.  In this project you need to follow through on
+this setup, and address performance issues in your code.
+
+P1.  [7pts] Give a brief overview of 2-3 of the worst hot-spots you identified
+     in your performance testing and analysis.  For each one, describe how your
+     team was able to resolve it.
+
+     1. Loading json was slow because we were setting cell contents every time which
+     meant cycle checking and updating references for each cell. We resolved it
+     by calling the set_contents inside the cell.py on each cell instead with passing in 
+     a boolean to determine whether or not formulas should be reparsed. We then 
+     also updated the cells after all cells contents were set. Furthermore, we
+     moved the declaration of MAX_COL from the reference class to be a constant
+     that we get from from_base_26 since that function was slow and didn't need to
+     be recomputed everytime.
+
+     2. Our copying sheet was slow because we were recomputing the value of each
+     of the cells of the sheet everytime. We tried to resolve it by instead copying
+     over each cell to the new sheet and computing the cycle checking at the very
+     end on all of the cells instead of each one. 
+
+     3. Our moving/copying cells was slow because we were recomputing the sheet extent
+     whenever we set contents for each cell. We tried to resolve this by moving this
+     slow computation to its own function called get sheet extent so that we get the extent
+     of the worksheet only when we need to. 
+
+
+P2.  [3pts] Did your team try anything to address performance issues and find
+     that it didn't improve things at all?  If so, were you able to identify why
+     the intended fix didn't produce the desired benefit?
+
+     As we mentioned in the performance document, 2. was not effective in improving
+     our performance tests. We were able to speed it up by only less than 0.5 seconds
+     in the function copy_sheets. We sped up deep copy but the rest was still slow so
+     there wasn't much different performance wise. It didn't produce the intended fix
+     because we still had to do the same calls in the function. We thought deep copy
+     took a lot of the time but that wasn't the case.
+
+
+P3.  [3pts] Did your performance updates cause any regressions in functionality?
+     If so, briefly describe any issues that emerged.  How were these issues
+     identified (e.g. automated test failures, manual testing, etc.)?  How
+     quickly were issues identified?
+
+     No, the performance updates didn't cause any regression in functionality.
+     This could be due to that none of the functions functionality was changed. We
+     more just optimized certain parts of the code to have a faster runtime. The
+     overall structure of our code was not affected by these optimizations.
+
+
+Section F:  CS130 Project 4 Feedback [OPTIONAL]
+-----------------------------------------------
+
+These questions are OPTIONAL, and you do not need to answer them.  Your grade
+will not be affected by answering or not answering them.  Also, your grade will
+not be affected by negative feedback - we want to know what went poorly so that
+we can improve future versions of the course.
+
+F1.  What parts of the assignment did you find highly enjoyable?  Conversely,
+     what parts of the assignment did you find unenjoyable?
+
+
+F2.  What parts of the assignment helped you learn more about software
+     engineering best-practices, or other useful development skills?
+     What parts were not helpful in learning these skills?
+
+
+F3.  Were there any parts of the assignment that seemed _unnecessarily_ tedious?
+     (Some parts of software development are always tedious, of course.)
+
+
+F4.  Do you have any feedback and/or constructive criticism about how this
+     project can be made better in future iterations of CS130?
