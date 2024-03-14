@@ -91,6 +91,27 @@ class TestClass(unittest.TestCase):
         for new_row in range(5, 10):
             self.assertEqual(wb.get_cell_value(n, "B" + str(new_row)), decimal.Decimal(new_row))
 
+    def test_stable_reversed(self):
+        wb = sheets.Workbook()
+        i, n = wb.new_sheet()
+
+        for row in range(1, 5):
+            wb.set_cell_contents(n, "A" + str(row), f"{row}")
+            wb.set_cell_contents(n, "B" + str(row), f"={row}")
+
+        for row in range(5, 10):
+            wb.set_cell_contents(n, "A" + str(row), "5")
+            wb.set_cell_contents(n, "B" + str(row), f"={row}")
+
+        for row in range(10, 15 + 1):
+            wb.set_cell_contents(n, "A" + str(row), f"{row}")
+            wb.set_cell_contents(n, "B" + str(row), f"={row}")
+
+        wb.sort_region(n, "A1", f"B{15}", [-1])
+
+        for new_row in range(5, 10):
+            self.assertEqual(wb.get_cell_value(n, "B" + str(new_row)), decimal.Decimal(new_row))
+
     def test_sort_reversed_reversed_bounds(self):
         wb = sheets.Workbook()
         i, n = wb.new_sheet()
