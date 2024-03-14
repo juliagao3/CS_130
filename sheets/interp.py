@@ -343,6 +343,11 @@ class FormulaEvaluator(lark.visitors.Interpreter):
 
     @visit_children_decor
     def concat_expr(self, values):
+        e = error.propagate_errors(values)
+
+        if e is not None:
+            return e
+
         return "".join(map(base_types.to_string, values))
 
     @visit_children_decor
