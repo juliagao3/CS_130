@@ -54,10 +54,10 @@ D2.  [3pts] How does your implementation solve the problem of supporting the
      with this task. In workbook.py, we support user-specific row ordering based on columns
      by checking that the list of columns is valid using a set. We check if the absolute
      value of the col has been added to the set since we are not allowed to sort twice on
-     a single column. In sheet.py, we check the order of the columns by checking if the value
-     is positive or negative and setting them to False or True accordingly. Then in our
-     class SortRow, in the __lt__ comparison, we return whether we should sort in ascending
-     or descending order using the check mentioned before. 
+     a single column. We enable ourselves to sort on columns in either order by xor-ing
+     the result of the value comparisons in our SortRow class with a boolean flag. By
+     setting the flag True we can reverse every comparison for a particular column and
+     obtain a reversed sort.
 
 D3.  [3pts] Briefly describe the changes you made to your spreadsheet engine to
      satisfy the stricter cell-change notification behaviors.  Did you find this
