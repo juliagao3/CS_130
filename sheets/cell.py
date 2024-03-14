@@ -58,7 +58,7 @@ class Cell:
         for ref in static_refs:
             try:
                 ref.check_bounds()
-                cell = workbook.get_cell(ref.sheet_name, ref)
+                cell = workbook.get_cell(ref)
                 workbook.dependency_graph.link(self, cell)
             except (KeyError, ValueError):
                 pass
@@ -81,7 +81,7 @@ class Cell:
 
         if type(value) == CellRange:
             ref = next(value.generate())
-            value = workbook.get_cell(ref.sheet_name, ref).value
+            value = workbook.get_cell(ref).value
 
         self.set_value(value)
 

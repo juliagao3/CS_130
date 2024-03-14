@@ -15,7 +15,7 @@ def link_subtree(evaluator, subtree):
     finder.visit(subtree)
 
     for ref in finder.refs:
-        cell = evaluator.workbook.get_cell(ref.sheet_name, ref)
+        cell = evaluator.workbook.get_cell(ref)
 
         evaluator.workbook.dependency_graph.link_runtime(evaluator.c, cell)
         evaluator.workbook.sheet_references.link_runtime(evaluator.c, ref.sheet_name or evaluator.sheet.sheet_name)
@@ -212,11 +212,11 @@ def func_indirect(evaluator, args):
         return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "INDIRECT requires exactly 1 argument")
 
     try:
-        r = CellRange.from_string(str(args[0]).lower(), default_sheet_name=evaluator.sheet.sheet_name)
+        r = CellRange.from_string(evaluator.sheet.sheet_name, str(args[0]).lower())
 
         for ref in r.generate():
             evaluator.workbook.sheet_references.link_runtime(evaluator.c, ref.sheet_name or evaluator.sheet.sheet_name)
-            cell = evaluator.workbook.get_cell(ref.sheet_name or evaluator.sheet.sheet_name, ref)
+            cell = evaluator.workbook.get_cell(ref)
             evaluator.workbook.dependency_graph.link_runtime(evaluator.c, cell)
 
         evaluator.c.check_cycles(evaluator.workbook)
@@ -226,11 +226,11 @@ def func_indirect(evaluator, args):
         pass
 
     try:
-        ref = reference.Reference.from_string(str(args[0]).lower(), allow_absolute=True)
+        ref = reference.Reference.from_string(evaluator.sheet.sheet_name, str(args[0]).lower())
 
         evaluator.workbook.sheet_references.link_runtime(evaluator.c, ref.sheet_name or evaluator.sheet.sheet_name)
 
-        cell = evaluator.workbook.get_cell(ref.sheet_name or evaluator.sheet.sheet_name, ref)
+        cell = evaluator.workbook.get_cell(ref)
 
         evaluator.workbook.dependency_graph.link_runtime(evaluator.c, cell)
         evaluator.c.check_cycles(evaluator.workbook)
@@ -313,13 +313,13 @@ def func_vlookup(evaluator, args):
     target_values = []
 
     for ref in region.generate_column(0):
-        cell = evaluator.workbook.get_cell(ref.sheet_name, ref)
+        cell = evaluator.workbook.get_cell(ref)
         evaluator.workbook.dependency_graph.link_runtime(evaluator.c, cell)
         evaluator.workbook.sheet_references.link_runtime(evaluator.c, ref.sheet_name or evaluator.sheet.sheet_name)
         search_values.append(cell.value)
 
     for ref in region.generate_column(index-1):
-        cell = evaluator.workbook.get_cell(ref.sheet_name, ref)
+        cell = evaluator.workbook.get_cell(ref)
         evaluator.workbook.dependency_graph.link_runtime(evaluator.c, cell)
         evaluator.workbook.sheet_references.link_runtime(evaluator.c, ref.sheet_name or evaluator.sheet.sheet_name)
         target_values.append(cell.value)
@@ -355,13 +355,13 @@ def func_hlookup(evaluator, args):
     target_values = []
 
     for ref in region.generate_row(0):
-        cell = evaluator.workbook.get_cell(ref.sheet_name, ref)
+        cell = evaluator.workbook.get_cell(ref)
         evaluator.workbook.dependency_graph.link_runtime(evaluator.c, cell)
         evaluator.workbook.sheet_references.link_runtime(evaluator.c, ref.sheet_name or evaluator.sheet.sheet_name)
         search_values.append(cell.value)
 
     for ref in region.generate_row(index-1):
-        cell = evaluator.workbook.get_cell(ref.sheet_name, ref)
+        cell = evaluator.workbook.get_cell(ref)
         evaluator.workbook.dependency_graph.link_runtime(evaluator.c, cell)
         evaluator.workbook.sheet_references.link_runtime(evaluator.c, ref.sheet_name or evaluator.sheet.sheet_name)
         target_values.append(cell.value)
