@@ -43,10 +43,17 @@ class Workbook:
     def copy_cell_values(self, cells: Set[cell.Cell]) -> Dict[cell.Cell, Any]:
         return {c.location: c.value for c in cells}
 
+    def check_changed_cells(self, old_value: Any, new_value: Any):
+        if isinstance(old_value, CellError) and isinstance(new_value, CellError):
+            old_value = old_value.get_type().value
+            new_value = new_value.get_type().value
+
+        return new_value != old_value or type(new_value) != type(old_value)
+
     def find_changed_cells(self, saved_values: Dict[cell.Cell, Any]):
         #for location, value in saved_values.items():
         #   print(f"Cell at {location[0], str(location[1])} was {value} and is now {self.get_cell(location[0], location[1]).value}")
-        return set(map(lambda loc: self.get_cell(loc), filter(lambda loc: self.get_cell(loc).value != saved_values[loc], saved_values.keys())))
+        return set(map(lambda loc: self.get_cell(loc), filter(lambda loc: self.check_changed_cells(self.get_cell(loc).value, saved_values[loc]), saved_values.keys())))
 
     def num_sheets(self) -> int:
         # Return the number of spreadsheets in the workbook.
@@ -160,7 +167,9 @@ class Workbook:
 
         cell = self.sheet_map[sheet_name.lower()].set_cell_contents(self, r, contents)
 
-        if self.get_cell_value(sheet_name, location) != old_value:
+        new_value = self.get_cell_value(sheet_name, location)
+
+        if self.check_changed_cells(old_value, new_value):
             self.notify({cell})
 
         self.update_ancestors({cell})
