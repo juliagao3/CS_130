@@ -82,15 +82,15 @@ def lt(a, b):
     if isinstance(a, type(b)):
         if isinstance(a, str):
             a = a.lower()
-
-        if isinstance(b, str):
             b = b.lower()
 
         if isinstance(a, CellError):
-            a = a.get_type()
+            a = a.get_type().value
+            b = b.get_type().value
 
-        if isinstance(b, CellError):
-            b = b.get_type()
+        if isinstance(a, type(None)):
+            a = "None"
+            b = "None"
 
         return a < b
     else:
