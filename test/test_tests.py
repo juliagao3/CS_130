@@ -298,7 +298,7 @@ class TestClass(unittest.TestCase):
 
                 wb.set_cell_contents(sheet_name, "A1", "=A2")
                 wb.set_cell_contents(sheet_name, "A2", "=A1+A4")
-                wb.set_cell_contents(sheet_name, "A3", "=\"Hello \" & A1 & \"!\"")
+                wb.set_cell_contents(sheet_name, "A3", "=ISERROR(A2)")
 
                 a1 = wb.get_cell_value(sheet_name, "A1")
                 a2 = wb.get_cell_value(sheet_name, "A2")
@@ -306,10 +306,11 @@ class TestClass(unittest.TestCase):
 
                 self.assertIsInstance(a1, sheets.CellError)
                 self.assertIsInstance(a2, sheets.CellError)
-                self.assertIsInstance(a3, str)
+                self.assertIsInstance(a3, bool)
 
                 self.assertEqual(a1.get_type(), sheets.CellErrorType.CIRCULAR_REFERENCE)
                 self.assertEqual(a2.get_type(), sheets.CellErrorType.CIRCULAR_REFERENCE)
+                self.assertEqual(a3, True)
 
         def test_grow_and_shrink_extent(self):
                 wb = sheets.Workbook("wb")
