@@ -319,6 +319,9 @@ def func_vlookup(evaluator, args):
     region = evaluator.visit(args[1])
     index = base_types.to_number(evaluator.visit(args[2]))
 
+    if (abs(index - int(index)) > 0):
+        return error.CellError(error.CellErrorType.TYPE_ERROR, "")
+
     if type(region) != CellRange:
         return error.CellError(error.CellErrorType.TYPE_ERROR, "")
 
@@ -348,7 +351,7 @@ def func_vlookup(evaluator, args):
     evaluator.c.check_cycles(evaluator.workbook)
 
     for search_value, target_value in zip(search_values, target_values):
-        if search_value == key:
+        if search_value == key and type(search_value) == type(key):
             return target_value
 
     return error.CellError(error.CellErrorType.TYPE_ERROR, "")
@@ -360,6 +363,9 @@ def func_hlookup(evaluator, args):
     key = evaluator.visit(args[0])
     region = evaluator.visit(args[1])
     index = base_types.to_number(evaluator.visit(args[2]))
+
+    if (abs(index - int(index)) > 0):
+        return error.CellError(error.CellErrorType.TYPE_ERROR, "")
 
     if type(region) != CellRange:
         return error.CellError(error.CellErrorType.TYPE_ERROR, "")
@@ -390,7 +396,7 @@ def func_hlookup(evaluator, args):
     evaluator.c.check_cycles(evaluator.workbook)
 
     for search_value, target_value in zip(search_values, target_values):
-        if search_value == key:
+        if search_value == key and type(search_value) == type(key):
             return target_value
 
     return error.CellError(error.CellErrorType.TYPE_ERROR, "")
