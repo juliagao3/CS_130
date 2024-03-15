@@ -212,5 +212,21 @@ class TestClass(unittest.TestCase):
         self.assertIsInstance(wb.get_cell_value(n, "A4"), sheets.CellError)
         self.assertEqual(wb.get_cell_value(n, "A4").get_type(), sheets.CellErrorType.TYPE_ERROR)
 
+    def test_update_on_copy_sheet(self):
+        wb = sheets.Workbook()
+        i, n = wb.new_sheet()
+
+        wb.set_cell_contents(n, 'A1', '1')
+        wb.set_cell_contents(n, 'A2', '2')
+
+        j, m = wb.new_sheet()
+
+        wb.set_cell_contents(m, 'A1', f'=SUM({n}_1!A1:B2)')
+
+        k, o = wb.copy_sheet(n)
+
+        self.assertEqual(wb.get_cell_value(m, "A1"), decimal.Decimal(3))
+
+
 if __name__ == "__main__":
         unittest.main()

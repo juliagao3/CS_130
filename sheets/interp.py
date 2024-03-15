@@ -293,7 +293,7 @@ class FormulaEvaluator(lark.visitors.Interpreter):
         try:
             start = str(tree.children[0].children[0])
             end = str(tree.children[1].children[0])
-            return CellRange(self.sheet.sheet_name, start, end)
+            return CellRange(self.sheet.sheet_name, start, end).check_sheet(self.workbook)
         except (ValueError, KeyError):
             return CellError(CellErrorType.BAD_REFERENCE, f"{tree.children[0]}:{tree.children[1]}")
 
