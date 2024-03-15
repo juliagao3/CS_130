@@ -654,7 +654,7 @@ class Workbook:
 
         sort_cols_set = set()
         for col in sort_cols:
-            if type(col) != int:
+            if not isinstance(col, int):
                 raise ValueError
 
             if abs(col) > cell_range.end_ref.col - cell_range.start_ref.col + 1 or abs(col) < 1:
