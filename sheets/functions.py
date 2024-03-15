@@ -40,6 +40,9 @@ def func_and(_evaluator, args):
 
     errors = []
     for a in args:
+        if type(a) == CellRange:
+            return error.CellError(error.CellErrorType.TYPE_ERROR, "Unhandled argument cell range")
+
         b = base_types.to_bool(a)
 
         if isinstance(b, sheets.CellError) and b not in errors:
@@ -61,6 +64,9 @@ def func_or(_evaluator, args):
 
     errors = []
     for a in args:
+        if type(a) == CellRange:
+            return error.CellError(error.CellErrorType.TYPE_ERROR, "Unhandled argument cell range")
+
         b = base_types.to_bool(a)
 
         if isinstance(b, sheets.CellError) and b not in errors:
@@ -78,6 +84,9 @@ def func_not(_evaluator, args):
     if len(args) != 1:
         return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "NOT requires exactly 1 argument")
     
+    if type(args[0]) == CellRange:
+            return error.CellError(error.CellErrorType.TYPE_ERROR, "Unhandled argument cell range")
+    
     b = base_types.to_bool(args[0])
 
     if isinstance(b, sheets.CellError):
@@ -92,6 +101,9 @@ def func_xor(_evaluator, args):
     count_true = 0
     errors = []
     for a in args:
+        if type(a) == CellRange:
+            return error.CellError(error.CellErrorType.TYPE_ERROR, "Unhandled argument cell range")
+
         b = base_types.to_bool(a)
         
         if isinstance(b, sheets.CellError) and b not in errors:
@@ -112,6 +124,9 @@ def func_exact(_evaluator, args):
     if isinstance(args[0], sheets.CellError) or isinstance(args[1], sheets.CellError):
         errors = [args[0], args[1]]
         return error.propagate_errors(errors) 
+    
+    if type(args[0]) == CellRange or type(args[1]) == CellRange:
+            return error.CellError(error.CellErrorType.TYPE_ERROR, "Unhandled argument cell range")
     
     return (base_types.to_string(args[0]) == base_types.to_string(args[1]))
 
@@ -198,12 +213,18 @@ def func_isblank(_evaluator, args):
             return args[0]
         else:
             return False
+        
+    if type(args[0]) == CellRange:
+            return error.CellError(error.CellErrorType.TYPE_ERROR, "Unhandled argument cell range")
     
     return (args[0] is None)
 
 def func_iserror(_evaluator, args):
     if len(args) != 1:
         return sheets.CellError(sheets.CellErrorType.TYPE_ERROR, "ISERROR requires exactly 1 argument")
+    
+    if type(args[0]) == CellRange:
+            return error.CellError(error.CellErrorType.TYPE_ERROR, "Unhandled argument cell range")
     
     return (isinstance(args[0], sheets.CellError))
 
