@@ -654,10 +654,10 @@ class Workbook:
 
         sort_cols_set = set()
         for col in sort_cols:
-            if col > cell_range.end_ref.col - cell_range.start_ref.col + 1 and col <= 1:
+            if type(col) != int:
                 raise ValueError
 
-            if col == 0:
+            if abs(col) > cell_range.end_ref.col - cell_range.start_ref.col + 1 or abs(col) < 1:
                 raise ValueError
 
             if abs(col) in sort_cols_set:
@@ -672,4 +672,5 @@ class Workbook:
 
         self.notify(self.find_changed_cells(saved_values))
 
+        self.update_cells(cells)
         self.update_ancestors(cells)
