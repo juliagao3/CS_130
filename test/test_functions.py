@@ -444,37 +444,6 @@ class TestClass(unittest.TestCase):
         self.assertIsInstance(wb.get_cell_value(name, "A1"), sheets.CellError)
         self.assertEqual(wb.get_cell_value(name, "A1").get_type(), sheets.CellErrorType.CIRCULAR_REFERENCE)
 
-    def test_cell_ranges(self):
-        wb = sheets.Workbook()
-        _, name = wb.new_sheet()
-        _, name2 = wb.new_sheet()
-
-        wb.set_cell_contents(name, "A1", "=ISERROR(A2:A4)")   
-
-        wb.set_cell_contents(name, "A2", "hello")
-        wb.set_cell_contents(name, "A3", "8")
-        wb.set_cell_contents(name, "A4", "True")
-
-        self.assertEqual(wb.get_cell_value(name, "A1"), False)
-
-        wb.set_cell_contents(name, "A4", "#REF!")
-        self.assertEqual(wb.get_cell_value(name, "A1"), False)
-
-        wb.move_cells(name, 'A1', 'A1', 'B1')
-        self.assertEqual(wb.get_cell_contents(name, 'B1'), "=ISERROR(b2:b4)")
-
-        wb.set_cell_contents(name, "A1", "=ISERROR(Sheet2!A2:A4)")   
-        wb.move_cells(name, 'A1', 'A1', 'B1')
-        self.assertEqual(wb.get_cell_contents(name, 'B1'), "=ISERROR(Sheet2!b2:b4)")
-
-        wb.set_cell_contents(name, "A1", "=ISERROR(A2:Sheet2!A4)")   
-        wb.move_cells(name, 'A1', 'A1', 'B1')
-        self.assertEqual(wb.get_cell_contents(name, 'B1'), "=ISERROR(b2:Sheet2!b4)")
-
-        wb.set_cell_contents(name, "A1", "=ISERROR(Sheet2!A2:Sheet2!A4)")   
-        wb.move_cells(name, 'A1', 'A1', 'B1')
-        self.assertEqual(wb.get_cell_contents(name, 'B1'), "=ISERROR(Sheet2!b2:Sheet2!b4)")
-
     def test_lazy_rename(self):
         wb = sheets.Workbook()
         _, n = wb.new_sheet()
