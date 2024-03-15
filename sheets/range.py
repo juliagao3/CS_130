@@ -47,6 +47,11 @@ class CellRange:
         self.end_ref.check_absolute()
         return self
 
+    def check_sheet(self, workbook):
+        if self.sheet_name.lower() not in workbook.sheet_map:
+            raise KeyError
+        return self
+
     def from_string(default_sheet_name: str, range_string: str):
         m = CellRange.range_regex.fullmatch(range_string)
 
